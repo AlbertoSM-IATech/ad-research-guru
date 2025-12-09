@@ -1,0 +1,293 @@
+export type Marketplace = {
+  id: string;
+  name: string;
+  domain: string;
+  flag: string;
+};
+
+export type CampaignType = 'SP' | 'SB' | 'SBV' | 'SD';
+
+export type CompetitionLevel = 'low' | 'medium' | 'high';
+
+// New types for advanced features
+export type RelevanceLevel = 'very-high' | 'high' | 'low' | 'none';
+export type IntentType = 'purchase' | 'research' | 'competition' | 'problem';
+export type KeywordState = 'tested-works' | 'pending' | 'low-competition' | 'discarded';
+
+export interface BookInfo {
+  title: string;
+  subtitle: string;
+  description: string;
+  categories: string[];
+}
+
+export interface Keyword {
+  id: string;
+  keyword: string;
+  searchVolume: number;
+  competitionLevel: CompetitionLevel;
+  competitionNote?: string; // Optional note like "526 productos"
+  campaignTypes: CampaignType[];
+  notes: string;
+  marketplaceId: string;
+  createdAt: Date;
+  updatedAt: Date;
+  // New advanced fields
+  relevance?: RelevanceLevel;
+  intent?: IntentType;
+  state?: KeywordState;
+  variantGroup?: string;
+}
+
+export interface TargetASIN {
+  id: string;
+  asin: string;
+  notes: string;
+  campaignTypes: CampaignType[];
+  marketplaceId: string;
+  bsr?: number; // Best Seller Rank
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface AdvertisingCategory {
+  id: string;
+  name: string;
+  amazonId: string;
+  campaignTypes: CampaignType[];
+  notes: string;
+  marketplaceId: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export const MARKETPLACES: Marketplace[] = [
+  { id: 'us', name: 'Estados Unidos', domain: 'Amazon.com', flag: '🇺🇸' },
+  { id: 'ca', name: 'Canadá', domain: 'Amazon.ca', flag: '🇨🇦' },
+  { id: 'uk', name: 'Reino Unido', domain: 'Amazon.co.uk', flag: '🇬🇧' },
+  { id: 'es', name: 'España', domain: 'Amazon.es', flag: '🇪🇸' },
+  { id: 'de', name: 'Alemania', domain: 'Amazon.de', flag: '🇩🇪' },
+  { id: 'fr', name: 'Francia', domain: 'Amazon.fr', flag: '🇫🇷' },
+  { id: 'it', name: 'Italia', domain: 'Amazon.it', flag: '🇮🇹' },
+  { id: 'au', name: 'Australia', domain: 'Amazon.com.au', flag: '🇦🇺' },
+  { id: 'mx', name: 'México', domain: 'Amazon.com.mx', flag: '🇲🇽' },
+  { id: 'nl', name: 'Países Bajos', domain: 'Amazon.nl', flag: '🇳🇱' },
+  { id: 'se', name: 'Suecia', domain: 'Amazon.se', flag: '🇸🇪' },
+  { id: 'jp', name: 'Japón', domain: 'Amazon.co.jp', flag: '🇯🇵' },
+];
+
+export const CAMPAIGN_TYPES: { value: CampaignType; label: string; description: string }[] = [
+  { value: 'SP', label: 'Sponsored Products', description: 'Anuncios de productos individuales en resultados de búsqueda' },
+  { value: 'SB', label: 'Sponsored Brands', description: 'Banners de marca con logo y múltiples productos' },
+  { value: 'SBV', label: 'Sponsored Brands Video', description: 'Anuncios de video en resultados de búsqueda' },
+  { value: 'SD', label: 'Sponsored Display', description: 'Anuncios de display dentro y fuera de Amazon' },
+];
+
+export const COMPETITION_LEVELS: { value: CompetitionLevel; label: string; color: string }[] = [
+  { value: 'low', label: 'Baja', color: 'bg-green-500' },
+  { value: 'medium', label: 'Media', color: 'bg-yellow-500' },
+  { value: 'high', label: 'Alta', color: 'bg-red-500' },
+];
+
+export const RELEVANCE_LEVELS: { value: RelevanceLevel; label: string; color: string; icon: string }[] = [
+  { value: 'very-high', label: 'Muy relevante', color: 'bg-blue-500', icon: '🔵' },
+  { value: 'high', label: 'Relevante', color: 'bg-green-500', icon: '🟢' },
+  { value: 'low', label: 'Relevancia baja', color: 'bg-yellow-500', icon: '🟡' },
+  { value: 'none', label: 'No relevante', color: 'bg-red-500', icon: '🔴' },
+];
+
+export const INTENT_TYPES: { value: IntentType; label: string; description: string }[] = [
+  { value: 'purchase', label: 'Compra directa', description: 'El usuario quiere comprar' },
+  { value: 'research', label: 'Investigación', description: 'El usuario busca información' },
+  { value: 'competition', label: 'Competencia', description: 'Marca, autor o ASIN competidor' },
+  { value: 'problem', label: 'Problema-solución', description: 'El libro resuelve este problema' },
+];
+
+export const KEYWORD_STATES: { value: KeywordState; label: string; icon: string; color: string }[] = [
+  { value: 'tested-works', label: 'Probada', icon: '🟢', color: 'bg-green-500/20 text-green-600 border-green-500/30' },
+  { value: 'pending', label: 'Pendiente', icon: '🟡', color: 'bg-yellow-500/20 text-yellow-600 border-yellow-500/30' },
+  { value: 'low-competition', label: 'Ideal', icon: '🔵', color: 'bg-blue-500/20 text-blue-600 border-blue-500/30' },
+  { value: 'discarded', label: 'Descartada', icon: '🔴', color: 'bg-red-500/20 text-red-600 border-red-500/30' },
+];
+
+export const getCompetitionLabel = (level: CompetitionLevel): string => {
+  switch (level) {
+    case 'low': return 'Baja';
+    case 'medium': return 'Media';
+    case 'high': return 'Alta';
+  }
+};
+
+// Utility functions for classification
+export const normalizeText = (text: string): string => {
+  return text
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '') // Remove accents
+    .replace(/[^a-z0-9\s]/g, '') // Remove special chars
+    .replace(/\s+/g, ' ') // Remove extra spaces
+    .trim();
+};
+
+export const calculateRelevance = (keyword: string, bookInfo: BookInfo): RelevanceLevel => {
+  const normalizedKeyword = normalizeText(keyword);
+  const normalizedTitle = normalizeText(bookInfo.title);
+  const normalizedSubtitle = normalizeText(bookInfo.subtitle);
+  const normalizedDescription = normalizeText(bookInfo.description);
+  const normalizedCategories = bookInfo.categories.map(normalizeText);
+  
+  const keywordWords = normalizedKeyword.split(' ').filter(w => w.length > 2);
+  
+  // Check exact match in title
+  if (normalizedTitle.includes(normalizedKeyword)) return 'very-high';
+  
+  // Check if all keyword words are in title
+  const allInTitle = keywordWords.every(w => normalizedTitle.includes(w));
+  if (allInTitle && keywordWords.length > 0) return 'very-high';
+  
+  // Check in subtitle
+  if (normalizedSubtitle.includes(normalizedKeyword)) return 'high';
+  const someInSubtitle = keywordWords.some(w => normalizedSubtitle.includes(w));
+  if (someInSubtitle) return 'high';
+  
+  // Check in categories
+  const inCategories = normalizedCategories.some(cat => 
+    cat.includes(normalizedKeyword) || keywordWords.some(w => cat.includes(w))
+  );
+  if (inCategories) return 'high';
+  
+  // Check in description
+  const matchesInDesc = keywordWords.filter(w => normalizedDescription.includes(w)).length;
+  if (matchesInDesc >= keywordWords.length * 0.5) return 'low';
+  if (matchesInDesc > 0) return 'low';
+  
+  return 'none';
+};
+
+export const classifyIntent = (keyword: string): IntentType => {
+  const normalized = normalizeText(keyword);
+  
+  // Purchase intent indicators
+  const purchaseKeywords = ['comprar', 'mejor', 'precio', 'barato', 'oferta', 'recomendado', 'top', 'buy', 'best', 'cheap', 'libros'];
+  if (purchaseKeywords.some(p => normalized.includes(p))) return 'purchase';
+  
+  // Research intent indicators
+  const researchKeywords = ['como', 'que es', 'guia', 'tutorial', 'aprender', 'how to', 'what is', 'learn', 'guide', 'tecnicas', 'ejercicios'];
+  if (researchKeywords.some(r => normalized.includes(r))) return 'research';
+  
+  // Competition indicators (brand/author names, ASINs)
+  const asinPattern = /^[b][0-9a-z]{9}$/i;
+  if (asinPattern.test(normalized.replace(/\s/g, ''))) return 'competition';
+  const competitionKeywords = ['autores', 'famosos', 'marca'];
+  if (competitionKeywords.some(c => normalized.includes(c))) return 'competition';
+  
+  // Problem indicators
+  const problemKeywords = ['problema', 'solucion', 'resolver', 'eliminar', 'evitar', 'ansiedad', 'estres', 'calmar', 'reducir', 'dormir'];
+  if (problemKeywords.some(p => normalized.includes(p))) return 'problem';
+  
+  // Default to research
+  return 'research';
+};
+
+export const detectVariants = (keywords: string[]): Map<string, string[]> => {
+  const groups = new Map<string, string[]>();
+  const normalized = keywords.map(k => ({ original: k, normalized: normalizeText(k) }));
+  
+  normalized.forEach((item, i) => {
+    const words = item.normalized.split(' ');
+    const key = words.sort().join(' ');
+    
+    if (!groups.has(key)) {
+      groups.set(key, []);
+    }
+    groups.get(key)!.push(item.original);
+  });
+  
+  // Only return groups with more than one variant
+  const result = new Map<string, string[]>();
+  groups.forEach((variants, key) => {
+    if (variants.length > 1) {
+      result.set(key, variants);
+    }
+  });
+  
+  return result;
+};
+
+export const generateSuggestions = (keyword: string): string[] => {
+  const words = keyword.toLowerCase().split(' ');
+  const suggestions: string[] = [];
+  
+  // Add plural/singular variations
+  words.forEach((word, i) => {
+    const newWords = [...words];
+    if (word.endsWith('s')) {
+      newWords[i] = word.slice(0, -1);
+    } else {
+      newWords[i] = word + 's';
+    }
+    suggestions.push(newWords.join(' '));
+  });
+  
+  // Add common prefixes
+  ['mejor', 'top', 'guia de', 'como'].forEach(prefix => {
+    suggestions.push(`${prefix} ${keyword}`);
+  });
+  
+  // Add common suffixes
+  ['libro', 'ebook', 'pdf', 'gratis', 'online'].forEach(suffix => {
+    suggestions.push(`${keyword} ${suffix}`);
+  });
+  
+  return suggestions.slice(0, 10);
+};
+
+// Example data generators
+export const getExampleKeywords = (marketplaceId: string): Omit<Keyword, 'id' | 'createdAt' | 'updatedAt'>[] => [
+  { keyword: 'meditación para principiantes', searchVolume: 3400, competitionLevel: 'low', campaignTypes: ['SP', 'SD'], notes: 'Keyword principal del nicho', marketplaceId, relevance: 'very-high', intent: 'purchase', state: 'pending' },
+  { keyword: 'mindfulness para principiantes', searchVolume: 3900, competitionLevel: 'medium', campaignTypes: ['SP', 'SD'], notes: 'Funciona muy bien', marketplaceId, relevance: 'very-high', intent: 'purchase', state: 'tested-works' },
+  { keyword: 'meditación diaria', searchVolume: 1600, competitionLevel: 'medium', campaignTypes: ['SP', 'SBV'], notes: '', marketplaceId, relevance: 'high', intent: 'research', state: 'pending' },
+  { keyword: 'guía de meditación ansiedad', searchVolume: 1200, competitionLevel: 'low', campaignTypes: ['SP', 'SD'], notes: '', marketplaceId, relevance: 'high', intent: 'problem', state: 'pending' },
+  { keyword: 'cómo meditar paso a paso', searchVolume: 2100, competitionLevel: 'low', campaignTypes: ['SP'], notes: 'Long-tail fuerte', marketplaceId, relevance: 'high', intent: 'research', state: 'low-competition' },
+  { keyword: 'respiración consciente', searchVolume: 900, competitionLevel: 'medium', campaignTypes: ['SP'], notes: '', marketplaceId, relevance: 'low', intent: 'research', state: 'pending' },
+  { keyword: 'mindfulness ejercicios cortos', searchVolume: 700, competitionLevel: 'low', campaignTypes: ['SP'], notes: '', marketplaceId, relevance: 'low', intent: 'purchase', state: 'pending' },
+  { keyword: 'reducir estrés mindfulness', searchVolume: 850, competitionLevel: 'high', campaignTypes: ['SD'], notes: '', marketplaceId, relevance: 'low', intent: 'problem', state: 'pending' },
+  { keyword: 'meditar en casa guía fácil', searchVolume: 500, competitionLevel: 'low', campaignTypes: ['SP'], notes: '', marketplaceId, relevance: 'high', intent: 'purchase', state: 'pending' },
+  { keyword: 'mindfulness para dormir', searchVolume: 1300, competitionLevel: 'medium', campaignTypes: ['SP'], notes: '', marketplaceId, relevance: 'high', intent: 'problem', state: 'pending' },
+  { keyword: 'técnicas de respiración', searchVolume: 1100, competitionLevel: 'medium', campaignTypes: ['SP'], notes: '', marketplaceId, relevance: 'low', intent: 'research', state: 'pending' },
+  { keyword: 'mindfulness ansiedad adultos', searchVolume: 920, competitionLevel: 'high', campaignTypes: ['SD'], notes: '', marketplaceId, relevance: 'high', intent: 'problem', state: 'discarded' },
+  { keyword: 'empezar meditación', searchVolume: 1500, competitionLevel: 'low', campaignTypes: ['SP'], notes: '', marketplaceId, relevance: 'high', intent: 'purchase', state: 'pending' },
+  { keyword: 'mindfulness para enfado', searchVolume: 400, competitionLevel: 'medium', campaignTypes: ['SP'], notes: '', marketplaceId, relevance: 'low', intent: 'research', state: 'pending' },
+  { keyword: 'relajación para ansiedad', searchVolume: 1250, competitionLevel: 'high', campaignTypes: ['SD'], notes: '', marketplaceId, relevance: 'low', intent: 'problem', state: 'tested-works' },
+  { keyword: 'meditación guiada estrés', searchVolume: 980, competitionLevel: 'medium', campaignTypes: ['SP', 'SD'], notes: '', marketplaceId, relevance: 'high', intent: 'problem', state: 'pending' },
+  { keyword: 'cómo calmar ansiedad', searchVolume: 3200, competitionLevel: 'high', campaignTypes: ['SD'], notes: '', marketplaceId, relevance: 'low', intent: 'problem', state: 'low-competition' },
+  { keyword: 'rutina mindfulness 10 minutos', searchVolume: 450, competitionLevel: 'low', campaignTypes: ['SP'], notes: '', marketplaceId, relevance: 'low', intent: 'research', state: 'pending' },
+  { keyword: 'mindfulness autores famosos', searchVolume: 250, competitionLevel: 'high', campaignTypes: ['SD'], notes: '', marketplaceId, relevance: 'none', intent: 'competition', state: 'discarded' },
+  { keyword: 'mejores libros mindfulness', searchVolume: 1800, competitionLevel: 'medium', campaignTypes: ['SP'], notes: '', marketplaceId, relevance: 'high', intent: 'purchase', state: 'tested-works' },
+];
+
+export const getExampleASINs = (marketplaceId: string): Omit<TargetASIN, 'id' | 'createdAt' | 'updatedAt'>[] => [
+  { asin: 'B0C1K7L9Q2', campaignTypes: ['SP', 'SD'], notes: 'Libro top ventas', marketplaceId, bsr: 1520 },
+  { asin: 'B0B8Z4T1M5', campaignTypes: ['SP'], notes: '', marketplaceId, bsr: 8900 },
+  { asin: 'B09XH2FQJ7', campaignTypes: ['SD'], notes: 'Muy relevante', marketplaceId, bsr: 2200 },
+  { asin: 'B0D2N8C4W1', campaignTypes: ['SP', 'SD'], notes: '', marketplaceId, bsr: 3100 },
+  { asin: 'B0A7M3P9L8', campaignTypes: ['SP'], notes: '', marketplaceId, bsr: 4500 },
+  { asin: 'B098H5T2R4', campaignTypes: ['SD'], notes: '', marketplaceId, bsr: 1700 },
+  { asin: 'B0C9F1W6M3', campaignTypes: ['SP'], notes: '', marketplaceId, bsr: 980 },
+  { asin: 'B0B4N6Q8S7', campaignTypes: ['SP'], notes: '', marketplaceId, bsr: 6500 },
+  { asin: 'B0D5K2M1Y9', campaignTypes: ['SD'], notes: '', marketplaceId, bsr: 14000 },
+  { asin: 'B09T3L7H2V', campaignTypes: ['SP'], notes: '', marketplaceId, bsr: 2700 },
+];
+
+export const getExampleCategories = (marketplaceId: string): Omit<AdvertisingCategory, 'id' | 'createdAt' | 'updatedAt'>[] => [
+  { name: 'Kindle eBooks → Meditation', amazonId: 'KHD-001', campaignTypes: ['SP', 'SD'], notes: 'Categoría principal del nicho', marketplaceId },
+  { name: 'Kindle eBooks → Stress Management', amazonId: 'KSH-044', campaignTypes: ['SP'], notes: 'Muy relevante para ansiedad', marketplaceId },
+  { name: 'Books → Spirituality', amazonId: 'BRS-012', campaignTypes: ['SD'], notes: 'Alcance amplio', marketplaceId },
+  { name: 'Books → Personal Transformation', amazonId: 'BPT-029', campaignTypes: ['SP'], notes: 'Relevancia media', marketplaceId },
+  { name: 'Kindle eBooks → Mindfulness', amazonId: 'KMF-037', campaignTypes: ['SP', 'SD'], notes: 'Muy relevante', marketplaceId },
+  { name: 'Books → Alternative Medicine', amazonId: 'BAM-055', campaignTypes: ['SP'], notes: 'Competencia media', marketplaceId },
+  { name: 'Kindle → Psychology → Emotions', amazonId: 'KPE-090', campaignTypes: ['SD'], notes: 'Perfecta para ansiedad', marketplaceId },
+  { name: 'Books → Anxiety Disorders', amazonId: 'BAD-122', campaignTypes: ['SD'], notes: 'Alta conversión', marketplaceId },
+  { name: 'Kindle → Short Reads 90m', amazonId: 'KSR-90M', campaignTypes: ['SP'], notes: 'Long-tail', marketplaceId },
+  { name: 'Books → Guided Meditation', amazonId: 'BGM-016', campaignTypes: ['SP'], notes: 'Muy directa', marketplaceId },
+];

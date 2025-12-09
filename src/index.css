@@ -1,0 +1,277 @@
+@import url('@fontsource/poppins/400.css');
+@import url('@fontsource/poppins/500.css');
+@import url('@fontsource/poppins/600.css');
+@import url('@fontsource/poppins/700.css');
+@import url('@fontsource/inter/300.css');
+@import url('@fontsource/inter/400.css');
+@import url('@fontsource/inter/500.css');
+@import url('@fontsource/inter/600.css');
+@import url('@fontsource/inter/700.css');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* PubliFy Design System - Light Mode */
+    --background: 0 0% 97%;
+    --foreground: 0 0% 12%;
+    
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 12%;
+    
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 12%;
+    
+    /* Primary - Coral */
+    --primary: 24 94% 59%;
+    --primary-foreground: 0 0% 100%;
+    
+    /* Secondary - For secondary surfaces */
+    --secondary: 220 14% 94%;
+    --secondary-foreground: 0 0% 12%;
+    
+    /* Accent - Blue */
+    --accent: 217 91% 60%;
+    --accent-foreground: 0 0% 100%;
+    
+    --muted: 220 14% 94%;
+    --muted-foreground: 215 25% 40%;
+    
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+    
+    --border: 0 0% 85%;
+    --input: 0 0% 85%;
+    --ring: 24 94% 59%;
+    
+    --radius: 0.5rem;
+    
+    /* Functional Colors */
+    --success: 142 76% 36%;
+    --success-foreground: 0 0% 100%;
+    --warning: 38 92% 50%;
+    --warning-foreground: 0 0% 12%;
+    --info: 217 91% 60%;
+    --info-foreground: 0 0% 100%;
+    
+    /* Competition Colors */
+    --competition-low: 142 76% 36%;
+    --competition-medium: 24 94% 59%;
+    --competition-high: 0 84% 60%;
+    
+    /* Sidebar - Always Dark */
+    --sidebar-background: 0 0% 12%;
+    --sidebar-foreground: 0 0% 100%;
+    --sidebar-primary: 24 94% 59%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 0 0% 18%;
+    --sidebar-accent-foreground: 0 0% 100%;
+    --sidebar-border: 0 0% 18%;
+    --sidebar-ring: 24 94% 59%;
+    
+    /* Shadows */
+    --shadow-coral: 0 4px 14px -2px hsl(24 94% 59% / 0.35);
+    --shadow-blue: 0 4px 14px -2px hsl(217 91% 60% / 0.35);
+    --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06);
+  }
+
+  .dark {
+    --background: 0 0% 12%;
+    --foreground: 0 0% 95%;
+    
+    --card: 0 0% 15%;
+    --card-foreground: 0 0% 95%;
+    
+    --popover: 0 0% 15%;
+    --popover-foreground: 0 0% 95%;
+    
+    --primary: 24 94% 59%;
+    --primary-foreground: 0 0% 100%;
+    
+    --secondary: 0 0% 18%;
+    --secondary-foreground: 0 0% 95%;
+    
+    --accent: 217 91% 60%;
+    --accent-foreground: 0 0% 100%;
+    
+    --muted: 0 0% 18%;
+    --muted-foreground: 0 0% 65%;
+    
+    --destructive: 0 62% 30%;
+    --destructive-foreground: 0 0% 95%;
+    
+    --border: 0 0% 22%;
+    --input: 0 0% 22%;
+    --ring: 24 94% 59%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+  }
+  
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-heading;
+  }
+}
+
+@layer components {
+  /* Glass Effect */
+  .glass-card {
+    @apply bg-card/80 backdrop-blur-sm border border-border/20;
+  }
+  
+  .dark .glass-card {
+    @apply bg-card/60 border-white/10;
+  }
+  
+  /* Competition Badges */
+  .badge-competition-low {
+    @apply bg-green-100 text-green-800 border-green-200;
+  }
+  
+  .dark .badge-competition-low {
+    @apply bg-green-900/30 text-green-300 border-green-800;
+  }
+  
+  .badge-competition-medium {
+    @apply bg-amber-100 text-amber-800 border-amber-200;
+  }
+  
+  .dark .badge-competition-medium {
+    @apply bg-amber-900/30 text-amber-300 border-amber-800;
+  }
+  
+  .badge-competition-high {
+    @apply bg-red-100 text-red-800 border-red-200;
+  }
+  
+  .dark .badge-competition-high {
+    @apply bg-red-900/30 text-red-300 border-red-800;
+  }
+  
+  /* Campaign Type Badges */
+  .badge-sp {
+    @apply bg-blue-100 text-blue-800 border-blue-200;
+  }
+  
+  .dark .badge-sp {
+    @apply bg-blue-900/30 text-blue-300 border-blue-800;
+  }
+  
+  .badge-sb {
+    @apply bg-purple-100 text-purple-800 border-purple-200;
+  }
+  
+  .dark .badge-sb {
+    @apply bg-purple-900/30 text-purple-300 border-purple-800;
+  }
+  
+  .badge-sbv {
+    @apply bg-pink-100 text-pink-800 border-pink-200;
+  }
+  
+  .dark .badge-sbv {
+    @apply bg-pink-900/30 text-pink-300 border-pink-800;
+  }
+  
+  .badge-sd {
+    @apply bg-teal-100 text-teal-800 border-teal-200;
+  }
+  
+  .dark .badge-sd {
+    @apply bg-teal-900/30 text-teal-300 border-teal-800;
+  }
+  
+  /* Info Box */
+  .info-box {
+    @apply bg-accent/10 border border-accent/20 rounded-lg p-4 text-sm;
+  }
+  
+  /* Stat Card */
+  .stat-card {
+    @apply bg-card border border-border rounded-lg p-4 transition-all duration-300;
+  }
+  
+  .stat-card:hover {
+    @apply shadow-lg -translate-y-1 border-primary/50;
+    box-shadow: var(--shadow-coral);
+  }
+}
+
+@layer utilities {
+  /* Custom Scrollbar */
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 8px;
+  }
+  
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: rgba(133, 133, 133, 0.3);
+    border-radius: 4px;
+  }
+  
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: rgba(133, 133, 133, 0.5);
+  }
+}
+
+/* Animations */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes scale-in {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-5px);
+  }
+}
+
+@keyframes pulse-soft {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.8;
+  }
+}
+
+@keyframes glow {
+  0%, 100% {
+    box-shadow: 0 0 5px hsl(24 94% 59% / 0.5);
+  }
+  50% {
+    box-shadow: 0 0 20px hsl(24 94% 59% / 0.8);
+  }
+}
