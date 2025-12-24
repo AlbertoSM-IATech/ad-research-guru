@@ -5,6 +5,8 @@ import {
   Trash2,
   ArrowUpDown,
   Upload,
+  LayoutGrid,
+  LayoutList,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -26,6 +28,8 @@ import { BulkKeywordImport } from './BulkKeywordImport';
 import { BulkCopyTools } from './BulkCopyTools';
 import { BulkActionsToolbar } from './BulkActionsToolbar';
 import { AdvancedFilters, type AdvancedFiltersState } from './AdvancedFilters';
+import { KeywordCardView } from './KeywordCardView';
+import { KeywordHistoryModal } from './KeywordHistoryModal';
 import {
   type Keyword,
   type CampaignType,
@@ -34,6 +38,7 @@ import {
   type IntentType,
   type KeywordState,
   type BookInfo,
+  type HistoryEntry,
   RELEVANCE_LEVELS,
   INTENT_TYPES,
   KEYWORD_STATES,
@@ -56,6 +61,7 @@ interface KeywordsSectionProps {
 
 type SortField = 'keyword' | 'searchVolume' | 'competitionLevel' | 'relevance' | 'state';
 type SortOrder = 'asc' | 'desc';
+type ViewMode = 'table' | 'cards';
 
 const ITEMS_PER_PAGE = 20;
 
@@ -88,6 +94,8 @@ export const KeywordsSection = ({
   const [currentPage, setCurrentPage] = useState(1);
   const [isBulkImportOpen, setIsBulkImportOpen] = useState(false);
   const [quickAddKeyword, setQuickAddKeyword] = useState('');
+  const [viewMode, setViewMode] = useState<ViewMode>('table');
+  const [historyKeyword, setHistoryKeyword] = useState<Keyword | null>(null);
 
   const handleQuickAdd = () => {
     if (!quickAddKeyword.trim()) return;
@@ -172,6 +180,38 @@ export const KeywordsSection = ({
     setSelectedIds(new Set());
   };
 
+  // Handle update with history tracking
+  const handleUpdateWithHistory = (id: string, updates: Partial<Keyword>) => {
+    const keyword = keywords.find(k => k.id === id);
+    if (!keyword) return;
+    
+    // Track history for specific fields
+    type TrackableField = 'searchVolume' | 'state' | 'relevance';
+    const historyEntries: HistoryEntry[] = [];
+    const trackedFields: TrackableField[] = ['searchVolume', 'state', 'relevance'];
+    
+    trackedFields.forEach(field => {
+      if (updates[field] !== undefined && updates[field] !== keyword[field]) {
+        historyEntries.push({
+          id: `${Date.now()}-${field}`,
+          timestamp: new Date(),
+          field,
+          oldValue: keyword[field] !== undefined ? keyword[field] : undefined,
+          newValue: updates[field],
+        });
+      }
+    });
+    
+    if (historyEntries.length > 0) {
+      onUpdate(id, {
+        ...updates,
+        history: [...(keyword.history || []), ...historyEntries],
+      });
+    } else {
+      onUpdate(id, updates);
+    }
+  };
+
   // Filter and sort keywords
   const filteredKeywords = useMemo(() => {
     return keywords
@@ -241,6 +281,25 @@ export const KeywordsSection = ({
           <InfoTooltip content="Gestiona las palabras clave. Edita directamente haciendo clic en cualquier celda." />
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          {/* View Toggle */}
+          <div className="flex items-center rounded-md border border-border">
+            <Button
+              variant={viewMode === 'table' ? 'secondary' : 'ghost'}
+              size="sm"
+              className="rounded-r-none"
+              onClick={() => setViewMode('table')}
+            >
+              <LayoutList className="w-4 h-4" />
+            </Button>
+            <Button
+              variant={viewMode === 'cards' ? 'secondary' : 'ghost'}
+              size="sm"
+              className="rounded-l-none"
+              onClick={() => setViewMode('cards')}
+            >
+              <LayoutGrid className="w-4 h-4" />
+            </Button>
+          </div>
           <BulkCopyTools keywords={filteredKeywords} selectedIds={selectedIds} />
           <Button variant="outline" size="sm" onClick={() => setIsBulkImportOpen(true)} className="gap-2">
             <Upload className="w-4 h-4" />
@@ -302,152 +361,164 @@ export const KeywordsSection = ({
         {selectedIds.size > 0 && ` • ${selectedIds.size} seleccionadas`}
       </div>
 
-      {/* Table */}
-      <div className="rounded-lg border border-border overflow-hidden">
-        <div className="overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow className="bg-muted/50 hover:bg-muted/50">
-                <TableHead className="w-[40px]">
-                  <Checkbox
-                    checked={selectedIds.size === filteredKeywords.length && filteredKeywords.length > 0}
-                    onCheckedChange={toggleSelectAll}
-                  />
-                </TableHead>
-                <TableHead className="cursor-pointer hover:text-foreground" onClick={() => handleSort('keyword')}>
-                  <div className="flex items-center gap-1">Keyword <ArrowUpDown className="w-3 h-3" /></div>
-                </TableHead>
-                <TableHead className="cursor-pointer hover:text-foreground w-[120px]" onClick={() => handleSort('searchVolume')}>
-                  <div className="flex items-center gap-1">
-                    Vol. búsqueda
-                    <ArrowUpDown className="w-3 h-3" />
-                    <InfoTooltip content="Número estimado de veces que los usuarios buscan esta palabra clave mensualmente en Amazon. Este valor puede variar por mercado y no es proporcionado por Amazon directamente, por lo que el publisher puede introducir valores manuales o basados en herramientas externas." />
-                  </div>
-                </TableHead>
-                <TableHead className="cursor-pointer hover:text-foreground w-[150px]" onClick={() => handleSort('competitionLevel')}>
-                  <div className="flex items-center gap-1">
-                    Competidores
-                    <ArrowUpDown className="w-3 h-3" />
-                    <InfoTooltip content="Número total de productos que aparecen en Amazon al introducir esta palabra clave. Este dato representa la saturación de la búsqueda. Es subjetivo y depende del mercado, por lo que se deberá seleccionar manualmente Alta / Media / Baja." />
-                  </div>
-                </TableHead>
-                <TableHead className="cursor-pointer hover:text-foreground w-[120px]" onClick={() => handleSort('relevance')}>
-                  <div className="flex items-center gap-1">
-                    Relevancia <ArrowUpDown className="w-3 h-3" />
-                    <InfoTooltip content="🔵 Muy relevante, 🟢 Relevante, 🟡 Baja, 🔴 No relevante" />
-                  </div>
-                </TableHead>
-                <TableHead className="w-[110px]">
-                  <div className="flex items-center gap-1">
-                    Intención
-                    <InfoTooltip content="Compra, Investigación, Competencia, Problema" />
-                  </div>
-                </TableHead>
-                <TableHead className="cursor-pointer hover:text-foreground w-[100px]" onClick={() => handleSort('state')}>
-                  <div className="flex items-center gap-1">Estado <ArrowUpDown className="w-3 h-3" /></div>
-                </TableHead>
-                <TableHead className="w-[150px]">
-                  <div className="flex items-center gap-1">
-                    Campaña
-                    <InfoTooltip content="SP, SB, SBV, SD" />
-                  </div>
-                </TableHead>
-                <TableHead className="w-[150px]">Notas</TableHead>
-                <TableHead className="w-[50px]"></TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {paginatedKeywords.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={10} className="text-center py-8 text-muted-foreground">
-                    {keywords.length === 0
-                      ? 'No hay keywords. Añade tu primera keyword o importa en lote.'
-                      : 'No se encontraron keywords con los filtros aplicados.'}
-                  </TableCell>
+      {/* Content - Table or Cards */}
+      {viewMode === 'table' ? (
+        <div className="rounded-lg border border-border overflow-hidden">
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-muted/50 hover:bg-muted/50">
+                  <TableHead className="w-[40px]">
+                    <Checkbox
+                      checked={selectedIds.size === filteredKeywords.length && filteredKeywords.length > 0}
+                      onCheckedChange={toggleSelectAll}
+                    />
+                  </TableHead>
+                  <TableHead className="cursor-pointer hover:text-foreground" onClick={() => handleSort('keyword')}>
+                    <div className="flex items-center gap-1">Keyword <ArrowUpDown className="w-3 h-3" /></div>
+                  </TableHead>
+                  <TableHead className="cursor-pointer hover:text-foreground w-[120px]" onClick={() => handleSort('searchVolume')}>
+                    <div className="flex items-center gap-1">
+                      Vol. búsqueda
+                      <ArrowUpDown className="w-3 h-3" />
+                      <InfoTooltip content="Número estimado de veces que los usuarios buscan esta palabra clave mensualmente en Amazon. Este valor puede variar por mercado y no es proporcionado por Amazon directamente, por lo que el publisher puede introducir valores manuales o basados en herramientas externas." />
+                    </div>
+                  </TableHead>
+                  <TableHead className="cursor-pointer hover:text-foreground w-[150px]" onClick={() => handleSort('competitionLevel')}>
+                    <div className="flex items-center gap-1">
+                      Competidores
+                      <ArrowUpDown className="w-3 h-3" />
+                      <InfoTooltip content="Número total de productos que aparecen en Amazon al introducir esta palabra clave. Este dato representa la saturación de la búsqueda. Es subjetivo y depende del mercado, por lo que se deberá seleccionar manualmente Alta / Media / Baja." />
+                    </div>
+                  </TableHead>
+                  <TableHead className="cursor-pointer hover:text-foreground w-[120px]" onClick={() => handleSort('relevance')}>
+                    <div className="flex items-center gap-1">
+                      Relevancia <ArrowUpDown className="w-3 h-3" />
+                      <InfoTooltip content="🔵 Muy relevante, 🟢 Relevante, 🟡 Baja, 🔴 No relevante" />
+                    </div>
+                  </TableHead>
+                  <TableHead className="w-[110px]">
+                    <div className="flex items-center gap-1">
+                      Intención
+                      <InfoTooltip content="Compra, Investigación, Competencia, Problema" />
+                    </div>
+                  </TableHead>
+                  <TableHead className="cursor-pointer hover:text-foreground w-[100px]" onClick={() => handleSort('state')}>
+                    <div className="flex items-center gap-1">Estado <ArrowUpDown className="w-3 h-3" /></div>
+                  </TableHead>
+                  <TableHead className="w-[150px]">
+                    <div className="flex items-center gap-1">
+                      Campaña
+                      <InfoTooltip content="SP, SB, SBV, SD" />
+                    </div>
+                  </TableHead>
+                  <TableHead className="w-[150px]">Notas</TableHead>
+                  <TableHead className="w-[50px]"></TableHead>
                 </TableRow>
-              ) : (
-                paginatedKeywords.map((keyword) => (
-                  <TableRow key={keyword.id} className="hover:bg-muted/30">
-                    <TableCell>
-                      <Checkbox checked={selectedIds.has(keyword.id)} onCheckedChange={() => toggleSelect(keyword.id)} />
-                    </TableCell>
-                    <TableCell>
-                      <InlineEditableCell
-                        value={keyword.keyword}
-                        onSave={(value) => onUpdate(keyword.id, { keyword: String(value) })}
-                        placeholder="Keyword..."
-                        className="font-medium"
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <InlineEditableCell
-                        value={keyword.searchVolume}
-                        onSave={(value) => onUpdate(keyword.id, { searchVolume: Number(value) })}
-                        type="number"
-                        min={0}
-                        formatter={(v) => Number(v).toLocaleString()}
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <InlineCompetitionLevelSelect
-                        value={keyword.competitionLevel}
-                        note={keyword.competitionNote}
-                        onChange={(level, note) => onUpdate(keyword.id, { competitionLevel: level, competitionNote: note })}
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <InlineSelectBadge
-                        value={keyword.relevance || 'none'}
-                        options={RELEVANCE_LEVELS.map(r => ({ value: r.value, label: r.label, icon: r.icon }))}
-                        onChange={(value) => onUpdate(keyword.id, { relevance: value as RelevanceLevel })}
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <InlineSelectBadge
-                        value={keyword.intent || 'research'}
-                        options={INTENT_TYPES.map(i => ({ value: i.value, label: i.label }))}
-                        onChange={(value) => onUpdate(keyword.id, { intent: value as IntentType })}
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <InlineSelectBadge
-                        value={keyword.state || 'pending'}
-                        options={KEYWORD_STATES.map(s => ({ value: s.value, label: s.label, icon: s.icon }))}
-                        onChange={(value) => onUpdate(keyword.id, { state: value as KeywordState })}
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <InlineCampaignTypeSelect
-                        value={keyword.campaignTypes}
-                        onChange={(types) => onUpdate(keyword.id, { campaignTypes: types })}
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <InlineEditableCell
-                        value={keyword.notes}
-                        onSave={(value) => onUpdate(keyword.id, { notes: String(value) })}
-                        type="textarea"
-                        placeholder="Notas..."
-                        className="text-sm text-muted-foreground max-w-[150px]"
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => onDelete(keyword.id)}
-                        className="text-muted-foreground hover:text-destructive"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
+              </TableHeader>
+              <TableBody>
+                {paginatedKeywords.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={10} className="text-center py-8 text-muted-foreground">
+                      {keywords.length === 0
+                        ? 'No hay keywords. Añade tu primera keyword o importa en lote.'
+                        : 'No se encontraron keywords con los filtros aplicados.'}
                     </TableCell>
                   </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
+                ) : (
+                  paginatedKeywords.map((keyword) => (
+                    <TableRow key={keyword.id} className="hover:bg-muted/30">
+                      <TableCell>
+                        <Checkbox checked={selectedIds.has(keyword.id)} onCheckedChange={() => toggleSelect(keyword.id)} />
+                      </TableCell>
+                      <TableCell>
+                        <InlineEditableCell
+                          value={keyword.keyword}
+                          onSave={(value) => handleUpdateWithHistory(keyword.id, { keyword: String(value) })}
+                          placeholder="Keyword..."
+                          className="font-medium"
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <InlineEditableCell
+                          value={keyword.searchVolume}
+                          onSave={(value) => handleUpdateWithHistory(keyword.id, { searchVolume: Number(value) })}
+                          type="number"
+                          min={0}
+                          formatter={(v) => Number(v).toLocaleString()}
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <InlineCompetitionLevelSelect
+                          value={keyword.competitionLevel}
+                          note={keyword.competitionNote}
+                          onChange={(level, note) => handleUpdateWithHistory(keyword.id, { competitionLevel: level, competitionNote: note })}
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <InlineSelectBadge
+                          value={keyword.relevance || 'none'}
+                          options={RELEVANCE_LEVELS.map(r => ({ value: r.value, label: r.label, icon: r.icon }))}
+                          onChange={(value) => handleUpdateWithHistory(keyword.id, { relevance: value as RelevanceLevel })}
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <InlineSelectBadge
+                          value={keyword.intent || 'research'}
+                          options={INTENT_TYPES.map(i => ({ value: i.value, label: i.label }))}
+                          onChange={(value) => handleUpdateWithHistory(keyword.id, { intent: value as IntentType })}
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <InlineSelectBadge
+                          value={keyword.state || 'pending'}
+                          options={KEYWORD_STATES.map(s => ({ value: s.value, label: s.label, icon: s.icon }))}
+                          onChange={(value) => handleUpdateWithHistory(keyword.id, { state: value as KeywordState })}
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <InlineCampaignTypeSelect
+                          value={keyword.campaignTypes}
+                          onChange={(types) => handleUpdateWithHistory(keyword.id, { campaignTypes: types })}
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <InlineEditableCell
+                          value={keyword.notes}
+                          onSave={(value) => handleUpdateWithHistory(keyword.id, { notes: String(value) })}
+                          type="textarea"
+                          placeholder="Notas..."
+                          className="text-sm text-muted-foreground max-w-[150px]"
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => onDelete(keyword.id)}
+                          className="text-muted-foreground hover:text-destructive"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
         </div>
-      </div>
+      ) : (
+        /* Card View */
+        <KeywordCardView
+          keywords={paginatedKeywords}
+          selectedIds={selectedIds}
+          onToggleSelect={toggleSelect}
+          onUpdate={handleUpdateWithHistory}
+          onDelete={onDelete}
+          onViewHistory={(keyword) => setHistoryKeyword(keyword)}
+        />
+      )}
 
       {/* Pagination */}
       {totalPages > 1 && (
@@ -472,6 +543,13 @@ export const KeywordsSection = ({
         marketplaceId={marketplaceId}
         bookInfo={bookInfo}
         existingKeywords={keywords.map((k) => k.keyword)}
+      />
+
+      {/* History Modal */}
+      <KeywordHistoryModal
+        keyword={historyKeyword}
+        isOpen={!!historyKeyword}
+        onClose={() => setHistoryKeyword(null)}
       />
     </div>
   );
