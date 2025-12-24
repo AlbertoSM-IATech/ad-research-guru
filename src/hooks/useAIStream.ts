@@ -1,5 +1,6 @@
 import { useState, useCallback, useRef } from "react";
 import { AI_CONFIG, AIRequest, AIStreamOptions } from "@/lib/ai-config";
+import { isAIDemoMode, streamDemoResponse } from "@/lib/ai-demo-service";
 
 interface UseAIStreamReturn {
   isLoading: boolean;
@@ -39,6 +40,35 @@ export function useAIStream(): UseAIStreamReturn {
       setError(null);
       setResponse("");
 
+      // Check if demo mode is enabled
+      if (isAIDemoMode()) {
+        try {
+          let fullResponse = "";
+          await streamDemoResponse(request, {
+            onDelta: (chunk) => {
+              fullResponse += chunk;
+              setResponse(fullResponse);
+              options?.onDelta?.(chunk);
+            },
+            onComplete: () => {
+              options?.onComplete?.();
+            },
+            onError: (err) => {
+              setError(err.message);
+              options?.onError?.(err);
+            },
+          });
+        } catch (err) {
+          const errorMessage = err instanceof Error ? err.message : "Error desconocido";
+          setError(errorMessage);
+          options?.onError?.(err instanceof Error ? err : new Error(errorMessage));
+        } finally {
+          setIsLoading(false);
+        }
+        return;
+      }
+
+      // Real API call
       abortControllerRef.current = new AbortController();
 
       try {
@@ -46,20 +76,20 @@ export function useAIStream(): UseAIStreamReturn {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            // Add authorization header if needed
-            // Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
           },
           body: JSON.stringify(request),
           signal: abortControllerRef.current.signal,
         });
 
         if (!resp.ok) {
-          // Handle rate limits and payment errors
           if (resp.status === 429) {
             throw new Error("Límite de peticiones excedido. Intenta de nuevo más tarde.");
           }
           if (resp.status === 402) {
             throw new Error("Se requiere pago. Añade fondos a tu cuenta.");
+          }
+          if (resp.status === 404) {
+            throw new Error("Backend no configurado. Activa el Modo Demo para probar la interfaz.");
           }
           throw new Error(`Error del servidor: ${resp.status}`);
         }
@@ -79,7 +109,6 @@ export function useAIStream(): UseAIStreamReturn {
 
           textBuffer += decoder.decode(value, { stream: true });
 
-          // Process line-by-line for SSE
           let newlineIndex: number;
           while ((newlineIndex = textBuffer.indexOf("\n")) !== -1) {
             let line = textBuffer.slice(0, newlineIndex);
@@ -101,14 +130,12 @@ export function useAIStream(): UseAIStreamReturn {
                 options?.onDelta?.(content);
               }
             } catch {
-              // Incomplete JSON, put back and wait for more
               textBuffer = line + "\n" + textBuffer;
               break;
             }
           }
         }
 
-        // Flush remaining buffer
         if (textBuffer.trim()) {
           for (let raw of textBuffer.split("\n")) {
             if (!raw) continue;
@@ -134,7 +161,6 @@ export function useAIStream(): UseAIStreamReturn {
         options?.onComplete?.();
       } catch (err) {
         if (err instanceof Error && err.name === "AbortError") {
-          // Request was cancelled, not an error
           return;
         }
         const errorMessage = err instanceof Error ? err.message : "Error desconocido";

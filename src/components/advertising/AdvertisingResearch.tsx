@@ -23,16 +23,19 @@ import { CompetitiveAnalysisPanel } from './CompetitiveAnalysisPanel';
 import { AIKeywordGenerator } from './AIKeywordGenerator';
 import { AICopywritingModal } from './AICopywritingModal';
 import { AIChatPanel } from './AIChatPanel';
+import { AIDemoToggle } from './AIDemoToggle';
 import { 
   type Keyword, 
   type TargetASIN, 
   type AdvertisingCategory, 
   type BookInfo,
   type CampaignPlan,
-  getExampleKeywords,
-  getExampleASINs,
-  getExampleCategories,
 } from '@/types/advertising';
+import { 
+  generateDemoKeywords, 
+  generateDemoASINs, 
+  generateDemoCategories 
+} from '@/lib/demo-data-generator';
 
 const generateId = () => Math.random().toString(36).substring(2, 15);
 
@@ -81,8 +84,8 @@ export const AdvertisingResearch = () => {
       const currentCategories = categoriesByMarket[selectedMarketplace] || [];
 
       if (currentKeywords.length === 0 && currentASINs.length === 0 && currentCategories.length === 0) {
-        // Load example keywords
-        const exampleKeywords = getExampleKeywords(selectedMarketplace).map(k => ({
+        // Load demo keywords (150)
+        const exampleKeywords = generateDemoKeywords(selectedMarketplace, 150).map(k => ({
           ...k,
           id: generateId(),
           createdAt: new Date(),
@@ -90,8 +93,8 @@ export const AdvertisingResearch = () => {
         }));
         setKeywordsByMarket(prev => ({ ...prev, [selectedMarketplace]: exampleKeywords }));
 
-        // Load example ASINs
-        const exampleASINs = getExampleASINs(selectedMarketplace).map(a => ({
+        // Load demo ASINs (40)
+        const exampleASINs = generateDemoASINs(selectedMarketplace, 40).map(a => ({
           ...a,
           id: generateId(),
           createdAt: new Date(),
@@ -99,8 +102,8 @@ export const AdvertisingResearch = () => {
         }));
         setAsinsByMarket(prev => ({ ...prev, [selectedMarketplace]: exampleASINs }));
 
-        // Load example categories
-        const exampleCategories = getExampleCategories(selectedMarketplace).map(c => ({
+        // Load demo categories (15)
+        const exampleCategories = generateDemoCategories(selectedMarketplace, 15).map(c => ({
           ...c,
           id: generateId(),
           createdAt: new Date(),
@@ -457,6 +460,7 @@ export const AdvertisingResearch = () => {
               marketplaceId={selectedMarketplace}
               onUpdateBookInfo={(updates) => setBookInfo(prev => ({ ...prev, ...updates }))}
             />
+            <AIDemoToggle />
           </div>
         </header>
 
