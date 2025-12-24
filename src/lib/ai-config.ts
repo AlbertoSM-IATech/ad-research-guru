@@ -13,6 +13,7 @@ export const AI_CONFIG = {
   actions: {
     GENERATE_KEYWORDS: "generate-keywords",
     CLASSIFY: "classify",
+    CLASSIFY_KEYWORDS: "classify-keywords",
     COPYWRITING: "copywriting",
     ANALYZE_COMPETITOR: "analyze-competitor",
     CHAT: "chat",
