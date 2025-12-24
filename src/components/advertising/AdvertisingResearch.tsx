@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo, useEffect } from 'react';
+import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { Search, Target, FolderOpen, BarChart3, Sparkles } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
@@ -66,6 +66,12 @@ export const AdvertisingResearch = () => {
   const [showImportModal, setShowImportModal] = useState(false);
   const [showCampaignPlanner, setShowCampaignPlanner] = useState(false);
   
+  // Book panel state - React controlled, no DOM hacks
+  const [isBookPanelOpen, setIsBookPanelOpen] = useState(true);
+  
+  // AI Assistant state - React controlled
+  const [isAIAssistantOpen, setIsAIAssistantOpen] = useState(false);
+  
   const [bookInfo, setBookInfo] = useState<BookInfo>({
     title: '',
     subtitle: '',
@@ -82,6 +88,13 @@ export const AdvertisingResearch = () => {
   const [globalSort, setGlobalSort] = useState<SortOption>('relevance');
 
   const bookContextComplete = isBookContextComplete(bookInfo);
+  
+  // Auto-collapse book panel when context is complete
+  useEffect(() => {
+    if (bookContextComplete) {
+      setIsBookPanelOpen(false);
+    }
+  }, [bookContextComplete]);
 
   // Load example data when section is empty
   useEffect(() => {
@@ -361,9 +374,10 @@ export const AdvertisingResearch = () => {
     console.log('Saving...');
   }, []);
 
+  // Search focus via ref - no DOM hacks
+  const searchInputRef = useRef<HTMLInputElement>(null);
   const handleFocusSearch = useCallback(() => {
-    const searchInput = document.querySelector('[data-tour="global-search"] input') as HTMLInputElement;
-    searchInput?.focus();
+    searchInputRef.current?.focus();
   }, []);
 
   // Toggle demo mode handler
@@ -436,16 +450,12 @@ export const AdvertisingResearch = () => {
                 />
               </div>
               
-              {/* AI Assistant Button - Único punto de entrada */}
+              {/* AI Assistant Button - Único punto de entrada, controlado por estado */}
               <Button
                 variant="default"
                 size="sm"
                 className="gap-2"
-                onClick={() => {
-                  // El AIChatPanel es flotante, se activa con su propio botón
-                  const chatButton = document.querySelector('[data-ai-chat-trigger]') as HTMLButtonElement;
-                  chatButton?.click();
-                }}
+                onClick={() => setIsAIAssistantOpen(true)}
               >
                 <Sparkles className="w-4 h-4" />
                 <span className="hidden sm:inline">Asistente IA</span>
@@ -485,15 +495,15 @@ export const AdvertisingResearch = () => {
           </div>
         </header>
 
-        {/* === SECCIÓN 1: CONTEXTO === Solo visible si incompleto */}
-        {!bookContextComplete && (
+        {/* === SECCIÓN 1: CONTEXTO === Controlado por estado, sin DOM hacks */}
+        {(isBookPanelOpen || !bookContextComplete) && (
           <section className="mb-6">
             <BookInfoPanel bookInfo={bookInfo} onChange={setBookInfo} />
           </section>
         )}
         
-        {/* Context summary when complete - Minimal */}
-        {bookContextComplete && (
+        {/* Context summary when complete and panel closed - Minimal */}
+        {bookContextComplete && !isBookPanelOpen && (
           <div className="mb-6 p-3 rounded-lg border border-border/50 bg-muted/30 flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="w-8 h-8 rounded-md bg-primary/10 flex items-center justify-center">
@@ -509,15 +519,7 @@ export const AdvertisingResearch = () => {
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => {
-                // Show BookInfoPanel in edit mode
-                setBookInfo(prev => ({ ...prev }));
-                // Force re-render to show panel
-                const panel = document.querySelector('[data-book-panel]');
-                if (panel) {
-                  panel.scrollIntoView({ behavior: 'smooth' });
-                }
-              }}
+              onClick={() => setIsBookPanelOpen(true)}
               className="text-xs"
             >
               Editar contexto
@@ -692,12 +694,14 @@ export const AdvertisingResearch = () => {
         onClose={() => setShowCampaignPlanner(false)}
       />
       
-      {/* AI Chat Panel - Único punto de IA, flotante */}
+      {/* AI Chat Panel - Controlado por estado, único punto de IA */}
       <AIChatPanel
         bookInfo={bookInfo}
         keywords={currentKeywords}
         asins={currentASINs}
         marketplaceId={selectedMarketplace}
+        isOpen={isAIAssistantOpen}
+        onOpenChange={setIsAIAssistantOpen}
       />
     </div>
   );
