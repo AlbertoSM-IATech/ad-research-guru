@@ -11,6 +11,7 @@ import {
 } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Checkbox } from '@/components/ui/checkbox';
+import { InfoTooltip } from './InfoTooltip';
 import { detectVariants, type Keyword } from '@/types/advertising';
 import { cn } from '@/lib/utils';
 
@@ -70,8 +71,20 @@ export const VariantDetector = ({
     setIsOpen(false);
   };
 
+  // Show info message when no variants detected
   if (variantGroups.length === 0) {
-    return null;
+    return (
+      <Button
+        variant="ghost"
+        size="sm"
+        disabled
+        className="gap-2 opacity-60"
+      >
+        <GitMerge className="w-4 h-4" />
+        Sin variantes
+        <InfoTooltip content="No se detectaron variantes ortográficas o similares entre las keywords actuales. Las variantes aparecerán cuando haya keywords muy parecidas (ej: 'mindfulness' y 'mindfullness')." />
+      </Button>
+    );
   }
 
   return (

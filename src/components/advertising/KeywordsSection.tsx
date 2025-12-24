@@ -32,6 +32,7 @@ import { AdvancedFilters, type AdvancedFiltersState } from './AdvancedFilters';
 import { KeywordCardView } from './KeywordCardView';
 import { KeywordHistoryModal } from './KeywordHistoryModal';
 import { VariantDetector } from './VariantDetector';
+import { AIAutoClassifier } from './AIAutoClassifier';
 import {
   type Keyword,
   type CampaignType,
@@ -319,6 +320,17 @@ export const KeywordsSection = ({
             }}
             onSeparateVariants={(keywordIds) => {
               toast({ title: 'Variantes separadas' });
+            }}
+          />
+          <AIAutoClassifier
+            keywords={keywords}
+            selectedIds={Array.from(selectedIds)}
+            bookInfo={bookInfo}
+            marketplaceId={marketplaceId}
+            onUpdateKeywords={(ids, updates) => {
+              ids.forEach((id, i) => {
+                onUpdate(id, updates[i]);
+              });
             }}
           />
           <Button variant="outline" size="sm" onClick={() => setIsBulkImportOpen(true)} className="gap-2">
