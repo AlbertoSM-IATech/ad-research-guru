@@ -20,7 +20,7 @@ import type { BookInfo, Keyword } from "@/types/advertising";
 interface AIKeywordGeneratorProps {
   bookInfo: BookInfo;
   marketplaceId: string;
-  existingKeywords: Keyword[];
+  existingKeywords: string[];
   onAddKeywords: (keywords: Array<Omit<Keyword, "id" | "createdAt" | "updatedAt">>) => void;
 }
 
@@ -49,7 +49,7 @@ export function AIKeywordGenerator({
     setGeneratedKeywords([]);
     reset();
 
-    const existingKeywordsList = existingKeywords.map((k) => k.keyword).join(", ");
+    const existingKeywordsList = existingKeywords.join(", ");
 
     await streamAI(
       {

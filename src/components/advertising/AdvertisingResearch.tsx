@@ -1,5 +1,5 @@
 import { useState, useCallback, useMemo, useEffect } from 'react';
-import { Search, Target, FolderOpen, BarChart3, Lightbulb, Download, Upload, Layers, HelpCircle } from 'lucide-react';
+import { Search, Target, FolderOpen, BarChart3, Lightbulb, Download, Upload, Layers, HelpCircle, Sparkles, MessageSquare, Wand2 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
@@ -20,6 +20,9 @@ import { CampaignPlanManager } from './CampaignPlanManager';
 import { GuidedTour, useTourStatus } from './GuidedTour';
 import { KeyboardShortcutsManager } from './KeyboardShortcutsManager';
 import { CompetitiveAnalysisPanel } from './CompetitiveAnalysisPanel';
+import { AIKeywordGenerator } from './AIKeywordGenerator';
+import { AICopywritingModal } from './AICopywritingModal';
+import { AIChatPanel } from './AIChatPanel';
 import { 
   type Keyword, 
   type TargetASIN, 
@@ -441,6 +444,19 @@ export const AdvertisingResearch = () => {
               <Layers className="w-4 h-4" />
               Planes de campaña
             </Button>
+            <Separator orientation="vertical" className="h-6" />
+            <AIKeywordGenerator
+              bookInfo={bookInfo}
+              marketplaceId={selectedMarketplace}
+              existingKeywords={currentKeywords.map(k => k.keyword)}
+              onAddKeywords={handleAddBulkKeywords}
+            />
+            <AICopywritingModal
+              bookInfo={bookInfo}
+              keywords={currentKeywords}
+              marketplaceId={selectedMarketplace}
+              onUpdateBookInfo={(updates) => setBookInfo(prev => ({ ...prev, ...updates }))}
+            />
           </div>
         </header>
 
@@ -600,6 +616,14 @@ export const AdvertisingResearch = () => {
         onAssignKeywords={handleAssignKeywords}
         isOpen={showCampaignPlanner}
         onClose={() => setShowCampaignPlanner(false)}
+      />
+      
+      {/* AI Chat Panel - Floating */}
+      <AIChatPanel
+        bookInfo={bookInfo}
+        keywords={currentKeywords}
+        asins={currentASINs}
+        marketplaceId={selectedMarketplace}
       />
     </div>
   );
