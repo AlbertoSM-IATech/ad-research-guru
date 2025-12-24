@@ -23,6 +23,8 @@ interface AIChatPanelProps {
   keywords: Keyword[];
   asins: TargetASIN[];
   marketplaceId: string;
+  isOpen?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
 interface ChatMessage {
@@ -37,8 +39,21 @@ export function AIChatPanel({
   keywords,
   asins,
   marketplaceId,
+  isOpen: controlledIsOpen,
+  onOpenChange,
 }: AIChatPanelProps) {
-  const [isOpen, setIsOpen] = useState(false);
+  const [internalIsOpen, setInternalIsOpen] = useState(false);
+  
+  // Use controlled or internal state
+  const isOpen = controlledIsOpen !== undefined ? controlledIsOpen : internalIsOpen;
+  const setIsOpen = (open: boolean) => {
+    if (onOpenChange) {
+      onOpenChange(open);
+    } else {
+      setInternalIsOpen(open);
+    }
+  };
+  
   const [isMinimized, setIsMinimized] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputValue, setInputValue] = useState("");
@@ -148,16 +163,9 @@ export function AIChatPanel({
     "¿Qué categorías debería usar?",
   ];
 
+  // When closed and controlled from outside, render nothing (button is in header)
   if (!isOpen) {
-    return (
-      <Button
-        onClick={() => setIsOpen(true)}
-        className="fixed bottom-4 right-4 h-14 w-14 rounded-full shadow-lg gap-0 z-50"
-        size="icon"
-      >
-        <MessageSquare className="w-6 h-6" />
-      </Button>
-    );
+    return null;
   }
 
   return (
