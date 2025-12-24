@@ -7,6 +7,7 @@ import {
   Upload,
   LayoutGrid,
   LayoutList,
+  History,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -30,6 +31,7 @@ import { BulkActionsToolbar } from './BulkActionsToolbar';
 import { AdvancedFilters, type AdvancedFiltersState } from './AdvancedFilters';
 import { KeywordCardView } from './KeywordCardView';
 import { KeywordHistoryModal } from './KeywordHistoryModal';
+import { VariantDetector } from './VariantDetector';
 import {
   type Keyword,
   type CampaignType,
@@ -301,6 +303,24 @@ export const KeywordsSection = ({
             </Button>
           </div>
           <BulkCopyTools keywords={filteredKeywords} selectedIds={selectedIds} />
+          <VariantDetector
+            keywords={keywords}
+            onGroupVariants={(groupId, keywordIds) => {
+              // Mark keywords as variants by updating their notes
+              keywordIds.forEach(id => {
+                const kw = keywords.find(k => k.id === id);
+                if (kw) {
+                  onUpdate(id, { 
+                    notes: kw.notes ? `${kw.notes} [Variante: ${groupId}]` : `[Variante: ${groupId}]` 
+                  });
+                }
+              });
+              toast({ title: `${keywordIds.length} keywords agrupadas como variantes` });
+            }}
+            onSeparateVariants={(keywordIds) => {
+              toast({ title: 'Variantes separadas' });
+            }}
+          />
           <Button variant="outline" size="sm" onClick={() => setIsBulkImportOpen(true)} className="gap-2">
             <Upload className="w-4 h-4" />
             Añadir palabras clave en lote
@@ -413,7 +433,7 @@ export const KeywordsSection = ({
                     </div>
                   </TableHead>
                   <TableHead className="w-[150px]">Notas</TableHead>
-                  <TableHead className="w-[50px]"></TableHead>
+                  <TableHead className="w-[80px]">Acciones</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -492,14 +512,27 @@ export const KeywordsSection = ({
                         />
                       </TableCell>
                       <TableCell>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => onDelete(keyword.id)}
-                          className="text-muted-foreground hover:text-destructive"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
+                        <div className="flex items-center gap-1">
+                          {keyword.history && keyword.history.length > 0 && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => setHistoryKeyword(keyword)}
+                              className="text-muted-foreground hover:text-primary"
+                              title="Ver historial"
+                            >
+                              <History className="w-4 h-4" />
+                            </Button>
+                          )}
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => onDelete(keyword.id)}
+                            className="text-muted-foreground hover:text-destructive"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))

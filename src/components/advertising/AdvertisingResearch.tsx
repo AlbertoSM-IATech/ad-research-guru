@@ -513,6 +513,8 @@ export const AdvertisingResearch = () => {
           <TabsContent value="asins" className="mt-6">
             <ASINSection 
               asins={globalFilter === 'all' || globalFilter === 'asins' ? filteredASINs : []} 
+              keywords={currentKeywords}
+              bookTitle={bookInfo.title}
               onAdd={handleAddASIN} 
               onAddBulk={handleAddBulkASINs} 
               onUpdate={handleUpdateASIN} 
