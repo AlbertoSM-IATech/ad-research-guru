@@ -16,7 +16,7 @@ import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 
 interface KeywordHistoryModalProps {
-  keyword: Keyword;
+  keyword: Keyword | null;
   isOpen: boolean;
   onClose: () => void;
 }
@@ -73,6 +73,11 @@ const getChangeIcon = (field: HistoryEntry['field'], oldValue: any, newValue: an
 };
 
 export const KeywordHistoryModal = ({ keyword, isOpen, onClose }: KeywordHistoryModalProps) => {
+  // Early return if no keyword - must check before any hooks that depend on keyword
+  if (!keyword) {
+    return null;
+  }
+  
   const history = keyword.history || [];
   
   // Prepare chart data for volume history
