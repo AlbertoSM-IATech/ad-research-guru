@@ -1,7 +1,8 @@
 import { useState, useCallback, useMemo, useEffect } from 'react';
-import { Search, Target, FolderOpen, BarChart3, Lightbulb } from 'lucide-react';
+import { Search, Target, FolderOpen, BarChart3, Lightbulb, Download, Upload, Layers, HelpCircle } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
+import { Button } from '@/components/ui/button';
 import { MarketplaceSelector } from './MarketplaceSelector';
 import { KeywordsSection } from './KeywordsSection';
 import { ASINSection } from './ASINSection';
@@ -13,11 +14,18 @@ import { VisualizationsTab } from './visualizations/VisualizationsTab';
 import { BookInfoPanel } from './BookInfoPanel';
 import { SuggestionsPanel } from './SuggestionsPanel';
 import { ThemeToggle } from '@/components/ThemeToggle';
+import { AdvancedExportModal } from './AdvancedExportModal';
+import { AdvancedImportModal } from './AdvancedImportModal';
+import { CampaignPlanManager } from './CampaignPlanManager';
+import { GuidedTour, useTourStatus } from './GuidedTour';
+import { KeyboardShortcutsManager } from './KeyboardShortcutsManager';
+import { CompetitiveAnalysisPanel } from './CompetitiveAnalysisPanel';
 import { 
   type Keyword, 
   type TargetASIN, 
   type AdvertisingCategory, 
   type BookInfo,
+  type CampaignPlan,
   getExampleKeywords,
   getExampleASINs,
   getExampleCategories,
@@ -31,6 +39,15 @@ export const AdvertisingResearch = () => {
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [hasLoadedExamples, setHasLoadedExamples] = useState(false);
   
+  // Tour state
+  const { hasCompletedTour, setHasCompletedTour, resetTour } = useTourStatus();
+  const [showTour, setShowTour] = useState(false);
+  
+  // Modal states
+  const [showExportModal, setShowExportModal] = useState(false);
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [showCampaignPlanner, setShowCampaignPlanner] = useState(false);
+  
   const [bookInfo, setBookInfo] = useState<BookInfo>({
     title: 'Mindfulness para principiantes',
     subtitle: 'Integrando el Mindfulness en la Vida Cotidiana',
@@ -41,9 +58,17 @@ export const AdvertisingResearch = () => {
   const [keywordsByMarket, setKeywordsByMarket] = useState<Record<string, Keyword[]>>({});
   const [asinsByMarket, setAsinsByMarket] = useState<Record<string, TargetASIN[]>>({});
   const [categoriesByMarket, setCategoriesByMarket] = useState<Record<string, AdvertisingCategory[]>>({});
+  const [campaignPlansByMarket, setCampaignPlansByMarket] = useState<Record<string, CampaignPlan[]>>({});
   const [globalSearchTerm, setGlobalSearchTerm] = useState('');
   const [globalFilter, setGlobalFilter] = useState<FilterType>('all');
   const [globalSort, setGlobalSort] = useState<SortOption>('relevance');
+
+  // Show tour on first visit
+  useEffect(() => {
+    if (!hasCompletedTour) {
+      setShowTour(true);
+    }
+  }, [hasCompletedTour]);
 
   // Load example data when section is empty
   useEffect(() => {
@@ -260,6 +285,51 @@ export const AdvertisingResearch = () => {
     }));
   }, [selectedMarketplace]);
 
+  // Campaign Plan handlers
+  const currentPlans = campaignPlansByMarket[selectedMarketplace] || [];
+  
+  const handleCreatePlan = useCallback((planData: Omit<CampaignPlan, 'id' | 'createdAt' | 'updatedAt'>) => {
+    const newPlan: CampaignPlan = {
+      ...planData,
+      id: generateId(),
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+    setCampaignPlansByMarket(prev => ({
+      ...prev,
+      [selectedMarketplace]: [...(prev[selectedMarketplace] || []), newPlan]
+    }));
+  }, [selectedMarketplace]);
+
+  const handleUpdatePlan = useCallback((id: string, updates: Partial<CampaignPlan>) => {
+    setCampaignPlansByMarket(prev => ({
+      ...prev,
+      [selectedMarketplace]: (prev[selectedMarketplace] || []).map(p => p.id === id ? {
+        ...p,
+        ...updates,
+        updatedAt: new Date()
+      } : p)
+    }));
+  }, [selectedMarketplace]);
+
+  const handleDeletePlan = useCallback((id: string) => {
+    setCampaignPlansByMarket(prev => ({
+      ...prev,
+      [selectedMarketplace]: (prev[selectedMarketplace] || []).filter(p => p.id !== id)
+    }));
+  }, [selectedMarketplace]);
+
+  const handleAssignKeywords = useCallback((planId: string, keywordIds: string[]) => {
+    setCampaignPlansByMarket(prev => ({
+      ...prev,
+      [selectedMarketplace]: (prev[selectedMarketplace] || []).map(p => p.id === planId ? {
+        ...p,
+        keywords: [...new Set([...p.keywords, ...keywordIds])],
+        updatedAt: new Date()
+      } : p)
+    }));
+  }, [selectedMarketplace]);
+
   // Suggestion handler
   const handleAddSuggestion = useCallback((keyword: string) => {
     handleAddKeyword({
@@ -272,6 +342,17 @@ export const AdvertisingResearch = () => {
       state: 'pending'
     });
   }, [handleAddKeyword, selectedMarketplace]);
+
+  // Keyboard shortcut handlers
+  const handleSave = useCallback(() => {
+    // Just a placeholder - data is auto-saved in state
+    console.log('Saving...');
+  }, []);
+
+  const handleFocusSearch = useCallback(() => {
+    const searchInput = document.querySelector('[data-tour="global-search"] input') as HTMLInputElement;
+    searchInput?.focus();
+  }, []);
 
   const educationSections = [{
     id: 'concepts',
@@ -300,6 +381,12 @@ export const AdvertisingResearch = () => {
 
   return (
     <div className="min-h-screen bg-background">
+      {/* Keyboard Shortcuts */}
+      <KeyboardShortcutsManager
+        onSave={handleSave}
+        onSearch={handleFocusSearch}
+      />
+      
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <header className="space-y-4 mb-8">
           <div className="flex items-start justify-between">
@@ -309,9 +396,52 @@ export const AdvertisingResearch = () => {
                 Administra palabras clave, ASIN, categorías y métricas para campañas en diferentes mercados.
               </p>
             </div>
-            <ThemeToggle />
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowTour(true)}
+                className="gap-2"
+              >
+                <HelpCircle className="w-4 h-4" />
+                Ver tour
+              </Button>
+              <ThemeToggle />
+            </div>
           </div>
-          <MarketplaceSelector value={selectedMarketplace} onChange={setSelectedMarketplace} />
+          
+          {/* Action buttons */}
+          <div className="flex flex-wrap items-center gap-2" data-tour="marketplace">
+            <MarketplaceSelector value={selectedMarketplace} onChange={setSelectedMarketplace} />
+            <div className="flex-1" />
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowImportModal(true)}
+              className="gap-2"
+            >
+              <Upload className="w-4 h-4" />
+              Importación avanzada
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowExportModal(true)}
+              className="gap-2"
+            >
+              <Download className="w-4 h-4" />
+              Exportar datos
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowCampaignPlanner(true)}
+              className="gap-2"
+            >
+              <Layers className="w-4 h-4" />
+              Planes de campaña
+            </Button>
+          </div>
         </header>
 
         <Separator className="mb-8" />
@@ -327,7 +457,7 @@ export const AdvertisingResearch = () => {
         </section>
 
         <Separator className="mb-8" />
-        <section className="mb-8">
+        <section className="mb-8" data-tour="global-search">
           <GlobalSearch 
             searchTerm={globalSearchTerm} 
             onSearchChange={setGlobalSearchTerm} 
@@ -344,7 +474,7 @@ export const AdvertisingResearch = () => {
         </section>
 
         <Separator className="mb-8" />
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6" data-tour="tabs">
           <TabsList className="grid w-full grid-cols-4 lg:w-[650px] bg-muted">
             <TabsTrigger value="keywords" className="gap-2 data-[state=active]:bg-card">
               <Search className="w-4 h-4" />
@@ -426,6 +556,48 @@ export const AdvertisingResearch = () => {
         onAddKeyword={handleAddSuggestion} 
         isOpen={showSuggestions} 
         onClose={() => setShowSuggestions(!showSuggestions)} 
+      />
+      
+      {/* Guided Tour */}
+      <GuidedTour
+        isOpen={showTour}
+        onClose={() => setShowTour(false)}
+        onComplete={() => {
+          setHasCompletedTour(true);
+          setShowTour(false);
+        }}
+      />
+      
+      {/* Advanced Export Modal */}
+      <AdvancedExportModal
+        isOpen={showExportModal}
+        onClose={() => setShowExportModal(false)}
+        keywords={currentKeywords}
+        asins={currentASINs}
+        categories={currentCategories}
+        marketplaceId={selectedMarketplace}
+      />
+      
+      {/* Advanced Import Modal */}
+      <AdvancedImportModal
+        isOpen={showImportModal}
+        onClose={() => setShowImportModal(false)}
+        onImport={handleAddBulkKeywords}
+        marketplaceId={selectedMarketplace}
+        bookInfo={bookInfo}
+        existingKeywords={currentKeywords.map(k => k.keyword)}
+      />
+      
+      {/* Campaign Plan Manager */}
+      <CampaignPlanManager
+        keywords={currentKeywords}
+        plans={currentPlans}
+        onCreatePlan={handleCreatePlan}
+        onUpdatePlan={handleUpdatePlan}
+        onDeletePlan={handleDeletePlan}
+        onAssignKeywords={handleAssignKeywords}
+        isOpen={showCampaignPlanner}
+        onClose={() => setShowCampaignPlanner(false)}
       />
     </div>
   );
