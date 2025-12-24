@@ -27,6 +27,9 @@ interface CategoriesSectionProps {
   onDelete: (id: string) => void;
   onDeleteBulk: (ids: string[]) => void;
   marketplaceId: string;
+  // Lifted selection state
+  selectedIds: Set<string>;
+  onSelectedIdsChange: (ids: Set<string>) => void;
 }
 
 export const CategoriesSection = ({
@@ -37,11 +40,12 @@ export const CategoriesSection = ({
   onDelete,
   onDeleteBulk,
   marketplaceId,
+  selectedIds,
+  onSelectedIdsChange,
 }: CategoriesSectionProps) => {
   const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState('');
   const [quickAddName, setQuickAddName] = useState('');
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [showBulkImport, setShowBulkImport] = useState(false);
 
   const handleQuickAdd = () => {
@@ -65,29 +69,28 @@ export const CategoriesSection = ({
 
   const toggleSelectAll = () => {
     if (selectedIds.size === filteredCategories.length) {
-      setSelectedIds(new Set());
+      onSelectedIdsChange(new Set());
     } else {
-      setSelectedIds(new Set(filteredCategories.map((c) => c.id)));
+      onSelectedIdsChange(new Set(filteredCategories.map((c) => c.id)));
     }
   };
 
   const toggleSelect = (id: string) => {
-    setSelectedIds((prev) => {
-      const newSet = new Set(prev);
-      if (newSet.has(id)) {
-        newSet.delete(id);
-      } else {
-        newSet.add(id);
-      }
-      return newSet;
-    });
+    const newSet = new Set(selectedIds);
+    if (newSet.has(id)) {
+      newSet.delete(id);
+    } else {
+      newSet.add(id);
+    }
+    onSelectedIdsChange(newSet);
   };
 
   const handleDeleteSelected = () => {
     if (selectedIds.size === 0) return;
+    const count = selectedIds.size;
     onDeleteBulk(Array.from(selectedIds));
-    setSelectedIds(new Set());
-    toast({ title: `${selectedIds.size} categorías eliminadas` });
+    onSelectedIdsChange(new Set());
+    toast({ title: `${count} categorías eliminadas` });
   };
 
   const filteredCategories = categories.filter((c) =>

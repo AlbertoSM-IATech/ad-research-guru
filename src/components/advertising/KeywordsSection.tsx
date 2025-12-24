@@ -60,6 +60,9 @@ interface KeywordsSectionProps {
   onUpdateBulk: (ids: string[], updates: Partial<Keyword>) => void;
   marketplaceId: string;
   bookInfo: BookInfo;
+  // Lifted selection state
+  selectedIds: Set<string>;
+  onSelectedIdsChange: (ids: Set<string>) => void;
 }
 
 type SortField = 'keyword' | 'searchVolume' | 'competitionLevel' | 'relevance' | 'state';
@@ -78,6 +81,8 @@ export const KeywordsSection = ({
   onUpdateBulk,
   marketplaceId,
   bookInfo,
+  selectedIds,
+  onSelectedIdsChange,
 }: KeywordsSectionProps) => {
   const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState('');
@@ -93,7 +98,6 @@ export const KeywordsSection = ({
   });
   const [sortField, setSortField] = useState<SortField>('keyword');
   const [sortOrder, setSortOrder] = useState<SortOrder>('asc');
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [currentPage, setCurrentPage] = useState(1);
   const [isBulkImportOpen, setIsBulkImportOpen] = useState(false);
   const [quickAddKeyword, setQuickAddKeyword] = useState('');
@@ -132,29 +136,28 @@ export const KeywordsSection = ({
 
   const toggleSelectAll = () => {
     if (selectedIds.size === filteredKeywords.length) {
-      setSelectedIds(new Set());
+      onSelectedIdsChange(new Set());
     } else {
-      setSelectedIds(new Set(filteredKeywords.map((k) => k.id)));
+      onSelectedIdsChange(new Set(filteredKeywords.map((k) => k.id)));
     }
   };
 
   const toggleSelect = (id: string) => {
-    setSelectedIds((prev) => {
-      const newSet = new Set(prev);
-      if (newSet.has(id)) {
-        newSet.delete(id);
-      } else {
-        newSet.add(id);
-      }
-      return newSet;
-    });
+    const newSet = new Set(selectedIds);
+    if (newSet.has(id)) {
+      newSet.delete(id);
+    } else {
+      newSet.add(id);
+    }
+    onSelectedIdsChange(newSet);
   };
 
   const handleDeleteSelected = () => {
     if (selectedIds.size === 0) return;
+    const count = selectedIds.size;
     onDeleteBulk(Array.from(selectedIds));
-    setSelectedIds(new Set());
-    toast({ title: `${selectedIds.size} keywords eliminadas` });
+    onSelectedIdsChange(new Set());
+    toast({ title: `${count} keywords eliminadas` });
   };
 
   const handleBulkImport = (newKeywords: Array<Omit<Keyword, 'id' | 'createdAt' | 'updatedAt'>>) => {
@@ -170,17 +173,17 @@ export const KeywordsSection = ({
 
   const handleBulkChangeCampaignType = (types: CampaignType[]) => {
     onUpdateBulk(Array.from(selectedIds), { campaignTypes: types });
-    setSelectedIds(new Set());
+    onSelectedIdsChange(new Set());
   };
 
   const handleBulkChangeState = (state: KeywordState) => {
     onUpdateBulk(Array.from(selectedIds), { state });
-    setSelectedIds(new Set());
+    onSelectedIdsChange(new Set());
   };
 
   const handleBulkChangeRelevance = (relevance: RelevanceLevel) => {
     onUpdateBulk(Array.from(selectedIds), { relevance });
-    setSelectedIds(new Set());
+    onSelectedIdsChange(new Set());
   };
 
   // Handle update with history tracking
