@@ -18,43 +18,36 @@ export const MarketplaceSelector = ({ value, onChange }: MarketplaceSelectorProp
   const selectedMarketplace = MARKETPLACES.find((m) => m.id === value);
 
   return (
-    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 p-4 bg-gradient-to-r from-primary/10 via-primary/5 to-transparent rounded-xl border border-primary/20">
-      <div className="flex items-center gap-3">
-        <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-          <Globe className="w-5 h-5 text-primary" />
-        </div>
-        <div className="flex flex-col">
-          <span className="text-sm font-medium text-muted-foreground">Mercado activo</span>
-          <span className="text-xs text-muted-foreground">Los datos son independientes por mercado</span>
-        </div>
+    <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+        <Globe className="w-4 h-4" />
+        <span className="hidden sm:inline">Mercado:</span>
       </div>
 
-      <div className="flex items-center gap-2 sm:ml-auto">
-        <Select value={value} onValueChange={onChange}>
-          <SelectTrigger className="w-[220px] h-11 bg-background border-primary/30 hover:border-primary/50 transition-colors">
-            <SelectValue>
-              {selectedMarketplace && (
-                <span className="flex items-center gap-2">
-                  <span className="text-xl">{selectedMarketplace.flag}</span>
-                  <span className="font-medium">{selectedMarketplace.name}</span>
-                </span>
-              )}
-            </SelectValue>
-          </SelectTrigger>
-          <SelectContent className="bg-popover border-border z-50">
-            {MARKETPLACES.map((marketplace) => (
-              <SelectItem key={marketplace.id} value={marketplace.id} className="cursor-pointer">
-                <span className="flex items-center gap-2">
-                  <span className="text-xl">{marketplace.flag}</span>
-                  <span>{marketplace.name}</span>
-                  <span className="text-xs text-muted-foreground ml-1">({marketplace.domain})</span>
-                </span>
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <InfoTooltip content="Las estrategias varían según el mercado. Cada país tiene sus propias keywords, ASIN y categorías independientes." />
-      </div>
+      <Select value={value} onValueChange={onChange}>
+        <SelectTrigger className="w-[160px] h-9 bg-background border-border hover:border-primary/50 transition-colors">
+          <SelectValue>
+            {selectedMarketplace && (
+              <span className="flex items-center gap-2">
+                <span className="text-lg">{selectedMarketplace.flag}</span>
+                <span className="font-medium text-sm">{selectedMarketplace.name}</span>
+              </span>
+            )}
+          </SelectValue>
+        </SelectTrigger>
+        <SelectContent className="bg-popover border-border z-50">
+          {MARKETPLACES.map((marketplace) => (
+            <SelectItem key={marketplace.id} value={marketplace.id} className="cursor-pointer">
+              <span className="flex items-center gap-2">
+                <span className="text-lg">{marketplace.flag}</span>
+                <span>{marketplace.name}</span>
+                <span className="text-xs text-muted-foreground ml-1">({marketplace.domain})</span>
+              </span>
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      <InfoTooltip content="Cada mercado tiene sus propias keywords, ASINs y categorías independientes." />
     </div>
   );
 };

@@ -27,6 +27,7 @@ interface GlobalSearchProps {
     asins: number;
     categories: number;
   };
+  compact?: boolean;
 }
 
 export const GlobalSearch = ({
@@ -37,6 +38,7 @@ export const GlobalSearch = ({
   sort,
   onSortChange,
   resultsCount,
+  compact = false,
 }: GlobalSearchProps) => {
   const [showOptions, setShowOptions] = useState(false);
 
@@ -45,6 +47,29 @@ export const GlobalSearch = ({
   const clearSearch = () => {
     onSearchChange('');
   };
+
+  // Compact mode for header integration
+  if (compact) {
+    return (
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+        <Input
+          placeholder="Buscar..."
+          value={searchTerm}
+          onChange={(e) => onSearchChange(e.target.value)}
+          className="pl-10 pr-8 w-[200px] h-9"
+        />
+        {searchTerm && (
+          <button
+            onClick={clearSearch}
+            className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <X className="w-3 h-3" />
+          </button>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-3">
