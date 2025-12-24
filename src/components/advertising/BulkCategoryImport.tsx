@@ -126,7 +126,7 @@ export const BulkCategoryImport = ({
         <DialogHeader>
           <DialogTitle className="font-heading flex items-center gap-2">
             <Upload className="w-5 h-5" />
-            Añadir Categorías en Lote
+            Importar Categorías en Lote
           </DialogTitle>
         </DialogHeader>
 

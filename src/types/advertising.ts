@@ -21,6 +21,35 @@ export interface BookInfo {
   categories: string[];
 }
 
+// History entry for tracking changes
+export interface HistoryEntry {
+  id: string;
+  timestamp: Date;
+  field: 'searchVolume' | 'state' | 'relevance' | 'competitionLevel' | 'notes';
+  oldValue: string | number | undefined;
+  newValue: string | number | undefined;
+}
+
+// Campaign Plan for organizing keywords
+export interface CampaignPlan {
+  id: string;
+  name: string;
+  objective: string;
+  keywords: string[]; // keyword IDs
+  estimatedBudget: number;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// Mapping template for external imports
+export interface ImportMappingTemplate {
+  id: string;
+  name: string;
+  source: string; // e.g., 'Helium10', 'Publisher Rocket', 'Custom'
+  mappings: Record<string, string>; // external column -> internal field
+  createdAt: Date;
+}
+
 export interface Keyword {
   id: string;
   keyword: string;
@@ -37,6 +66,12 @@ export interface Keyword {
   intent?: IntentType;
   state?: KeywordState;
   variantGroup?: string;
+  // History tracking
+  history?: HistoryEntry[];
+  // Budget estimation
+  estimatedBudget?: number;
+  // Campaign plan assignment
+  campaignPlanId?: string;
 }
 
 export interface TargetASIN {
@@ -48,6 +83,11 @@ export interface TargetASIN {
   bsr?: number; // Best Seller Rank
   createdAt: Date;
   updatedAt: Date;
+  // New competitive analysis fields
+  title?: string;
+  amazonUrl?: string;
+  threatScore?: number; // 0-100
+  sharedKeywords?: number; // count of keywords in common
 }
 
 export interface AdvertisingCategory {
@@ -242,41 +282,75 @@ export const generateSuggestions = (keyword: string): string[] => {
   return suggestions.slice(0, 10);
 };
 
+// Estimate budget based on competition
+export const estimateBudget = (keyword: Keyword): number => {
+  const baseRate = 0.50; // Base CPC in dollars
+  const volumeMultiplier = Math.min(keyword.searchVolume / 1000, 5); // Max 5x for high volume
+  
+  let competitionMultiplier = 1;
+  switch (keyword.competitionLevel) {
+    case 'low': competitionMultiplier = 0.8; break;
+    case 'medium': competitionMultiplier = 1.5; break;
+    case 'high': competitionMultiplier = 2.5; break;
+  }
+  
+  // Daily budget estimate (30 clicks target)
+  return Math.round(baseRate * competitionMultiplier * (1 + volumeMultiplier * 0.2) * 30 * 100) / 100;
+};
+
+// Calculate ROI
+export const calculateROI = (
+  budget: number,
+  ctr: number, // 0-100
+  conversionRate: number, // 0-100
+  bookPrice: number
+): { impressions: number; clicks: number; sales: number; revenue: number; profit: number; roas: number } => {
+  const cpc = budget / 30; // Assume daily budget / 30 clicks
+  const clicks = Math.floor(budget / cpc);
+  const impressions = Math.round(clicks / (ctr / 100));
+  const sales = Math.round(clicks * (conversionRate / 100));
+  const revenue = sales * bookPrice;
+  const profit = revenue - budget;
+  const roas = budget > 0 ? (revenue / budget) : 0;
+  
+  return { impressions, clicks, sales, revenue, profit, roas };
+};
+
 // Example data generators
 export const getExampleKeywords = (marketplaceId: string): Omit<Keyword, 'id' | 'createdAt' | 'updatedAt'>[] => [
-  { keyword: 'meditación para principiantes', searchVolume: 3400, competitionLevel: 'low', campaignTypes: ['SP', 'SD'], notes: 'Keyword principal del nicho', marketplaceId, relevance: 'very-high', intent: 'purchase', state: 'pending' },
-  { keyword: 'mindfulness para principiantes', searchVolume: 3900, competitionLevel: 'medium', campaignTypes: ['SP', 'SD'], notes: 'Funciona muy bien', marketplaceId, relevance: 'very-high', intent: 'purchase', state: 'tested-works' },
-  { keyword: 'meditación diaria', searchVolume: 1600, competitionLevel: 'medium', campaignTypes: ['SP', 'SBV'], notes: '', marketplaceId, relevance: 'high', intent: 'research', state: 'pending' },
-  { keyword: 'guía de meditación ansiedad', searchVolume: 1200, competitionLevel: 'low', campaignTypes: ['SP', 'SD'], notes: '', marketplaceId, relevance: 'high', intent: 'problem', state: 'pending' },
-  { keyword: 'cómo meditar paso a paso', searchVolume: 2100, competitionLevel: 'low', campaignTypes: ['SP'], notes: 'Long-tail fuerte', marketplaceId, relevance: 'high', intent: 'research', state: 'low-competition' },
-  { keyword: 'respiración consciente', searchVolume: 900, competitionLevel: 'medium', campaignTypes: ['SP'], notes: '', marketplaceId, relevance: 'low', intent: 'research', state: 'pending' },
-  { keyword: 'mindfulness ejercicios cortos', searchVolume: 700, competitionLevel: 'low', campaignTypes: ['SP'], notes: '', marketplaceId, relevance: 'low', intent: 'purchase', state: 'pending' },
-  { keyword: 'reducir estrés mindfulness', searchVolume: 850, competitionLevel: 'high', campaignTypes: ['SD'], notes: '', marketplaceId, relevance: 'low', intent: 'problem', state: 'pending' },
-  { keyword: 'meditar en casa guía fácil', searchVolume: 500, competitionLevel: 'low', campaignTypes: ['SP'], notes: '', marketplaceId, relevance: 'high', intent: 'purchase', state: 'pending' },
-  { keyword: 'mindfulness para dormir', searchVolume: 1300, competitionLevel: 'medium', campaignTypes: ['SP'], notes: '', marketplaceId, relevance: 'high', intent: 'problem', state: 'pending' },
-  { keyword: 'técnicas de respiración', searchVolume: 1100, competitionLevel: 'medium', campaignTypes: ['SP'], notes: '', marketplaceId, relevance: 'low', intent: 'research', state: 'pending' },
-  { keyword: 'mindfulness ansiedad adultos', searchVolume: 920, competitionLevel: 'high', campaignTypes: ['SD'], notes: '', marketplaceId, relevance: 'high', intent: 'problem', state: 'discarded' },
-  { keyword: 'empezar meditación', searchVolume: 1500, competitionLevel: 'low', campaignTypes: ['SP'], notes: '', marketplaceId, relevance: 'high', intent: 'purchase', state: 'pending' },
-  { keyword: 'mindfulness para enfado', searchVolume: 400, competitionLevel: 'medium', campaignTypes: ['SP'], notes: '', marketplaceId, relevance: 'low', intent: 'research', state: 'pending' },
-  { keyword: 'relajación para ansiedad', searchVolume: 1250, competitionLevel: 'high', campaignTypes: ['SD'], notes: '', marketplaceId, relevance: 'low', intent: 'problem', state: 'tested-works' },
-  { keyword: 'meditación guiada estrés', searchVolume: 980, competitionLevel: 'medium', campaignTypes: ['SP', 'SD'], notes: '', marketplaceId, relevance: 'high', intent: 'problem', state: 'pending' },
-  { keyword: 'cómo calmar ansiedad', searchVolume: 3200, competitionLevel: 'high', campaignTypes: ['SD'], notes: '', marketplaceId, relevance: 'low', intent: 'problem', state: 'low-competition' },
-  { keyword: 'rutina mindfulness 10 minutos', searchVolume: 450, competitionLevel: 'low', campaignTypes: ['SP'], notes: '', marketplaceId, relevance: 'low', intent: 'research', state: 'pending' },
-  { keyword: 'mindfulness autores famosos', searchVolume: 250, competitionLevel: 'high', campaignTypes: ['SD'], notes: '', marketplaceId, relevance: 'none', intent: 'competition', state: 'discarded' },
-  { keyword: 'mejores libros mindfulness', searchVolume: 1800, competitionLevel: 'medium', campaignTypes: ['SP'], notes: '', marketplaceId, relevance: 'high', intent: 'purchase', state: 'tested-works' },
+  { keyword: 'meditación para principiantes', searchVolume: 3400, competitionLevel: 'low', campaignTypes: ['SP', 'SD'], notes: 'Keyword principal del nicho', marketplaceId, relevance: 'very-high', intent: 'purchase', state: 'pending', history: [] },
+  { keyword: 'mindfulness para principiantes', searchVolume: 3900, competitionLevel: 'medium', campaignTypes: ['SP', 'SD'], notes: 'Funciona muy bien', marketplaceId, relevance: 'very-high', intent: 'purchase', state: 'tested-works', history: [] },
+  { keyword: 'meditación diaria', searchVolume: 1600, competitionLevel: 'medium', campaignTypes: ['SP', 'SBV'], notes: '', marketplaceId, relevance: 'high', intent: 'research', state: 'pending', history: [] },
+  { keyword: 'guía de meditación ansiedad', searchVolume: 1200, competitionLevel: 'low', campaignTypes: ['SP', 'SD'], notes: '', marketplaceId, relevance: 'high', intent: 'problem', state: 'pending', history: [] },
+  { keyword: 'cómo meditar paso a paso', searchVolume: 2100, competitionLevel: 'low', campaignTypes: ['SP'], notes: 'Long-tail fuerte', marketplaceId, relevance: 'high', intent: 'research', state: 'low-competition', history: [] },
+  { keyword: 'respiración consciente', searchVolume: 900, competitionLevel: 'medium', campaignTypes: ['SP'], notes: '', marketplaceId, relevance: 'low', intent: 'research', state: 'pending', history: [] },
+  { keyword: 'mindfulness ejercicios cortos', searchVolume: 700, competitionLevel: 'low', campaignTypes: ['SP'], notes: '', marketplaceId, relevance: 'low', intent: 'purchase', state: 'pending', history: [] },
+  { keyword: 'reducir estrés mindfulness', searchVolume: 850, competitionLevel: 'high', campaignTypes: ['SD'], notes: '', marketplaceId, relevance: 'low', intent: 'problem', state: 'pending', history: [] },
+  { keyword: 'meditar en casa guía fácil', searchVolume: 500, competitionLevel: 'low', campaignTypes: ['SP'], notes: '', marketplaceId, relevance: 'high', intent: 'purchase', state: 'pending', history: [] },
+  { keyword: 'mindfulness para dormir', searchVolume: 1300, competitionLevel: 'medium', campaignTypes: ['SP'], notes: '', marketplaceId, relevance: 'high', intent: 'problem', state: 'pending', history: [] },
+  { keyword: 'técnicas de respiración', searchVolume: 1100, competitionLevel: 'medium', campaignTypes: ['SP'], notes: '', marketplaceId, relevance: 'low', intent: 'research', state: 'pending', history: [] },
+  { keyword: 'mindfulness ansiedad adultos', searchVolume: 920, competitionLevel: 'high', campaignTypes: ['SD'], notes: '', marketplaceId, relevance: 'high', intent: 'problem', state: 'discarded', history: [] },
+  { keyword: 'empezar meditación', searchVolume: 1500, competitionLevel: 'low', campaignTypes: ['SP'], notes: '', marketplaceId, relevance: 'high', intent: 'purchase', state: 'pending', history: [] },
+  { keyword: 'mindfulness para enfado', searchVolume: 400, competitionLevel: 'medium', campaignTypes: ['SP'], notes: '', marketplaceId, relevance: 'low', intent: 'research', state: 'pending', history: [] },
+  { keyword: 'relajación para ansiedad', searchVolume: 1250, competitionLevel: 'high', campaignTypes: ['SD'], notes: '', marketplaceId, relevance: 'low', intent: 'problem', state: 'tested-works', history: [] },
+  { keyword: 'meditación guiada estrés', searchVolume: 980, competitionLevel: 'medium', campaignTypes: ['SP', 'SD'], notes: '', marketplaceId, relevance: 'high', intent: 'problem', state: 'pending', history: [] },
+  { keyword: 'cómo calmar ansiedad', searchVolume: 3200, competitionLevel: 'high', campaignTypes: ['SD'], notes: '', marketplaceId, relevance: 'low', intent: 'problem', state: 'low-competition', history: [] },
+  { keyword: 'rutina mindfulness 10 minutos', searchVolume: 450, competitionLevel: 'low', campaignTypes: ['SP'], notes: '', marketplaceId, relevance: 'low', intent: 'research', state: 'pending', history: [] },
+  { keyword: 'mindfulness autores famosos', searchVolume: 250, competitionLevel: 'high', campaignTypes: ['SD'], notes: '', marketplaceId, relevance: 'none', intent: 'competition', state: 'discarded', history: [] },
+  { keyword: 'mejores libros mindfulness', searchVolume: 1800, competitionLevel: 'medium', campaignTypes: ['SP'], notes: '', marketplaceId, relevance: 'high', intent: 'purchase', state: 'tested-works', history: [] },
 ];
 
 export const getExampleASINs = (marketplaceId: string): Omit<TargetASIN, 'id' | 'createdAt' | 'updatedAt'>[] => [
-  { asin: 'B0C1K7L9Q2', campaignTypes: ['SP', 'SD'], notes: 'Libro top ventas', marketplaceId, bsr: 1520 },
-  { asin: 'B0B8Z4T1M5', campaignTypes: ['SP'], notes: '', marketplaceId, bsr: 8900 },
-  { asin: 'B09XH2FQJ7', campaignTypes: ['SD'], notes: 'Muy relevante', marketplaceId, bsr: 2200 },
-  { asin: 'B0D2N8C4W1', campaignTypes: ['SP', 'SD'], notes: '', marketplaceId, bsr: 3100 },
-  { asin: 'B0A7M3P9L8', campaignTypes: ['SP'], notes: '', marketplaceId, bsr: 4500 },
-  { asin: 'B098H5T2R4', campaignTypes: ['SD'], notes: '', marketplaceId, bsr: 1700 },
-  { asin: 'B0C9F1W6M3', campaignTypes: ['SP'], notes: '', marketplaceId, bsr: 980 },
-  { asin: 'B0B4N6Q8S7', campaignTypes: ['SP'], notes: '', marketplaceId, bsr: 6500 },
-  { asin: 'B0D5K2M1Y9', campaignTypes: ['SD'], notes: '', marketplaceId, bsr: 14000 },
-  { asin: 'B09T3L7H2V', campaignTypes: ['SP'], notes: '', marketplaceId, bsr: 2700 },
+  { asin: 'B0C1K7L9Q2', campaignTypes: ['SP', 'SD'], notes: 'Libro top ventas', marketplaceId, bsr: 1520, title: 'Mindfulness: Guía Completa', amazonUrl: `https://amazon.com/dp/B0C1K7L9Q2`, threatScore: 85, sharedKeywords: 12 },
+  { asin: 'B0B8Z4T1M5', campaignTypes: ['SP'], notes: '', marketplaceId, bsr: 8900, title: 'Meditación para Todos', amazonUrl: `https://amazon.com/dp/B0B8Z4T1M5`, threatScore: 45, sharedKeywords: 5 },
+  { asin: 'B09XH2FQJ7', campaignTypes: ['SD'], notes: 'Muy relevante', marketplaceId, bsr: 2200, title: 'Calma Interior', amazonUrl: `https://amazon.com/dp/B09XH2FQJ7`, threatScore: 72, sharedKeywords: 9 },
+  { asin: 'B0D2N8C4W1', campaignTypes: ['SP', 'SD'], notes: '', marketplaceId, bsr: 3100, title: 'El Arte de Meditar', amazonUrl: `https://amazon.com/dp/B0D2N8C4W1`, threatScore: 65, sharedKeywords: 7 },
+  { asin: 'B0A7M3P9L8', campaignTypes: ['SP'], notes: '', marketplaceId, bsr: 4500, title: 'Respiración Consciente', amazonUrl: `https://amazon.com/dp/B0A7M3P9L8`, threatScore: 55, sharedKeywords: 4 },
+  { asin: 'B098H5T2R4', campaignTypes: ['SD'], notes: '', marketplaceId, bsr: 1700, title: 'Mindfulness Práctico', amazonUrl: `https://amazon.com/dp/B098H5T2R4`, threatScore: 78, sharedKeywords: 10 },
+  { asin: 'B0C9F1W6M3', campaignTypes: ['SP'], notes: '', marketplaceId, bsr: 980, title: 'Paz Mental', amazonUrl: `https://amazon.com/dp/B0C9F1W6M3`, threatScore: 88, sharedKeywords: 14 },
+  { asin: 'B0B4N6Q8S7', campaignTypes: ['SP'], notes: '', marketplaceId, bsr: 6500, title: 'Bienestar Emocional', amazonUrl: `https://amazon.com/dp/B0B4N6Q8S7`, threatScore: 35, sharedKeywords: 3 },
+  { asin: 'B0D5K2M1Y9', campaignTypes: ['SD'], notes: '', marketplaceId, bsr: 14000, title: 'Ejercicios de Relajación', amazonUrl: `https://amazon.com/dp/B0D5K2M1Y9`, threatScore: 20, sharedKeywords: 2 },
+  { asin: 'B09T3L7H2V', campaignTypes: ['SP'], notes: '', marketplaceId, bsr: 2700, title: 'Vivir en Calma', amazonUrl: `https://amazon.com/dp/B09T3L7H2V`, threatScore: 68, sharedKeywords: 8 },
 ];
 
 export const getExampleCategories = (marketplaceId: string): Omit<AdvertisingCategory, 'id' | 'createdAt' | 'updatedAt'>[] => [
