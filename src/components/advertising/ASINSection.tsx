@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Plus, Trash2, Target, Search, Upload } from 'lucide-react';
+import { Plus, Trash2, Target, Search, Upload, Swords } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -16,11 +16,14 @@ import { InlineEditableCell } from './InlineEditableCell';
 import { InlineCampaignTypeSelect } from './InlineCampaignTypeSelect';
 import { BulkASINImport } from './BulkASINImport';
 import { BulkASINCopyTools } from './BulkASINCopyTools';
-import { type TargetASIN, type CampaignType } from '@/types/advertising';
+import { CompetitiveAnalysisPanel } from './CompetitiveAnalysisPanel';
+import { type TargetASIN, type CampaignType, type Keyword } from '@/types/advertising';
 import { useToast } from '@/hooks/use-toast';
 
 interface ASINSectionProps {
   asins: TargetASIN[];
+  keywords: Keyword[];
+  bookTitle: string;
   onAdd: (asin: Omit<TargetASIN, 'id' | 'createdAt' | 'updatedAt'>) => void;
   onAddBulk: (asins: Array<Omit<TargetASIN, 'id' | 'createdAt' | 'updatedAt'>>) => void;
   onUpdate: (id: string, asin: Partial<TargetASIN>) => void;
@@ -31,6 +34,8 @@ interface ASINSectionProps {
 
 export const ASINSection = ({
   asins,
+  keywords,
+  bookTitle,
   onAdd,
   onAddBulk,
   onUpdate,
@@ -43,6 +48,7 @@ export const ASINSection = ({
   const [quickAddASIN, setQuickAddASIN] = useState('');
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [showBulkImport, setShowBulkImport] = useState(false);
+  const [showCompetitiveAnalysis, setShowCompetitiveAnalysis] = useState(false);
 
   const handleQuickAdd = () => {
     const asinValue = quickAddASIN.toUpperCase().trim();
@@ -138,6 +144,17 @@ export const ASINSection = ({
         </div>
         <div className="flex items-center gap-2">
           <BulkASINCopyTools asins={asins} selectedIds={selectedIds} />
+          {asins.length > 0 && keywords.length > 0 && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowCompetitiveAnalysis(true)}
+              className="gap-2"
+            >
+              <Swords className="w-4 h-4" />
+              Análisis competitivo
+            </Button>
+          )}
           <Button
             variant="outline"
             size="sm"
@@ -311,6 +328,15 @@ export const ASINSection = ({
         onImport={handleBulkImport}
         existingASINs={asins.map((a) => a.asin)}
         marketplaceId={marketplaceId}
+      />
+
+      {/* Competitive Analysis Modal */}
+      <CompetitiveAnalysisPanel
+        asins={asins}
+        keywords={keywords}
+        bookTitle={bookTitle}
+        isOpen={showCompetitiveAnalysis}
+        onClose={() => setShowCompetitiveAnalysis(false)}
       />
     </div>
   );
