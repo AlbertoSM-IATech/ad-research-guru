@@ -120,7 +120,7 @@ export const BulkASINImport = ({
         <DialogHeader>
           <DialogTitle className="font-heading flex items-center gap-2">
             <Upload className="w-5 h-5" />
-            Añadir ASINs en Lote
+            Importar ASINs en Lote
           </DialogTitle>
         </DialogHeader>
 

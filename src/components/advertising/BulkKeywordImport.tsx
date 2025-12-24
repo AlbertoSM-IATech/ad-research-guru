@@ -20,7 +20,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { InfoTooltip } from './InfoTooltip';
+import { ImportHelpTooltip } from './ImportHelpTooltip';
 import { InlineCampaignTypeSelect } from './InlineCampaignTypeSelect';
 import { InlineCompetitionLevelSelect } from './InlineCompetitionLevelSelect';
 import { InlineSelectBadge } from './InlineSelectBadge';
@@ -170,7 +170,8 @@ export const BulkKeywordImport = ({
         <DialogHeader>
           <DialogTitle className="font-heading flex items-center gap-2">
             <Upload className="w-5 h-5" />
-            Añadir Keywords en Lote
+            Importar Keywords en Lote
+            <ImportHelpTooltip type="keywords" />
           </DialogTitle>
         </DialogHeader>
 
