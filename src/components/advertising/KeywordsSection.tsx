@@ -32,7 +32,7 @@ import { AdvancedFilters, type AdvancedFiltersState } from './AdvancedFilters';
 import { KeywordCardView } from './KeywordCardView';
 import { KeywordHistoryModal } from './KeywordHistoryModal';
 import { VariantDetector } from './VariantDetector';
-import { AIAutoClassifier } from './AIAutoClassifier';
+// AIAutoClassifier removed - IA now unified in AIAssistantDrawer
 import {
   type Keyword,
   type CampaignType,
@@ -322,17 +322,7 @@ export const KeywordsSection = ({
               toast({ title: 'Variantes separadas' });
             }}
           />
-          <AIAutoClassifier
-            keywords={keywords}
-            selectedIds={Array.from(selectedIds)}
-            bookInfo={bookInfo}
-            marketplaceId={marketplaceId}
-            onUpdateKeywords={(ids, updates) => {
-              ids.forEach((id, i) => {
-                onUpdate(id, updates[i]);
-              });
-            }}
-          />
+          {/* AIAutoClassifier removed - IA ahora unificada en el drawer lateral */}
           <Button variant="outline" size="sm" onClick={() => setIsBulkImportOpen(true)} className="gap-2">
             <Upload className="w-4 h-4" />
             Añadir palabras clave en lote
