@@ -21,6 +21,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { ImportHelpTooltip } from './ImportHelpTooltip';
+import { InfoTooltip } from './InfoTooltip';
 import { InlineCampaignTypeSelect } from './InlineCampaignTypeSelect';
 import { InlineCompetitionLevelSelect } from './InlineCompetitionLevelSelect';
 import { InlineSelectBadge } from './InlineSelectBadge';
