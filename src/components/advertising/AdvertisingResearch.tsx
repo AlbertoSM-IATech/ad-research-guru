@@ -19,7 +19,7 @@ import { AdvancedImportModal } from './AdvancedImportModal';
 import { CampaignPlanManager } from './CampaignPlanManager';
 import { GuidedTour, useTourStatus } from './GuidedTour';
 import { KeyboardShortcutsManager } from './KeyboardShortcutsManager';
-import { AIChatPanel } from './AIChatPanel';
+import { AIAssistantDrawer } from './AIAssistantDrawer';
 import { HeaderOverflowMenu } from './HeaderOverflowMenu';
 import { isAIDemoMode, toggleAIDemoMode } from '@/lib/ai-demo-service';
 import { 
@@ -71,6 +71,11 @@ export const AdvertisingResearch = () => {
   
   // AI Assistant state - React controlled
   const [isAIAssistantOpen, setIsAIAssistantOpen] = useState(false);
+  
+  // Selection states for each tab
+  const [selectedKeywordIds, setSelectedKeywordIds] = useState<string[]>([]);
+  const [selectedAsinIds, setSelectedAsinIds] = useState<string[]>([]);
+  const [selectedCategoryIds, setSelectedCategoryIds] = useState<string[]>([]);
   
   const [bookInfo, setBookInfo] = useState<BookInfo>({
     title: '',
@@ -694,14 +699,23 @@ export const AdvertisingResearch = () => {
         onClose={() => setShowCampaignPlanner(false)}
       />
       
-      {/* AI Chat Panel - Controlado por estado, único punto de IA */}
-      <AIChatPanel
-        bookInfo={bookInfo}
-        keywords={currentKeywords}
-        asins={currentASINs}
-        marketplaceId={selectedMarketplace}
+      {/* AI Assistant Drawer - Único punto de IA */}
+      <AIAssistantDrawer
         isOpen={isAIAssistantOpen}
         onOpenChange={setIsAIAssistantOpen}
+        marketplaceId={selectedMarketplace}
+        bookInfo={bookInfo}
+        activeTab={activeTab as 'keywords' | 'asins' | 'categories'}
+        onChangeActiveTab={(tab) => setActiveTab(tab)}
+        keywords={currentKeywords}
+        asins={currentASINs}
+        categories={currentCategories}
+        selectedKeywordIds={selectedKeywordIds}
+        selectedAsinIds={selectedAsinIds}
+        selectedCategoryIds={selectedCategoryIds}
+        onAddKeywords={handleAddBulkKeywords}
+        onUpdateKeywords={handleUpdateBulkKeywords}
+        onUpdateBookInfo={(updates) => setBookInfo(prev => ({ ...prev, ...updates }))}
       />
     </div>
   );
