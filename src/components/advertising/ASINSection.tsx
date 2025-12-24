@@ -30,6 +30,9 @@ interface ASINSectionProps {
   onDelete: (id: string) => void;
   onDeleteBulk: (ids: string[]) => void;
   marketplaceId: string;
+  // Lifted selection state
+  selectedIds: Set<string>;
+  onSelectedIdsChange: (ids: Set<string>) => void;
 }
 
 export const ASINSection = ({
@@ -42,11 +45,12 @@ export const ASINSection = ({
   onDelete,
   onDeleteBulk,
   marketplaceId,
+  selectedIds,
+  onSelectedIdsChange,
 }: ASINSectionProps) => {
   const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState('');
   const [quickAddASIN, setQuickAddASIN] = useState('');
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [showBulkImport, setShowBulkImport] = useState(false);
   const [showCompetitiveAnalysis, setShowCompetitiveAnalysis] = useState(false);
 
@@ -105,29 +109,28 @@ export const ASINSection = ({
 
   const toggleSelectAll = () => {
     if (selectedIds.size === filteredASINs.length) {
-      setSelectedIds(new Set());
+      onSelectedIdsChange(new Set());
     } else {
-      setSelectedIds(new Set(filteredASINs.map((a) => a.id)));
+      onSelectedIdsChange(new Set(filteredASINs.map((a) => a.id)));
     }
   };
 
   const toggleSelect = (id: string) => {
-    setSelectedIds((prev) => {
-      const newSet = new Set(prev);
-      if (newSet.has(id)) {
-        newSet.delete(id);
-      } else {
-        newSet.add(id);
-      }
-      return newSet;
-    });
+    const newSet = new Set(selectedIds);
+    if (newSet.has(id)) {
+      newSet.delete(id);
+    } else {
+      newSet.add(id);
+    }
+    onSelectedIdsChange(newSet);
   };
 
   const handleDeleteSelected = () => {
     if (selectedIds.size === 0) return;
+    const count = selectedIds.size;
     onDeleteBulk(Array.from(selectedIds));
-    setSelectedIds(new Set());
-    toast({ title: `${selectedIds.size} ASINs eliminados` });
+    onSelectedIdsChange(new Set());
+    toast({ title: `${count} ASINs eliminados` });
   };
 
   const filteredASINs = asins.filter((a) =>

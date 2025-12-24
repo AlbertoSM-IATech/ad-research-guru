@@ -72,10 +72,34 @@ export const AdvertisingResearch = () => {
   // AI Assistant state - React controlled
   const [isAIAssistantOpen, setIsAIAssistantOpen] = useState(false);
   
-  // Selection states for each tab
-  const [selectedKeywordIds, setSelectedKeywordIds] = useState<string[]>([]);
-  const [selectedAsinIds, setSelectedAsinIds] = useState<string[]>([]);
-  const [selectedCategoryIds, setSelectedCategoryIds] = useState<string[]>([]);
+  // Selection states for each tab - lifted from sections for AIAssistant access
+  const [selection, setSelection] = useState<{
+    keywords: Set<string>;
+    asins: Set<string>;
+    categories: Set<string>;
+  }>({
+    keywords: new Set(),
+    asins: new Set(),
+    categories: new Set(),
+  });
+
+  // Selection helpers
+  const setTabSelection = useCallback((tab: 'keywords' | 'asins' | 'categories', nextSet: Set<string>) => {
+    setSelection(prev => ({ ...prev, [tab]: nextSet }));
+  }, []);
+
+  const clearTabSelection = useCallback((tab: 'keywords' | 'asins' | 'categories') => {
+    setSelection(prev => ({ ...prev, [tab]: new Set() }));
+  }, []);
+
+  const clearAllSelection = useCallback(() => {
+    setSelection({ keywords: new Set(), asins: new Set(), categories: new Set() });
+  }, []);
+
+  // Clear selection when marketplace changes (don't mix IDs between markets)
+  useEffect(() => {
+    clearAllSelection();
+  }, [selectedMarketplace, clearAllSelection]);
   
   const [bookInfo, setBookInfo] = useState<BookInfo>({
     title: '',
@@ -575,7 +599,9 @@ export const AdvertisingResearch = () => {
                 onDeleteBulk={handleDeleteBulkKeywords} 
                 onUpdateBulk={handleUpdateBulkKeywords} 
                 marketplaceId={selectedMarketplace} 
-                bookInfo={bookInfo} 
+                bookInfo={bookInfo}
+                selectedIds={selection.keywords}
+                onSelectedIdsChange={(ids) => setTabSelection('keywords', ids)}
               />
             </TabsContent>
             <TabsContent value="asins" className="mt-4">
@@ -588,7 +614,9 @@ export const AdvertisingResearch = () => {
                 onUpdate={handleUpdateASIN} 
                 onDelete={handleDeleteASIN} 
                 onDeleteBulk={handleDeleteBulkASINs} 
-                marketplaceId={selectedMarketplace} 
+                marketplaceId={selectedMarketplace}
+                selectedIds={selection.asins}
+                onSelectedIdsChange={(ids) => setTabSelection('asins', ids)}
               />
             </TabsContent>
             <TabsContent value="categories" className="mt-4">
@@ -599,7 +627,9 @@ export const AdvertisingResearch = () => {
                 onUpdate={handleUpdateCategory} 
                 onDelete={handleDeleteCategory} 
                 onDeleteBulk={handleDeleteBulkCategories} 
-                marketplaceId={selectedMarketplace} 
+                marketplaceId={selectedMarketplace}
+                selectedIds={selection.categories}
+                onSelectedIdsChange={(ids) => setTabSelection('categories', ids)}
               />
             </TabsContent>
           </Tabs>
@@ -710,9 +740,9 @@ export const AdvertisingResearch = () => {
         keywords={currentKeywords}
         asins={currentASINs}
         categories={currentCategories}
-        selectedKeywordIds={selectedKeywordIds}
-        selectedAsinIds={selectedAsinIds}
-        selectedCategoryIds={selectedCategoryIds}
+        selectedKeywordIds={Array.from(selection.keywords)}
+        selectedAsinIds={Array.from(selection.asins)}
+        selectedCategoryIds={Array.from(selection.categories)}
         onAddKeywords={handleAddBulkKeywords}
         onUpdateKeywords={handleUpdateBulkKeywords}
         onUpdateBookInfo={(updates) => setBookInfo(prev => ({ ...prev, ...updates }))}
