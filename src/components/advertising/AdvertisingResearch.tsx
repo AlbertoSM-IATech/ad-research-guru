@@ -23,7 +23,9 @@ import { AIAssistantDrawer } from './ai/AIAssistantDrawer';
 import { HeaderOverflowMenu } from './HeaderOverflowMenu';
 import { BackupImportModal } from './BackupImportModal';
 import { isAIDemoMode, toggleAIDemoMode } from '@/lib/ai-demo-service';
-import { loadPersistedState, usePersistence } from '@/hooks/useLocalPersistence';
+import { loadPersistedState, usePersistence, getLastSyncAt } from '@/hooks/useLocalPersistence';
+import { type BackupSummary } from './BackupImportModal';
+import { toast } from 'sonner';
 import { 
   Collapsible,
   CollapsibleContent,
@@ -51,9 +53,32 @@ const isBookContextComplete = (bookInfo: BookInfo): boolean => {
   return !!(bookInfo.title && bookInfo.title.trim().length > 0);
 };
 
+// Helper to format last sync time
+const formatLastSync = (date: Date | null): string => {
+  if (!date) return '—';
+  
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffSec = Math.floor(diffMs / 1000);
+  const diffMin = Math.floor(diffSec / 60);
+  
+  if (diffSec < 60) return 'hace unos segundos';
+  if (diffMin < 60) return `hace ${diffMin} min`;
+  
+  // Format as DD/MM HH:MM
+  const day = date.getDate().toString().padStart(2, '0');
+  const month = (date.getMonth() + 1).toString().padStart(2, '0');
+  const hours = date.getHours().toString().padStart(2, '0');
+  const minutes = date.getMinutes().toString().padStart(2, '0');
+  return `${day}/${month} ${hours}:${minutes}`;
+};
+
 export const AdvertisingResearch = () => {
   // Hydration flag - must be first
   const [hasHydrated, setHasHydrated] = useState(false);
+  
+  // Last sync indicator
+  const [lastSyncAt, setLastSyncAt] = useState<Date | null>(null);
   
   const [selectedMarketplace, setSelectedMarketplace] = useState('us');
   const [activeTab, setActiveTab] = useState<'keywords' | 'asins' | 'categories'>('keywords');
@@ -139,8 +164,21 @@ export const AdvertisingResearch = () => {
       // Skip loading demo data if we have persisted data
       setHasLoadedExamples(true);
     }
+    // Set initial last sync time
+    setLastSyncAt(getLastSyncAt());
     setHasHydrated(true);
   }, []);
+
+  // ============= LAST SYNC REFRESH (every 10s) =============
+  useEffect(() => {
+    if (!hasHydrated) return;
+    
+    const interval = setInterval(() => {
+      setLastSyncAt(getLastSyncAt());
+    }, 10000);
+    
+    return () => clearInterval(interval);
+  }, [hasHydrated]);
 
   // ============= PERSISTENCE TO LOCALSTORAGE =============
   usePersistence(
@@ -535,9 +573,8 @@ export const AdvertisingResearch = () => {
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
     
-    import('sonner').then(({ toast }) => {
-      toast.success('Backup exportado');
-    });
+    toast.success('Backup exportado');
+    toast.info(`Archivo: ${filename}`, { duration: 4000 });
   }, [selectedMarketplace, activeTab, bookInfo, keywordsByMarket, asinsByMarket, categoriesByMarket, campaignPlansByMarket, showInsights]);
 
   // Import backup handler - restores state from imported data
@@ -550,7 +587,7 @@ export const AdvertisingResearch = () => {
     categoriesByMarket: Record<string, AdvertisingCategory[]>;
     campaignPlansByMarket: Record<string, CampaignPlan[]>;
     showInsights?: boolean;
-  }) => {
+  }, summary: BackupSummary) => {
     // Set all states from imported data
     setSelectedMarketplace(data.selectedMarketplace);
     setActiveTab(data.activeTab);
@@ -571,6 +608,13 @@ export const AdvertisingResearch = () => {
     
     // Close backup modal
     setShowBackupImportModal(false);
+    
+    // Show success toasts
+    toast.success('Backup importado correctamente');
+    toast.info(
+      `Markets: ${summary.markets} | Keywords: ${summary.keywords} | ASINs: ${summary.asins} | Categorías: ${summary.categories}`,
+      { duration: 5000 }
+    );
   }, []);
 
   // Education sections (accessible from overflow menu)
@@ -605,10 +649,16 @@ export const AdvertisingResearch = () => {
         {/* === HEADER === Minimalista y profesional */}
         <header className="mb-6">
           <div className="flex items-center justify-between gap-4 flex-wrap">
-            {/* Title */}
-            <h1 className="font-heading text-2xl font-bold text-foreground">
-              Investigación Publicitaria
-            </h1>
+            {/* Title + Sync indicator */}
+            <div className="flex items-center gap-3">
+              <h1 className="font-heading text-2xl font-bold text-foreground">
+                Investigación Publicitaria
+              </h1>
+              {/* Last sync indicator - Desktop */}
+              <span className="hidden md:inline text-xs text-muted-foreground">
+                Última sincronización: {formatLastSync(lastSyncAt)}
+              </span>
+            </div>
             
             {/* Controls */}
             <div className="flex items-center gap-3">
@@ -663,6 +713,11 @@ export const AdvertisingResearch = () => {
                 onImportBackup={() => setShowBackupImportModal(true)}
               />
             </div>
+          </div>
+          
+          {/* Last sync indicator - Mobile */}
+          <div className="md:hidden mt-2 text-xs text-muted-foreground">
+            Última sincronización: {formatLastSync(lastSyncAt)}
           </div>
           
           {/* Mobile search */}
