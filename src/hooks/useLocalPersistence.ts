@@ -115,12 +115,46 @@ export interface UsePersistenceOptions {
   showInsights: boolean;
 }
 
+export interface UsePersistenceReturn {
+  saveNow: () => void;
+}
+
 export function usePersistence(
   state: UsePersistenceOptions,
   hasHydrated: boolean,
   onSave?: () => void
-): void {
+): UsePersistenceReturn {
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const stateRef = useRef(state);
+  
+  // Keep stateRef updated
+  useEffect(() => {
+    stateRef.current = state;
+  }, [state]);
+  
+  // Force save function (no debounce)
+  const saveNow = useCallback(() => {
+    if (!hasHydrated) return;
+    
+    // Clear any pending debounce
+    if (debounceRef.current) {
+      clearTimeout(debounceRef.current);
+      debounceRef.current = null;
+    }
+    
+    // Save immediately
+    savePersistedState({
+      selectedMarketplace: stateRef.current.selectedMarketplace,
+      activeTab: stateRef.current.activeTab,
+      bookInfo: stateRef.current.bookInfo,
+      keywordsByMarket: stateRef.current.keywordsByMarket,
+      asinsByMarket: stateRef.current.asinsByMarket,
+      categoriesByMarket: stateRef.current.categoriesByMarket,
+      campaignPlansByMarket: stateRef.current.campaignPlansByMarket,
+      showInsights: stateRef.current.showInsights,
+    });
+    onSave?.();
+  }, [hasHydrated, onSave]);
   
   // Debounced save effect
   useEffect(() => {
@@ -163,4 +197,6 @@ export function usePersistence(
     state.showInsights,
     onSave,
   ]);
+  
+  return { saveNow };
 }

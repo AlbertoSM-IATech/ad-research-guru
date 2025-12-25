@@ -1,5 +1,5 @@
 import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
-import { Search, Target, FolderOpen, BarChart3, Sparkles } from 'lucide-react';
+import { Search, Target, FolderOpen, BarChart3, Sparkles, Save } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
@@ -31,6 +31,12 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { ChevronDown, TrendingUp } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { 
@@ -80,6 +86,9 @@ export const AdvertisingResearch = () => {
   // Last sync indicator
   const [lastSyncAt, setLastSyncAt] = useState<Date | null>(null);
   const [isSyncing, setIsSyncing] = useState(false);
+  
+  // Sync history (last 5 syncs)
+  const [syncHistory, setSyncHistory] = useState<Date[]>([]);
   
   // Pending changes counter
   const [pendingChangesCount, setPendingChangesCount] = useState(0);
@@ -230,14 +239,17 @@ export const AdvertisingResearch = () => {
 
   // ============= PERSISTENCE TO LOCALSTORAGE =============
   const handleSyncComplete = useCallback(() => {
-    setLastSyncAt(new Date());
+    const now = new Date();
+    setLastSyncAt(now);
     setIsSyncing(true);
     setPendingChangesCount(0); // Reset pending changes
+    // Add to sync history (keep last 5)
+    setSyncHistory(prev => [now, ...prev].slice(0, 5));
     // Reset syncing animation after 1.5s
     setTimeout(() => setIsSyncing(false), 1500);
   }, []);
 
-  usePersistence(
+  const { saveNow } = usePersistence(
     {
       selectedMarketplace,
       activeTab,
@@ -251,6 +263,12 @@ export const AdvertisingResearch = () => {
     hasHydrated,
     handleSyncComplete
   );
+  
+  // Handle manual save
+  const handleSaveNow = useCallback(() => {
+    saveNow();
+    toast.success('Guardado manualmente');
+  }, [saveNow]);
 
   const bookContextComplete = isBookContextComplete(bookInfo);
   
@@ -716,8 +734,8 @@ export const AdvertisingResearch = () => {
                 Investigación Publicitaria
               </h1>
               {/* Sync status indicators - Desktop */}
-              <div className="hidden md:flex items-center gap-3">
-                {/* Pending changes indicator */}
+              <div className="hidden md:flex items-center gap-2">
+                {/* Pending changes indicator + Save Now button */}
                 <span 
                   className={`inline-flex items-center gap-1.5 text-xs transition-all duration-300 ${
                     pendingChangesCount > 0 
@@ -737,14 +755,54 @@ export const AdvertisingResearch = () => {
                     : 'Todo sincronizado'}
                 </span>
                 
-                {/* Last sync time */}
-                <span 
-                  className={`inline-flex items-center gap-1.5 text-xs text-muted-foreground transition-all duration-300 ${
-                    isSyncing ? 'text-primary' : ''
-                  }`}
-                >
-                  Última sincronización: {formatLastSync(lastSyncAt)}
-                </span>
+                {/* Save Now button - only show when there are pending changes */}
+                {pendingChangesCount > 0 && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 px-2 text-xs gap-1 text-amber-600 dark:text-amber-400 hover:text-amber-700 dark:hover:text-amber-300"
+                    onClick={handleSaveNow}
+                  >
+                    <Save className="w-3 h-3" />
+                    Guardar
+                  </Button>
+                )}
+                
+                {/* Last sync time with history tooltip */}
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span 
+                        className={`inline-flex items-center gap-1.5 text-xs text-muted-foreground transition-all duration-300 cursor-help ${
+                          isSyncing ? 'text-primary' : ''
+                        }`}
+                      >
+                        Última sincronización: {formatLastSync(lastSyncAt)}
+                      </span>
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom" className="max-w-xs">
+                      <div className="space-y-1">
+                        <p className="font-medium text-xs">Historial de sincronización</p>
+                        {syncHistory.length === 0 ? (
+                          <p className="text-xs text-muted-foreground">Sin sincronizaciones recientes</p>
+                        ) : (
+                          <ul className="text-xs space-y-0.5">
+                            {syncHistory.map((date, i) => (
+                              <li key={i} className="text-muted-foreground">
+                                {date.toLocaleTimeString('es-ES', { 
+                                  hour: '2-digit', 
+                                  minute: '2-digit', 
+                                  second: '2-digit' 
+                                })}
+                                {i === 0 && <span className="ml-1 text-green-500">(última)</span>}
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                      </div>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
               </div>
             </div>
             
@@ -810,7 +868,7 @@ export const AdvertisingResearch = () => {
           </div>
           
           {/* Sync status indicators - Mobile */}
-          <div className="md:hidden mt-2 flex flex-wrap items-center gap-x-4 gap-y-1">
+          <div className="md:hidden mt-2 flex flex-wrap items-center gap-x-3 gap-y-1">
             {/* Pending changes indicator */}
             <span 
               className={`inline-flex items-center gap-1.5 text-xs transition-all duration-300 ${
@@ -827,18 +885,58 @@ export const AdvertisingResearch = () => {
                 } ${isSyncing ? 'animate-pulse scale-125' : ''}`}
               />
               {pendingChangesCount > 0 
-                ? `Cambios pendientes: ${pendingChangesCount}` 
-                : 'Todo sincronizado'}
+                ? `Pendientes: ${pendingChangesCount}` 
+                : 'Sincronizado'}
             </span>
             
-            {/* Last sync time */}
-            <span 
-              className={`inline-flex items-center gap-1.5 text-xs text-muted-foreground transition-all duration-300 ${
-                isSyncing ? 'text-primary' : ''
-              }`}
-            >
-              Última sincronización: {formatLastSync(lastSyncAt)}
-            </span>
+            {/* Save Now button - mobile */}
+            {pendingChangesCount > 0 && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-5 px-1.5 text-[10px] gap-0.5 text-amber-600 dark:text-amber-400"
+                onClick={handleSaveNow}
+              >
+                <Save className="w-3 h-3" />
+                Guardar
+              </Button>
+            )}
+            
+            {/* Last sync time with history tooltip */}
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span 
+                    className={`inline-flex items-center gap-1.5 text-xs text-muted-foreground transition-all duration-300 cursor-help ${
+                      isSyncing ? 'text-primary' : ''
+                    }`}
+                  >
+                    Sync: {formatLastSync(lastSyncAt)}
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent side="bottom" className="max-w-xs">
+                  <div className="space-y-1">
+                    <p className="font-medium text-xs">Historial</p>
+                    {syncHistory.length === 0 ? (
+                      <p className="text-xs text-muted-foreground">Sin sincronizaciones</p>
+                    ) : (
+                      <ul className="text-xs space-y-0.5">
+                        {syncHistory.map((date, i) => (
+                          <li key={i} className="text-muted-foreground">
+                            {date.toLocaleTimeString('es-ES', { 
+                              hour: '2-digit', 
+                              minute: '2-digit', 
+                              second: '2-digit' 
+                            })}
+                            {i === 0 && <span className="ml-1 text-green-500">(última)</span>}
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           </div>
           
           {/* Mobile search */}
