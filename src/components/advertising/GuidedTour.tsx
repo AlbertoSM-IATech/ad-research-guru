@@ -309,24 +309,40 @@ export const GuidedTour = ({ isOpen, onClose, onComplete, onRequestUIState }: Gu
 
   return (
     <div className="fixed inset-0 z-[100] pointer-events-none">
-      {/* Semi-transparent overlay with cutout for target */}
+      {/* Semi-transparent overlay - NO blur so highlighted elements stay crisp */}
       <div 
-        className="absolute inset-0 bg-background/60 backdrop-blur-[2px] pointer-events-auto"
+        className="absolute inset-0 bg-black/50 pointer-events-auto"
         onClick={handleSkip}
       />
 
-      {/* Highlight box around target element */}
+      {/* Highlight box around target element - creates clear "window" */}
       {targetRect && !targetNotFound && (
-        <div
-          className="absolute border-2 border-primary rounded-lg shadow-lg shadow-primary/30 pointer-events-none animate-pulse"
-          style={{
-            top: targetRect.top - 4,
-            left: targetRect.left - 4,
-            width: targetRect.width + 8,
-            height: targetRect.height + 8,
-            boxShadow: '0 0 0 9999px rgba(0, 0, 0, 0.4)',
-          }}
-        />
+        <>
+          {/* Clear window over the target - removes the dark overlay in this area */}
+          <div
+            className="absolute bg-transparent pointer-events-none"
+            style={{
+              top: targetRect.top - 8,
+              left: targetRect.left - 8,
+              width: targetRect.width + 16,
+              height: targetRect.height + 16,
+              boxShadow: '0 0 0 9999px rgba(0, 0, 0, 0.6)',
+              borderRadius: '12px',
+            }}
+          />
+          {/* Border highlight */}
+          <div
+            className="absolute border-2 border-primary rounded-lg pointer-events-none"
+            style={{
+              top: targetRect.top - 4,
+              left: targetRect.left - 4,
+              width: targetRect.width + 8,
+              height: targetRect.height + 8,
+              boxShadow: '0 0 20px 4px hsl(var(--primary) / 0.4)',
+              animation: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+            }}
+          />
+        </>
       )}
 
       {/* Tour Card */}
