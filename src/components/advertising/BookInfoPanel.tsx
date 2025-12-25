@@ -22,7 +22,7 @@ export const BookInfoPanel = ({ bookInfo, onChange }: BookInfoPanelProps) => {
   const [isOpen, setIsOpen] = useState(true);
 
   return (
-    <div className="rounded-xl border border-primary/20 bg-gradient-to-br from-primary/5 to-accent/5 overflow-hidden">
+    <div data-tour="book-info" className="rounded-xl border border-primary/20 bg-gradient-to-br from-primary/5 to-accent/5 overflow-hidden">
       <Collapsible open={isOpen} onOpenChange={setIsOpen}>
         <CollapsibleTrigger className="w-full px-6 py-4 flex items-center justify-between hover:bg-muted/30 transition-colors">
           <div className="flex items-center gap-3">

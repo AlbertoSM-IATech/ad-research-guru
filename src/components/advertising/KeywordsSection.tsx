@@ -291,7 +291,7 @@ export const KeywordsSection = ({
   );
 
   return (
-    <div className="space-y-6 animate-fade-in">
+    <div data-tour="keywords-section" className="space-y-6 animate-fade-in">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-2">
@@ -338,7 +338,7 @@ export const KeywordsSection = ({
             }}
           />
           {/* AIAutoClassifier removed - IA ahora unificada en el drawer lateral */}
-          <Button variant="outline" size="sm" onClick={() => setIsBulkImportOpen(true)} className="gap-2">
+          <Button data-tour="bulk-import" variant="outline" size="sm" onClick={() => setIsBulkImportOpen(true)} className="gap-2">
             <Upload className="w-4 h-4" />
             Añadir palabras clave en lote
           </Button>
