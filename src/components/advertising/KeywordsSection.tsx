@@ -20,6 +20,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { Badge } from '@/components/ui/badge';
 import { InfoTooltip } from './InfoTooltip';
 import { InlineEditableCell } from './InlineEditableCell';
 import { InlineCampaignTypeSelect } from './InlineCampaignTypeSelect';
@@ -32,6 +33,8 @@ import { AdvancedFilters, type AdvancedFiltersState } from './AdvancedFilters';
 import { KeywordCardView } from './KeywordCardView';
 import { KeywordHistoryModal } from './KeywordHistoryModal';
 import { VariantDetector } from './VariantDetector';
+import { KeywordValidationDrawer } from './KeywordValidationDrawer';
+import { ValidationBadge } from './ValidationBadge';
 // AIAutoClassifier removed - IA now unified in AIAssistantDrawer
 import {
   type Keyword,
@@ -48,6 +51,11 @@ import {
   calculateRelevance,
   classifyIntent,
 } from '@/types/advertising';
+import {
+  type KeywordValidation,
+  scoreToRelevanceLevel,
+  VALIDATION_STATUS_OPTIONS,
+} from '@/lib/keyword-validation';
 import { useToast } from '@/hooks/use-toast';
 
 interface KeywordsSectionProps {
@@ -103,6 +111,7 @@ export const KeywordsSection = ({
   const [quickAddKeyword, setQuickAddKeyword] = useState('');
   const [viewMode, setViewMode] = useState<ViewMode>('table');
   const [historyKeyword, setHistoryKeyword] = useState<Keyword | null>(null);
+  const [validationKeyword, setValidationKeyword] = useState<Keyword | null>(null);
 
   // Memoize callback to avoid infinite loops
   const stableOnSelectedIdsChange = useCallback(onSelectedIdsChange, [onSelectedIdsChange]);
@@ -187,6 +196,30 @@ export const KeywordsSection = ({
   const handleBulkChangeRelevance = (relevance: RelevanceLevel) => {
     onUpdateBulk(Array.from(selectedIds), { relevance });
     onSelectedIdsChange(new Set());
+  };
+
+  // Handle validation save
+  const handleSaveValidation = (keywordId: string, validation: KeywordValidation) => {
+    const updates: Partial<Keyword> = { validation };
+    
+    // If relevanceMode is from_validation, also update relevance
+    if (validation.relevanceMode === 'from_validation') {
+      updates.relevance = scoreToRelevanceLevel(validation.validationScore);
+    }
+    
+    onUpdate(keywordId, updates);
+    toast({ title: 'Validación guardada' });
+  };
+
+  // Get effective relevance (from validation or manual)
+  const getEffectiveRelevance = (keyword: Keyword): { value: RelevanceLevel; isAuto: boolean } => {
+    if (keyword.validation?.relevanceMode === 'from_validation') {
+      return {
+        value: scoreToRelevanceLevel(keyword.validation.validationScore),
+        isAuto: true,
+      };
+    }
+    return { value: keyword.relevance || 'none', isAuto: false };
   };
 
   // Handle update with history tracking
@@ -428,10 +461,16 @@ export const KeywordsSection = ({
                       <InfoTooltip content="Número total de productos que aparecen en Amazon al introducir esta palabra clave. Este dato representa la saturación de la búsqueda. Es subjetivo y depende del mercado, por lo que se deberá seleccionar manualmente Alta / Media / Baja." />
                     </div>
                   </TableHead>
+                  <TableHead className="w-[120px]">
+                    <div className="flex items-center gap-1">
+                      Validación
+                      <InfoTooltip content="Validación de viabilidad de la keyword. Incluye score y estado." />
+                    </div>
+                  </TableHead>
                   <TableHead className="cursor-pointer hover:text-foreground w-[120px]" onClick={() => handleSort('relevance')}>
                     <div className="flex items-center gap-1">
                       Relevancia <ArrowUpDown className="w-3 h-3" />
-                      <InfoTooltip content="🔵 Muy relevante, 🟢 Relevante, 🟡 Baja, 🔴 No relevante" />
+                      <InfoTooltip content="🔵 Muy relevante, 🟢 Relevante, 🟡 Baja, 🔴 No relevante. Si 'Auto', deriva del score de validación." />
                     </div>
                   </TableHead>
                   <TableHead className="w-[110px]">
@@ -493,11 +532,25 @@ export const KeywordsSection = ({
                         />
                       </TableCell>
                       <TableCell>
-                        <InlineSelectBadge
-                          value={keyword.relevance || 'none'}
-                          options={RELEVANCE_LEVELS.map(r => ({ value: r.value, label: r.label, icon: r.icon }))}
-                          onChange={(value) => handleUpdateWithHistory(keyword.id, { relevance: value as RelevanceLevel })}
+                        <ValidationBadge
+                          validation={keyword.validation}
+                          onValidate={() => setValidationKeyword(keyword)}
                         />
+                      </TableCell>
+                      <TableCell>
+                        {(() => {
+                          const { value, isAuto } = getEffectiveRelevance(keyword);
+                          return (
+                            <div className="flex items-center gap-1">
+                              {isAuto && <Badge variant="outline" className="text-[10px] px-1 py-0">Auto</Badge>}
+                              <InlineSelectBadge
+                                value={value}
+                                options={RELEVANCE_LEVELS.map(r => ({ value: r.value, label: r.label, icon: r.icon }))}
+                                onChange={(v) => handleUpdateWithHistory(keyword.id, { relevance: v as RelevanceLevel })}
+                              />
+                            </div>
+                          );
+                        })()}
                       </TableCell>
                       <TableCell>
                         <InlineSelectBadge
@@ -600,6 +653,14 @@ export const KeywordsSection = ({
         keyword={historyKeyword}
         isOpen={!!historyKeyword}
         onClose={() => setHistoryKeyword(null)}
+      />
+
+      {/* Validation Drawer */}
+      <KeywordValidationDrawer
+        keyword={validationKeyword}
+        isOpen={!!validationKeyword}
+        onClose={() => setValidationKeyword(null)}
+        onSave={handleSaveValidation}
       />
     </div>
   );

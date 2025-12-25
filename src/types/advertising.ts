@@ -50,6 +50,9 @@ export interface ImportMappingTemplate {
   createdAt: Date;
 }
 
+// Import validation type
+import type { KeywordValidation } from '@/lib/keyword-validation';
+
 export interface Keyword {
   id: string;
   keyword: string;
@@ -72,6 +75,8 @@ export interface Keyword {
   estimatedBudget?: number;
   // Campaign plan assignment
   campaignPlanId?: string;
+  // Validation (optional - backwards compatible)
+  validation?: KeywordValidation;
 }
 
 export interface TargetASIN {
