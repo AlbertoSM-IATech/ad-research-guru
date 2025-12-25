@@ -16,6 +16,7 @@ import {
   Zap,
   MessageSquare,
   FileText,
+  Target,
 } from "lucide-react";
 import {
   Sheet,
@@ -62,22 +63,77 @@ import {
   KEYWORD_STATES,
 } from "@/types/advertising";
 
-interface AIAssistantDrawerProps {
-  isOpen: boolean;
+type ActiveTab = "keywords" | "asins" | "categories";
+
+export interface AIAssistantDrawerProps {
+  open: boolean;
   onOpenChange: (open: boolean) => void;
   marketplaceId: string;
   bookInfo: BookInfo;
-  activeTab: "keywords" | "asins" | "categories";
-  onChangeActiveTab: (tab: "keywords" | "asins" | "categories") => void;
+  activeTab: ActiveTab;
+  onChangeActiveTab: (tab: ActiveTab) => void;
   keywords: Keyword[];
   asins: TargetASIN[];
   categories: AdvertisingCategory[];
-  selectedKeywordIds: string[];
-  selectedAsinIds: string[];
-  selectedCategoryIds: string[];
+  selection: {
+    keywords: Set<string>;
+    asins: Set<string>;
+    categories: Set<string>;
+  };
   onAddKeywords: (keywords: Array<Omit<Keyword, "id" | "createdAt" | "updatedAt">>) => void;
-  onUpdateKeywords: (ids: string[], updates: Partial<Keyword>) => void;
+  onUpdateKeywordsBulk: (ids: string[], updates: Partial<Keyword>) => void;
   onUpdateBookInfo?: (updates: Partial<BookInfo>) => void;
+}
+
+// ==================== SCOPE INDICATOR ====================
+function ScopeIndicator({
+  activeTab,
+  selection,
+  keywords,
+  asins,
+  categories,
+}: {
+  activeTab: ActiveTab;
+  selection: AIAssistantDrawerProps["selection"];
+  keywords: Keyword[];
+  asins: TargetASIN[];
+  categories: AdvertisingCategory[];
+}) {
+  const activeSelectionSet = selection[activeTab];
+  const hasSelection = activeSelectionSet.size > 0;
+
+  const getDatasetSize = () => {
+    switch (activeTab) {
+      case "keywords":
+        return keywords.length;
+      case "asins":
+        return asins.length;
+      case "categories":
+        return categories.length;
+    }
+  };
+
+  const tabLabel = {
+    keywords: "Keywords",
+    asins: "ASINs",
+    categories: "Categorías",
+  }[activeTab];
+
+  return (
+    <div className="flex items-center gap-2 px-4 py-2 bg-muted/50 border-b border-border text-xs">
+      <Target className="w-3 h-3 text-muted-foreground" />
+      <span className="text-muted-foreground">Aplicando a:</span>
+      {hasSelection ? (
+        <Badge variant="default" className="text-xs">
+          Selección ({activeSelectionSet.size} {tabLabel.toLowerCase()})
+        </Badge>
+      ) : (
+        <Badge variant="secondary" className="text-xs">
+          Lista completa ({getDatasetSize()} {tabLabel.toLowerCase()})
+        </Badge>
+      )}
+    </div>
+  );
 }
 
 // ==================== CHAT TAB ====================
@@ -186,6 +242,15 @@ function ChatTab({
 
   return (
     <div className="flex flex-col h-full">
+      {/* Context snapshot */}
+      <div className="px-4 py-2 bg-muted/30 border-b border-border text-xs text-muted-foreground">
+        <span className="font-medium">{bookInfo.title || "Sin título"}</span>
+        <span className="mx-2">•</span>
+        <span>{marketplaceId.toUpperCase()}</span>
+        <span className="mx-2">•</span>
+        <span>{keywords.length} keywords</span>
+      </div>
+
       <ScrollArea className="flex-1 p-4" ref={scrollRef}>
         {messages.length === 0 ? (
           <div className="space-y-4">
@@ -301,8 +366,8 @@ function GenerateTab({
   marketplaceId: string;
   existingKeywords: string[];
   onAddKeywords: (keywords: Array<Omit<Keyword, "id" | "createdAt" | "updatedAt">>) => void;
-  activeTab: "keywords" | "asins" | "categories";
-  onChangeActiveTab: (tab: "keywords" | "asins" | "categories") => void;
+  activeTab: ActiveTab;
+  onChangeActiveTab: (tab: ActiveTab) => void;
 }) {
   const { toast } = useToast();
   const [additionalContext, setAdditionalContext] = useState("");
@@ -597,17 +662,17 @@ function ClassifyTab({
   selectedIds,
   bookInfo,
   marketplaceId,
-  onUpdateKeywords,
+  onUpdateKeywordsBulk,
   activeTab,
   onChangeActiveTab,
 }: {
   keywords: Keyword[];
-  selectedIds: string[];
+  selectedIds: Set<string>;
   bookInfo: BookInfo;
   marketplaceId: string;
-  onUpdateKeywords: (ids: string[], updates: Partial<Keyword>) => void;
-  activeTab: "keywords" | "asins" | "categories";
-  onChangeActiveTab: (tab: "keywords" | "asins" | "categories") => void;
+  onUpdateKeywordsBulk: (ids: string[], updates: Partial<Keyword>) => void;
+  activeTab: ActiveTab;
+  onChangeActiveTab: (tab: ActiveTab) => void;
 }) {
   const { toast } = useToast();
   const [results, setResults] = useState<ClassificationResult[]>([]);
@@ -632,9 +697,10 @@ function ClassifyTab({
     );
   }
 
+  const selectedIdsArray = Array.from(selectedIds);
   const keywordsToClassify =
-    selectedIds.length > 0
-      ? keywords.filter((k) => selectedIds.includes(k.id))
+    selectedIdsArray.length > 0
+      ? keywords.filter((k) => selectedIds.has(k.id))
       : keywords.slice(0, 20);
 
   const handleClassify = async () => {
@@ -708,7 +774,7 @@ Responde SOLO con un JSON array válido.`,
         (k) => k.keyword.toLowerCase() === result.keyword.toLowerCase()
       );
       if (matchingKeyword) {
-        onUpdateKeywords([matchingKeyword.id], {
+        onUpdateKeywordsBulk([matchingKeyword.id], {
           relevance: result.relevance,
           intent: result.intent,
           state: result.state,
@@ -738,8 +804,8 @@ Responde SOLO con un JSON array válido.`,
       {/* Keywords to classify */}
       <div className="p-3 bg-muted/30 rounded-lg mb-4">
         <p className="text-sm font-medium mb-2">
-          {selectedIds.length > 0
-            ? `${selectedIds.length} keywords seleccionadas`
+          {selectedIdsArray.length > 0
+            ? `${selectedIdsArray.length} keywords seleccionadas`
             : `Primeras ${keywordsToClassify.length} keywords`}
         </p>
         <div className="flex flex-wrap gap-1">
@@ -1063,7 +1129,7 @@ Genera:
 
 // ==================== MAIN DRAWER ====================
 export function AIAssistantDrawer({
-  isOpen,
+  open,
   onOpenChange,
   marketplaceId,
   bookInfo,
@@ -1072,11 +1138,9 @@ export function AIAssistantDrawer({
   keywords,
   asins,
   categories,
-  selectedKeywordIds,
-  selectedAsinIds,
-  selectedCategoryIds,
+  selection,
   onAddKeywords,
-  onUpdateKeywords,
+  onUpdateKeywordsBulk,
   onUpdateBookInfo,
 }: AIAssistantDrawerProps) {
   const [internalTab, setInternalTab] = useState("chat");
@@ -1094,7 +1158,7 @@ export function AIAssistantDrawer({
   };
 
   return (
-    <Sheet open={isOpen} onOpenChange={onOpenChange}>
+    <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="w-full sm:max-w-md p-0 flex flex-col">
         <SheetHeader className="px-4 py-3 border-b border-border">
           <SheetTitle className="flex items-center gap-2 text-lg">
@@ -1120,67 +1184,78 @@ export function AIAssistantDrawer({
 
         {/* Tabs Content */}
         {hasData && (
-          <Tabs value={internalTab} onValueChange={setInternalTab} className="flex-1 flex flex-col overflow-hidden">
-            <TabsList className="grid w-full grid-cols-4 rounded-none border-b border-border h-12">
-              <TabsTrigger value="chat" className="gap-1 text-xs">
-                <MessageSquare className="w-4 h-4" />
-                <span className="hidden sm:inline">Chat</span>
-              </TabsTrigger>
-              <TabsTrigger value="generate" className="gap-1 text-xs">
-                <Sparkles className="w-4 h-4" />
-                <span className="hidden sm:inline">Generar</span>
-              </TabsTrigger>
-              <TabsTrigger value="classify" className="gap-1 text-xs">
-                <Zap className="w-4 h-4" />
-                <span className="hidden sm:inline">Clasificar</span>
-              </TabsTrigger>
-              <TabsTrigger value="copy" className="gap-1 text-xs">
-                <FileText className="w-4 h-4" />
-                <span className="hidden sm:inline">Copy</span>
-              </TabsTrigger>
-            </TabsList>
+          <>
+            {/* Scope Indicator */}
+            <ScopeIndicator
+              activeTab={activeTab}
+              selection={selection}
+              keywords={keywords}
+              asins={asins}
+              categories={categories}
+            />
 
-            <TabsContent value="chat" className="flex-1 overflow-hidden mt-0">
-              <ChatTab
-                bookInfo={bookInfo}
-                keywords={keywords}
-                asins={asins}
-                marketplaceId={marketplaceId}
-              />
-            </TabsContent>
+            <Tabs value={internalTab} onValueChange={setInternalTab} className="flex-1 flex flex-col overflow-hidden">
+              <TabsList className="grid w-full grid-cols-4 rounded-none border-b border-border h-12">
+                <TabsTrigger value="chat" className="gap-1 text-xs">
+                  <MessageSquare className="w-4 h-4" />
+                  <span className="hidden sm:inline">Chat</span>
+                </TabsTrigger>
+                <TabsTrigger value="generate" className="gap-1 text-xs">
+                  <Sparkles className="w-4 h-4" />
+                  <span className="hidden sm:inline">Generar</span>
+                </TabsTrigger>
+                <TabsTrigger value="classify" className="gap-1 text-xs">
+                  <Zap className="w-4 h-4" />
+                  <span className="hidden sm:inline">Clasificar</span>
+                </TabsTrigger>
+                <TabsTrigger value="copy" className="gap-1 text-xs">
+                  <FileText className="w-4 h-4" />
+                  <span className="hidden sm:inline">Copy</span>
+                </TabsTrigger>
+              </TabsList>
 
-            <TabsContent value="generate" className="flex-1 overflow-auto mt-0">
-              <GenerateTab
-                bookInfo={bookInfo}
-                marketplaceId={marketplaceId}
-                existingKeywords={keywords.map((k) => k.keyword)}
-                onAddKeywords={onAddKeywords}
-                activeTab={activeTab}
-                onChangeActiveTab={onChangeActiveTab}
-              />
-            </TabsContent>
+              <TabsContent value="chat" className="flex-1 overflow-hidden mt-0">
+                <ChatTab
+                  bookInfo={bookInfo}
+                  keywords={keywords}
+                  asins={asins}
+                  marketplaceId={marketplaceId}
+                />
+              </TabsContent>
 
-            <TabsContent value="classify" className="flex-1 overflow-auto mt-0">
-              <ClassifyTab
-                keywords={keywords}
-                selectedIds={selectedKeywordIds}
-                bookInfo={bookInfo}
-                marketplaceId={marketplaceId}
-                onUpdateKeywords={onUpdateKeywords}
-                activeTab={activeTab}
-                onChangeActiveTab={onChangeActiveTab}
-              />
-            </TabsContent>
+              <TabsContent value="generate" className="flex-1 overflow-auto mt-0">
+                <GenerateTab
+                  bookInfo={bookInfo}
+                  marketplaceId={marketplaceId}
+                  existingKeywords={keywords.map((k) => k.keyword)}
+                  onAddKeywords={onAddKeywords}
+                  activeTab={activeTab}
+                  onChangeActiveTab={onChangeActiveTab}
+                />
+              </TabsContent>
 
-            <TabsContent value="copy" className="flex-1 overflow-auto mt-0">
-              <CopyTab
-                bookInfo={bookInfo}
-                keywords={keywords}
-                marketplaceId={marketplaceId}
-                onUpdateBookInfo={onUpdateBookInfo}
-              />
-            </TabsContent>
-          </Tabs>
+              <TabsContent value="classify" className="flex-1 overflow-auto mt-0">
+                <ClassifyTab
+                  keywords={keywords}
+                  selectedIds={selection.keywords}
+                  bookInfo={bookInfo}
+                  marketplaceId={marketplaceId}
+                  onUpdateKeywordsBulk={onUpdateKeywordsBulk}
+                  activeTab={activeTab}
+                  onChangeActiveTab={onChangeActiveTab}
+                />
+              </TabsContent>
+
+              <TabsContent value="copy" className="flex-1 overflow-auto mt-0">
+                <CopyTab
+                  bookInfo={bookInfo}
+                  keywords={keywords}
+                  marketplaceId={marketplaceId}
+                  onUpdateBookInfo={onUpdateBookInfo}
+                />
+              </TabsContent>
+            </Tabs>
+          </>
         )}
       </SheetContent>
     </Sheet>
