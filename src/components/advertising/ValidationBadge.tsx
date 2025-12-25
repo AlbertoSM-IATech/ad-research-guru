@@ -1,51 +1,44 @@
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { ClipboardCheck, AlertTriangle } from 'lucide-react';
+import { ClipboardCheck } from 'lucide-react';
 import {
   type KeywordValidation,
   VALIDATION_STATUS_OPTIONS,
   getScoreColor,
-  getValidationAlerts,
+  getScoreBgColor,
 } from '@/lib/keyword-validation';
 import { cn } from '@/lib/utils';
 
 interface ValidationBadgeProps {
   validation?: KeywordValidation;
+  score: number;
   onValidate: () => void;
-  compact?: boolean;
 }
 
-export const ValidationBadge = ({
-  validation,
-  onValidate,
-  compact = false,
-}: ValidationBadgeProps) => {
-  if (!validation || validation.validationStatus === 'unvalidated') {
+export const ValidationBadge = ({ validation, score, onValidate }: ValidationBadgeProps) => {
+  if (!validation) {
     return (
       <Button
         variant="ghost"
         size="sm"
         onClick={onValidate}
-        className="h-7 text-xs gap-1 text-muted-foreground hover:text-foreground"
+        className="h-7 px-2 text-xs text-muted-foreground hover:text-primary gap-1"
       >
-        <ClipboardCheck className="w-3.5 h-3.5" />
-        {!compact && 'Validar'}
+        <ClipboardCheck className="w-3 h-3" />
+        Validar
       </Button>
     );
   }
 
-  const statusInfo = VALIDATION_STATUS_OPTIONS.find(
-    s => s.value === (validation.validationStatusOverride || validation.validationStatus)
-  );
-  const alerts = getValidationAlerts(validation);
-  const hasAlerts = alerts.some(a => a.type === 'error');
+  const status = validation.validationStatusOverride || validation.validationStatus;
+  const statusInfo = VALIDATION_STATUS_OPTIONS.find(s => s.value === status);
 
   return (
-    <div className="flex items-center gap-1.5">
+    <div className="flex items-center gap-1">
       <Badge
         variant="outline"
         className={cn(
-          'cursor-pointer hover:opacity-80 transition-opacity text-xs font-medium',
+          'text-[10px] px-1.5 py-0 cursor-pointer hover:opacity-80',
           statusInfo?.color
         )}
         onClick={onValidate}
@@ -54,16 +47,14 @@ export const ValidationBadge = ({
       </Badge>
       <span
         className={cn(
-          'text-xs font-semibold cursor-pointer hover:opacity-80',
-          getScoreColor(validation.validationScore)
+          'text-xs font-medium cursor-pointer hover:opacity-80 px-1 py-0.5 rounded',
+          getScoreBgColor(score),
+          getScoreColor(score)
         )}
         onClick={onValidate}
       >
-        {validation.validationScore}
+        {score}
       </span>
-      {hasAlerts && (
-        <AlertTriangle className="w-3.5 h-3.5 text-red-500" />
-      )}
     </div>
   );
 };
