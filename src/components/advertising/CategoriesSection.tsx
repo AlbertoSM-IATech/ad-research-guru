@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Plus, Trash2, FolderOpen, Search, Upload } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -48,6 +48,9 @@ export const CategoriesSection = ({
   const [quickAddName, setQuickAddName] = useState('');
   const [showBulkImport, setShowBulkImport] = useState(false);
 
+  // Memoize callback to avoid infinite loops
+  const stableOnSelectedIdsChange = useCallback(onSelectedIdsChange, [onSelectedIdsChange]);
+
   const handleQuickAdd = () => {
     if (!quickAddName.trim()) return;
 
@@ -96,6 +99,15 @@ export const CategoriesSection = ({
   const filteredCategories = categories.filter((c) =>
     searchTerm ? c.name.toLowerCase().includes(searchTerm.toLowerCase()) : true
   );
+
+  // Purge invalid selection IDs when filtered list changes
+  useEffect(() => {
+    const validIds = new Set(filteredCategories.map(c => c.id));
+    const nextSelected = new Set([...selectedIds].filter(id => validIds.has(id)));
+    if (nextSelected.size !== selectedIds.size) {
+      stableOnSelectedIdsChange(nextSelected);
+    }
+  }, [filteredCategories, selectedIds, stableOnSelectedIdsChange]);
 
   return (
     <div className="space-y-6 animate-fade-in">
