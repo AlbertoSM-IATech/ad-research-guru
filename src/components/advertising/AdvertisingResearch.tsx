@@ -22,6 +22,7 @@ import { KeyboardShortcutsManager } from './KeyboardShortcutsManager';
 import { AIAssistantDrawer } from './ai/AIAssistantDrawer';
 import { HeaderOverflowMenu } from './HeaderOverflowMenu';
 import { isAIDemoMode, toggleAIDemoMode } from '@/lib/ai-demo-service';
+import { loadPersistedState, usePersistence } from '@/hooks/useLocalPersistence';
 import { 
   Collapsible,
   CollapsibleContent,
@@ -50,8 +51,11 @@ const isBookContextComplete = (bookInfo: BookInfo): boolean => {
 };
 
 export const AdvertisingResearch = () => {
+  // Hydration flag - must be first
+  const [hasHydrated, setHasHydrated] = useState(false);
+  
   const [selectedMarketplace, setSelectedMarketplace] = useState('us');
-  const [activeTab, setActiveTab] = useState('keywords');
+  const [activeTab, setActiveTab] = useState<'keywords' | 'asins' | 'categories'>('keywords');
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [hasLoadedExamples, setHasLoadedExamples] = useState(false);
   const [isDemoMode, setIsDemoMode] = useState(isAIDemoMode());
@@ -116,6 +120,41 @@ export const AdvertisingResearch = () => {
   const [globalFilter, setGlobalFilter] = useState<FilterType>('all');
   const [globalSort, setGlobalSort] = useState<SortOption>('relevance');
 
+  // ============= HYDRATION FROM LOCALSTORAGE =============
+  useEffect(() => {
+    const persisted = loadPersistedState();
+    if (persisted) {
+      setSelectedMarketplace(persisted.selectedMarketplace);
+      setActiveTab(persisted.activeTab);
+      setBookInfo(persisted.bookInfo);
+      setKeywordsByMarket(persisted.keywordsByMarket);
+      setAsinsByMarket(persisted.asinsByMarket);
+      setCategoriesByMarket(persisted.categoriesByMarket);
+      setCampaignPlansByMarket(persisted.campaignPlansByMarket);
+      if (persisted.showInsights !== undefined) {
+        setShowInsights(persisted.showInsights);
+      }
+      // Skip loading demo data if we have persisted data
+      setHasLoadedExamples(true);
+    }
+    setHasHydrated(true);
+  }, []);
+
+  // ============= PERSISTENCE TO LOCALSTORAGE =============
+  usePersistence(
+    {
+      selectedMarketplace,
+      activeTab,
+      bookInfo,
+      keywordsByMarket,
+      asinsByMarket,
+      categoriesByMarket,
+      campaignPlansByMarket,
+      showInsights,
+    },
+    hasHydrated
+  );
+
   const bookContextComplete = isBookContextComplete(bookInfo);
   
   // Auto-collapse book panel when context is complete
@@ -125,8 +164,9 @@ export const AdvertisingResearch = () => {
     }
   }, [bookContextComplete]);
 
-  // Load example data when section is empty
+  // Load example data when section is empty (only after hydration)
   useEffect(() => {
+    if (!hasHydrated) return;
     if (!hasLoadedExamples) {
       const currentKeywords = keywordsByMarket[selectedMarketplace] || [];
       const currentASINs = asinsByMarket[selectedMarketplace] || [];
@@ -163,7 +203,7 @@ export const AdvertisingResearch = () => {
         setHasLoadedExamples(true);
       }
     }
-  }, [selectedMarketplace, hasLoadedExamples, keywordsByMarket, asinsByMarket, categoriesByMarket]);
+  }, [hasHydrated, selectedMarketplace, hasLoadedExamples, keywordsByMarket, asinsByMarket, categoriesByMarket]);
 
   const currentKeywords = keywordsByMarket[selectedMarketplace] || [];
   const currentASINs = asinsByMarket[selectedMarketplace] || [];
@@ -558,7 +598,7 @@ export const AdvertisingResearch = () => {
 
         {/* === SECCIÓN 2: TRABAJO (CORE) === Dominante visualmente */}
         <section className="mb-6" data-tour="tabs">
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+          <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'keywords' | 'asins' | 'categories')} className="space-y-4">
             <TabsList className="grid w-full grid-cols-3 lg:w-[450px] bg-muted">
               <TabsTrigger value="keywords" className="gap-2 data-[state=active]:bg-card">
                 <Search className="w-4 h-4" />
