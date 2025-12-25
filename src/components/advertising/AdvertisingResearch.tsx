@@ -21,6 +21,7 @@ import { GuidedTour, useTourStatus } from './GuidedTour';
 import { KeyboardShortcutsManager } from './KeyboardShortcutsManager';
 import { AIAssistantDrawer } from './ai/AIAssistantDrawer';
 import { HeaderOverflowMenu } from './HeaderOverflowMenu';
+import { BackupImportModal } from './BackupImportModal';
 import { isAIDemoMode, toggleAIDemoMode } from '@/lib/ai-demo-service';
 import { loadPersistedState, usePersistence } from '@/hooks/useLocalPersistence';
 import { 
@@ -68,6 +69,7 @@ export const AdvertisingResearch = () => {
   // Modal states
   const [showExportModal, setShowExportModal] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
+  const [showBackupImportModal, setShowBackupImportModal] = useState(false);
   const [showCampaignPlanner, setShowCampaignPlanner] = useState(false);
   
   // Book panel state - React controlled, no DOM hacks
@@ -504,15 +506,18 @@ export const AdvertisingResearch = () => {
 
     const backup = {
       version: 1,
-      updatedAt: new Date().toISOString(),
-      selectedMarketplace,
-      activeTab,
-      bookInfo: serializeData(bookInfo),
-      keywordsByMarket: serializeData(keywordsByMarket),
-      asinsByMarket: serializeData(asinsByMarket),
-      categoriesByMarket: serializeData(categoriesByMarket),
-      campaignPlansByMarket: serializeData(campaignPlansByMarket),
-      showInsights,
+      exportedAt: new Date().toISOString(),
+      storageKey: 'ad-research:v1',
+      data: {
+        selectedMarketplace,
+        activeTab,
+        bookInfo: serializeData(bookInfo),
+        keywordsByMarket: serializeData(keywordsByMarket),
+        asinsByMarket: serializeData(asinsByMarket),
+        categoriesByMarket: serializeData(categoriesByMarket),
+        campaignPlansByMarket: serializeData(campaignPlansByMarket),
+        showInsights,
+      },
     };
 
     const jsonString = JSON.stringify(backup, null, 2);
@@ -520,7 +525,7 @@ export const AdvertisingResearch = () => {
     const url = URL.createObjectURL(blob);
     
     const date = new Date().toISOString().split('T')[0];
-    const filename = `ad-research-backup-${date}.json`;
+    const filename = `ad-research-backup-v1-${date}.json`;
     
     const a = document.createElement('a');
     a.href = url;
@@ -529,7 +534,44 @@ export const AdvertisingResearch = () => {
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
+    
+    import('sonner').then(({ toast }) => {
+      toast.success('Backup exportado');
+    });
   }, [selectedMarketplace, activeTab, bookInfo, keywordsByMarket, asinsByMarket, categoriesByMarket, campaignPlansByMarket, showInsights]);
+
+  // Import backup handler - restores state from imported data
+  const handleImportBackup = useCallback((data: {
+    selectedMarketplace: string;
+    activeTab: 'keywords' | 'asins' | 'categories';
+    bookInfo: BookInfo;
+    keywordsByMarket: Record<string, Keyword[]>;
+    asinsByMarket: Record<string, TargetASIN[]>;
+    categoriesByMarket: Record<string, AdvertisingCategory[]>;
+    campaignPlansByMarket: Record<string, CampaignPlan[]>;
+    showInsights?: boolean;
+  }) => {
+    // Set all states from imported data
+    setSelectedMarketplace(data.selectedMarketplace);
+    setActiveTab(data.activeTab);
+    setBookInfo(data.bookInfo);
+    setKeywordsByMarket(data.keywordsByMarket);
+    setAsinsByMarket(data.asinsByMarket);
+    setCategoriesByMarket(data.categoriesByMarket);
+    setCampaignPlansByMarket(data.campaignPlansByMarket);
+    if (data.showInsights !== undefined) {
+      setShowInsights(data.showInsights);
+    }
+    
+    // Prevent demo data from loading
+    setHasLoadedExamples(true);
+    
+    // Clear selection
+    setSelection({ keywords: new Set(), asins: new Set(), categories: new Set() });
+    
+    // Close backup modal
+    setShowBackupImportModal(false);
+  }, []);
 
   // Education sections (accessible from overflow menu)
   const educationSections = [{
@@ -618,6 +660,7 @@ export const AdvertisingResearch = () => {
                 isDemoMode={isDemoMode}
                 onResetData={handleResetData}
                 onExportBackup={handleExportBackup}
+                onImportBackup={() => setShowBackupImportModal(true)}
               />
             </div>
           </div>
@@ -861,6 +904,13 @@ export const AdvertisingResearch = () => {
         onAddKeywords={handleAddBulkKeywords}
         onUpdateKeywordsBulk={handleUpdateBulkKeywords}
         onUpdateBookInfo={(updates) => setBookInfo(prev => ({ ...prev, ...updates }))}
+      />
+      
+      {/* Backup Import Modal */}
+      <BackupImportModal
+        isOpen={showBackupImportModal}
+        onClose={() => setShowBackupImportModal(false)}
+        onImport={handleImportBackup}
       />
     </div>
   );
