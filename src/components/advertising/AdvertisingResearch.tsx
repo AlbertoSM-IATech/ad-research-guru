@@ -19,7 +19,7 @@ import { AdvancedImportModal } from './AdvancedImportModal';
 import { CampaignPlanManager } from './CampaignPlanManager';
 import { GuidedTour, useTourStatus } from './GuidedTour';
 import { KeyboardShortcutsManager } from './KeyboardShortcutsManager';
-import { AIAssistantDrawer } from './AIAssistantDrawer';
+import { AIAssistantDrawer } from './ai/AIAssistantDrawer';
 import { HeaderOverflowMenu } from './HeaderOverflowMenu';
 import { isAIDemoMode, toggleAIDemoMode } from '@/lib/ai-demo-service';
 import { 
@@ -731,7 +731,7 @@ export const AdvertisingResearch = () => {
       
       {/* AI Assistant Drawer - Único punto de IA */}
       <AIAssistantDrawer
-        isOpen={isAIAssistantOpen}
+        open={isAIAssistantOpen}
         onOpenChange={setIsAIAssistantOpen}
         marketplaceId={selectedMarketplace}
         bookInfo={bookInfo}
@@ -740,11 +740,9 @@ export const AdvertisingResearch = () => {
         keywords={currentKeywords}
         asins={currentASINs}
         categories={currentCategories}
-        selectedKeywordIds={Array.from(selection.keywords)}
-        selectedAsinIds={Array.from(selection.asins)}
-        selectedCategoryIds={Array.from(selection.categories)}
+        selection={selection}
         onAddKeywords={handleAddBulkKeywords}
-        onUpdateKeywords={handleUpdateBulkKeywords}
+        onUpdateKeywordsBulk={handleUpdateBulkKeywords}
         onUpdateBookInfo={(updates) => setBookInfo(prev => ({ ...prev, ...updates }))}
       />
     </div>
