@@ -213,6 +213,21 @@ export const AdvertisingResearch = () => {
     showInsights,
   ]);
 
+  // ============= WARN BEFORE LEAVING WITH PENDING CHANGES =============
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (pendingChangesCount > 0) {
+        e.preventDefault();
+        // Modern browsers require returnValue to be set
+        e.returnValue = '';
+        return '';
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [pendingChangesCount]);
+
   // ============= PERSISTENCE TO LOCALSTORAGE =============
   const handleSyncComplete = useCallback(() => {
     setLastSyncAt(new Date());
@@ -763,11 +778,17 @@ export const AdvertisingResearch = () => {
               <Button
                 variant="default"
                 size="sm"
-                className="gap-2"
+                className="gap-2 relative"
                 onClick={() => setIsAIAssistantOpen(true)}
               >
                 <Sparkles className="w-4 h-4" />
                 <span className="hidden sm:inline">Asistente IA</span>
+                {/* Pending changes badge */}
+                {pendingChangesCount > 0 && (
+                  <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] px-1 flex items-center justify-center rounded-full bg-amber-500 text-white text-[10px] font-bold shadow-sm animate-pulse">
+                    {pendingChangesCount > 99 ? '99+' : pendingChangesCount}
+                  </span>
+                )}
               </Button>
               
               {/* Theme Toggle - Discreto */}
