@@ -54,6 +54,7 @@ import {
 import {
   type KeywordValidation,
   scoreToRelevanceLevel,
+  calculateRelevanceScore,
   VALIDATION_STATUS_OPTIONS,
 } from '@/lib/keyword-validation';
 import { useToast } from '@/hooks/use-toast';
@@ -198,28 +199,22 @@ export const KeywordsSection = ({
     onSelectedIdsChange(new Set());
   };
 
-  // Handle validation save
-  const handleSaveValidation = (keywordId: string, validation: KeywordValidation) => {
-    const updates: Partial<Keyword> = { validation };
-    
-    // If relevanceMode is from_validation, also update relevance
-    if (validation.relevanceMode === 'from_validation') {
-      updates.relevance = scoreToRelevanceLevel(validation.validationScore);
-    }
+  // Handle validation save - now uses unified scoring
+  const handleSaveValidation = (keywordId: string, validation: KeywordValidation, newScore: number) => {
+    // Update the keyword with validation and derived relevance
+    const updates: Partial<Keyword> = { 
+      validation,
+      // Always update relevance from the unified score
+      relevance: scoreToRelevanceLevel(newScore),
+    };
     
     onUpdate(keywordId, updates);
-    toast({ title: 'Validación guardada' });
+    toast({ title: 'Validación guardada', description: `Score: ${newScore}/100` });
   };
 
-  // Get effective relevance (from validation or manual)
-  const getEffectiveRelevance = (keyword: Keyword): { value: RelevanceLevel; isAuto: boolean } => {
-    if (keyword.validation?.relevanceMode === 'from_validation') {
-      return {
-        value: scoreToRelevanceLevel(keyword.validation.validationScore),
-        isAuto: true,
-      };
-    }
-    return { value: keyword.relevance || 'none', isAuto: false };
+  // Get keyword score (calculated from base data + validation)
+  const getKeywordScore = (keyword: Keyword): number => {
+    return calculateRelevanceScore(keyword);
   };
 
   // Handle update with history tracking
@@ -534,23 +529,16 @@ export const KeywordsSection = ({
                       <TableCell>
                         <ValidationBadge
                           validation={keyword.validation}
+                          score={getKeywordScore(keyword)}
                           onValidate={() => setValidationKeyword(keyword)}
                         />
                       </TableCell>
                       <TableCell>
-                        {(() => {
-                          const { value, isAuto } = getEffectiveRelevance(keyword);
-                          return (
-                            <div className="flex items-center gap-1">
-                              {isAuto && <Badge variant="outline" className="text-[10px] px-1 py-0">Auto</Badge>}
-                              <InlineSelectBadge
-                                value={value}
-                                options={RELEVANCE_LEVELS.map(r => ({ value: r.value, label: r.label, icon: r.icon }))}
-                                onChange={(v) => handleUpdateWithHistory(keyword.id, { relevance: v as RelevanceLevel })}
-                              />
-                            </div>
-                          );
-                        })()}
+                        <InlineSelectBadge
+                          value={keyword.relevance || 'none'}
+                          options={RELEVANCE_LEVELS.map(r => ({ value: r.value, label: r.label, icon: r.icon }))}
+                          onChange={(v) => handleUpdateWithHistory(keyword.id, { relevance: v as RelevanceLevel })}
+                        />
                       </TableCell>
                       <TableCell>
                         <InlineSelectBadge

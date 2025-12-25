@@ -1,21 +1,19 @@
-// Keyword Validation Types and Scoring Logic
+// Keyword Validation Types and Scoring Logic - UNIFIED MODEL
+// This module provides qualitative signals that ENRICH the keyword data
+// without duplicating base fields (volume, competitors, price, royalties)
 
-import type { RelevanceLevel } from '@/types/advertising';
+import type { Keyword, RelevanceLevel } from '@/types/advertising';
 
 // ============ TYPES ============
 
-export type ValidationStatus = 'unvalidated' | 'reviewing' | 'validated' | 'discarded';
-export type RelevanceMode = 'manual' | 'from_validation';
+export type ValidationStatus = 'discovering' | 'validated' | 'discarded' | 'approved';
 
-export type BrandRegistered = 'yes' | 'no';
-export type VolumeBucket = '<50' | '50-100' | '101-600' | '>600';
-export type CompetitorsBucket = '<1000' | '1000-4000' | '4000-10000' | '>10000';
-export type ProfitableBooks = '0' | '1' | '2' | '3' | '4' | '5+';
-export type BooksOver200ReviewsBucket = '0-5' | '5-9' | '9-15' | '>15';
-export type HasBooksUnder100Reviews = 'yes' | 'no';
-export type PriceBucket = '<9.99' | '9.99-12' | '>12';
-export type RoyaltiesBucket = '<1.99' | '2-3.99' | '4-5.99' | '>6';
-export type MainTrafficSource = 'amazon' | 'personal_brand' | 'social' | 'other';
+// Traffic source - only 'amazon' is positive
+export type TrafficSource = 'amazon' | 'brand' | 'social' | 'external';
+
+// Books over 200 reviews - soft penalty
+export type BooksOver200Reviews = 'none' | 'few' | 'many';
+
 export type ChecklistAnswer = 'yes' | 'no' | 'na';
 
 export interface ChecklistItem {
@@ -31,29 +29,32 @@ export interface ChecklistGroup {
   items: ChecklistItem[];
 }
 
+// NEW UNIFIED VALIDATION MODEL
+// These are QUALITATIVE signals, NOT duplications of table data
 export interface KeywordValidation {
-  // Core validation fields
-  brandRegistered?: BrandRegistered;
-  volumeBucket?: VolumeBucket;
-  competitorsBucket?: CompetitorsBucket;
-  profitableBooks?: ProfitableBooks;
-  booksOver200ReviewsBucket?: BooksOver200ReviewsBucket;
-  hasBooksUnder100Reviews?: HasBooksUnder100Reviews;
-  priceBucket?: PriceBucket;
-  royaltiesBucket?: RoyaltiesBucket;
-  mainTrafficSource?: MainTrafficSource;
-  validationNotes: string;
+  // Qualitative signals only (not duplicated from Keyword base fields)
+  hasTrademark: boolean;                    // true = heavy penalty (×0.3)
+  autosuggestPresence: boolean;             // true = demand signal (+5)
+  profitableBooksCount: number;             // 0-5+ (higher = better)
+  booksOver200Reviews: BooksOver200Reviews; // penalizes softly if 'many'
+  booksUnder100Reviews: boolean;            // true = space to enter (+5)
+  trafficSource: TrafficSource;             // only 'amazon' is neutral/positive
   
-  // Checklist
-  excelCriteria: ChecklistGroup[];
+  // Editorial viability (0-3 questions answered yes)
+  contentFeasibilityScore: number;          // 0-3 (+0 to +10)
   
-  // Calculated fields
-  validationScore: number;
+  // Extra opportunity (0-2)
+  extraOpportunityScore: number;            // 0-2 (+0 to +5)
+  
+  // Status
   validationStatus: ValidationStatus;
   validationStatusOverride?: ValidationStatus;
   
-  // Relevance integration
-  relevanceMode: RelevanceMode;
+  // Notes
+  validationNotes: string;
+  
+  // Checklist for detailed analysis
+  checklist: ChecklistGroup[];
   
   // Metadata
   updatedAt: Date;
@@ -61,71 +62,33 @@ export interface KeywordValidation {
 
 // ============ CONSTANTS ============
 
-export const BRAND_REGISTERED_OPTIONS: { value: BrandRegistered; label: string; color: string }[] = [
-  { value: 'no', label: 'No registrada', color: 'bg-green-500/20 text-green-600 border-green-500/30' },
-  { value: 'yes', label: 'Marca registrada', color: 'bg-red-500/20 text-red-600 border-red-500/30' },
+export const TRAFFIC_SOURCE_OPTIONS: { value: TrafficSource; label: string; color: string; penalty: boolean }[] = [
+  { value: 'amazon', label: 'Amazon orgánico', color: 'bg-green-500/20 text-green-600 border-green-500/30', penalty: false },
+  { value: 'brand', label: 'Marca personal', color: 'bg-red-500/20 text-red-600 border-red-500/30', penalty: true },
+  { value: 'social', label: 'Redes sociales', color: 'bg-orange-500/20 text-orange-600 border-orange-500/30', penalty: true },
+  { value: 'external', label: 'Tráfico externo', color: 'bg-yellow-500/20 text-yellow-600 border-yellow-500/30', penalty: true },
 ];
 
-export const VOLUME_BUCKET_OPTIONS: { value: VolumeBucket; label: string; color: string }[] = [
-  { value: '<50', label: '< 50', color: 'bg-red-500/20 text-red-600 border-red-500/30' },
-  { value: '50-100', label: '50-100', color: 'bg-yellow-500/20 text-yellow-600 border-yellow-500/30' },
-  { value: '101-600', label: '101-600', color: 'bg-green-500/20 text-green-600 border-green-500/30' },
-  { value: '>600', label: '> 600', color: 'bg-emerald-500/20 text-emerald-600 border-emerald-500/30' },
-];
-
-export const COMPETITORS_BUCKET_OPTIONS: { value: CompetitorsBucket; label: string; color: string }[] = [
-  { value: '<1000', label: '< 1,000', color: 'bg-emerald-500/20 text-emerald-600 border-emerald-500/30' },
-  { value: '1000-4000', label: '1,000-4,000', color: 'bg-green-500/20 text-green-600 border-green-500/30' },
-  { value: '4000-10000', label: '4,000-10,000', color: 'bg-yellow-500/20 text-yellow-600 border-yellow-500/30' },
-  { value: '>10000', label: '> 10,000', color: 'bg-red-500/20 text-red-600 border-red-500/30' },
-];
-
-export const PROFITABLE_BOOKS_OPTIONS: { value: ProfitableBooks; label: string; color: string }[] = [
-  { value: '0', label: '0 libros', color: 'bg-red-500/20 text-red-600 border-red-500/30' },
-  { value: '1', label: '1 libro', color: 'bg-orange-500/20 text-orange-600 border-orange-500/30' },
-  { value: '2', label: '2 libros', color: 'bg-yellow-500/20 text-yellow-600 border-yellow-500/30' },
-  { value: '3', label: '3 libros', color: 'bg-lime-500/20 text-lime-600 border-lime-500/30' },
-  { value: '4', label: '4 libros', color: 'bg-green-500/20 text-green-600 border-green-500/30' },
-  { value: '5+', label: '5+ libros', color: 'bg-emerald-500/20 text-emerald-600 border-emerald-500/30' },
-];
-
-export const BOOKS_OVER_200_REVIEWS_OPTIONS: { value: BooksOver200ReviewsBucket; label: string; color: string }[] = [
-  { value: '0-5', label: '0-5', color: 'bg-green-500/20 text-green-600 border-green-500/30' },
-  { value: '5-9', label: '5-9', color: 'bg-lime-500/20 text-lime-600 border-lime-500/30' },
-  { value: '9-15', label: '9-15', color: 'bg-yellow-500/20 text-yellow-600 border-yellow-500/30' },
-  { value: '>15', label: '> 15', color: 'bg-orange-500/20 text-orange-600 border-orange-500/30' },
-];
-
-export const HAS_BOOKS_UNDER_100_REVIEWS_OPTIONS: { value: HasBooksUnder100Reviews; label: string; color: string }[] = [
-  { value: 'yes', label: 'Sí hay espacio', color: 'bg-green-500/20 text-green-600 border-green-500/30' },
-  { value: 'no', label: 'No hay espacio', color: 'bg-red-500/20 text-red-600 border-red-500/30' },
-];
-
-export const PRICE_BUCKET_OPTIONS: { value: PriceBucket; label: string; color: string }[] = [
-  { value: '<9.99', label: '< $9.99', color: 'bg-red-500/20 text-red-600 border-red-500/30' },
-  { value: '9.99-12', label: '$9.99-12', color: 'bg-green-500/20 text-green-600 border-green-500/30' },
-  { value: '>12', label: '> $12', color: 'bg-emerald-500/20 text-emerald-600 border-emerald-500/30' },
-];
-
-export const ROYALTIES_BUCKET_OPTIONS: { value: RoyaltiesBucket; label: string; color: string }[] = [
-  { value: '<1.99', label: '< $1.99', color: 'bg-red-500/20 text-red-600 border-red-500/30' },
-  { value: '2-3.99', label: '$2-3.99', color: 'bg-yellow-500/20 text-yellow-600 border-yellow-500/30' },
-  { value: '4-5.99', label: '$4-5.99', color: 'bg-green-500/20 text-green-600 border-green-500/30' },
-  { value: '>6', label: '> $6', color: 'bg-emerald-500/20 text-emerald-600 border-emerald-500/30' },
-];
-
-export const TRAFFIC_SOURCE_OPTIONS: { value: MainTrafficSource; label: string; color: string; warning?: boolean }[] = [
-  { value: 'amazon', label: 'Amazon orgánico', color: 'bg-green-500/20 text-green-600 border-green-500/30' },
-  { value: 'personal_brand', label: 'Marca personal', color: 'bg-red-500/20 text-red-600 border-red-500/30', warning: true },
-  { value: 'social', label: 'Redes sociales', color: 'bg-red-500/20 text-red-600 border-red-500/30', warning: true },
-  { value: 'other', label: 'Otro', color: 'bg-yellow-500/20 text-yellow-600 border-yellow-500/30' },
+export const BOOKS_OVER_200_OPTIONS: { value: BooksOver200Reviews; label: string; color: string }[] = [
+  { value: 'none', label: 'Ninguno (0)', color: 'bg-green-500/20 text-green-600 border-green-500/30' },
+  { value: 'few', label: 'Pocos (1-5)', color: 'bg-yellow-500/20 text-yellow-600 border-yellow-500/30' },
+  { value: 'many', label: 'Muchos (6+)', color: 'bg-orange-500/20 text-orange-600 border-orange-500/30' },
 ];
 
 export const VALIDATION_STATUS_OPTIONS: { value: ValidationStatus; label: string; color: string }[] = [
-  { value: 'unvalidated', label: 'Sin validar', color: 'bg-muted text-muted-foreground border-border' },
-  { value: 'reviewing', label: 'En revisión', color: 'bg-yellow-500/20 text-yellow-600 border-yellow-500/30' },
+  { value: 'discovering', label: 'Descubriendo', color: 'bg-blue-500/20 text-blue-600 border-blue-500/30' },
   { value: 'validated', label: 'Validada', color: 'bg-green-500/20 text-green-600 border-green-500/30' },
+  { value: 'approved', label: 'Aprobada', color: 'bg-emerald-500/20 text-emerald-600 border-emerald-500/30' },
   { value: 'discarded', label: 'Descartada', color: 'bg-red-500/20 text-red-600 border-red-500/30' },
+];
+
+export const PROFITABLE_BOOKS_OPTIONS = [
+  { value: 0, label: '0 libros', color: 'bg-red-500/20 text-red-600' },
+  { value: 1, label: '1 libro', color: 'bg-orange-500/20 text-orange-600' },
+  { value: 2, label: '2 libros', color: 'bg-yellow-500/20 text-yellow-600' },
+  { value: 3, label: '3 libros', color: 'bg-lime-500/20 text-lime-600' },
+  { value: 4, label: '4 libros', color: 'bg-green-500/20 text-green-600' },
+  { value: 5, label: '5+ libros', color: 'bg-emerald-500/20 text-emerald-600' },
 ];
 
 // ============ DEFAULT CHECKLIST ============
@@ -145,7 +108,7 @@ export const getDefaultChecklist = (): ChecklistGroup[] => [
     id: 'competitive-pressure',
     title: 'Presión competitiva',
     items: [
-      { id: 'cp-1', question: '¿El tamaño del mercado está en un rango asumible (competidores)?', answer: 'na', notes: '' },
+      { id: 'cp-1', question: '¿El tamaño del mercado está en un rango asumible?', answer: 'na', notes: '' },
       { id: 'cp-2', question: '¿Los resultados están alineados con la intención real de la keyword?', answer: 'na', notes: '' },
       { id: 'cp-3', question: '¿Hay señales de demanda sólida (muchos títulos con reviews altas)?', answer: 'na', notes: '' },
       { id: 'cp-4', question: '¿Hay espacio para entrar (títulos con pocas reviews visibles)?', answer: 'na', notes: '' },
@@ -170,117 +133,130 @@ export const getDefaultChecklist = (): ChecklistGroup[] => [
   },
 ];
 
-// ============ SCORING LOGIC ============
+// ============ DEFAULT VALIDATION ============
 
-export const calculateValidationScore = (validation: Partial<KeywordValidation>): number => {
-  let score = 50; // Base score
+export const getDefaultValidation = (): KeywordValidation => ({
+  hasTrademark: false,
+  autosuggestPresence: false,
+  profitableBooksCount: 0,
+  booksOver200Reviews: 'none',
+  booksUnder100Reviews: false,
+  trafficSource: 'amazon',
+  contentFeasibilityScore: 0,
+  extraOpportunityScore: 0,
+  validationStatus: 'discovering',
+  validationNotes: '',
+  checklist: getDefaultChecklist(),
+  updatedAt: new Date(),
+});
 
-  // 1) brandRegistered
-  if (validation.brandRegistered === 'yes') score -= 25;
-  // no = 0
+// ============ UNIFIED SCORING LOGIC ============
+// Uses BOTH keyword base data AND validation qualitative signals
 
-  // 2) volumeBucket
-  switch (validation.volumeBucket) {
-    case '<50': score -= 12; break;
-    case '50-100': score -= 5; break;
-    case '101-600': score += 10; break;
-    case '>600': score += 18; break;
+export const calculateRelevanceScore = (keyword: Keyword): number => {
+  const v = keyword.validation;
+  let score = 0;
+  
+  // ============ 1) DEMANDA (40%) ============
+  // Volume from keyword base data
+  const volume = keyword.searchVolume || 0;
+  if (volume <= 50) score -= 10;
+  else if (volume <= 100) score -= 5;
+  else if (volume <= 600) score += 10;
+  else score += 20;
+  
+  // Autosuggest presence (from validation)
+  if (v?.autosuggestPresence) score += 5;
+  
+  // ============ 2) COMPETENCIA (30%) ============
+  // We use competitionNote if available (raw number), otherwise infer from level
+  const competitorsRaw = keyword.competitionNote ? parseInt(keyword.competitionNote.replace(/[^\d]/g, '')) : null;
+  
+  if (competitorsRaw !== null && !isNaN(competitorsRaw)) {
+    if (competitorsRaw < 1000) score += 20;
+    else if (competitorsRaw <= 4000) score += 10;
+    else if (competitorsRaw <= 10000) score -= 5;
+    else score -= 15;
+  } else {
+    // Fallback to competition level
+    switch (keyword.competitionLevel) {
+      case 'low': score += 15; break;
+      case 'medium': score += 0; break;
+      case 'high': score -= 10; break;
+    }
   }
-
-  // 3) competitorsBucket
-  switch (validation.competitorsBucket) {
-    case '<1000': score += 22; break;
-    case '1000-4000': score += 12; break;
-    case '4000-10000': score -= 12; break;
-    case '>10000': score -= 22; break;
+  
+  // Books over 200 reviews (soft penalty)
+  if (v) {
+    switch (v.booksOver200Reviews) {
+      case 'none': score += 0; break;
+      case 'few': score -= 3; break;
+      case 'many': score -= 7; break;
+    }
+    
+    // Books under 100 reviews (space to enter)
+    if (v.booksUnder100Reviews) score += 5;
+    else if (v.booksUnder100Reviews === false) score -= 5;
   }
-
-  // 4) profitableBooks
-  switch (validation.profitableBooks) {
-    case '0': score -= 18; break;
-    case '1': score -= 10; break;
-    case '2': score += 0; break;
-    case '3': score += 8; break;
-    case '4': score += 12; break;
-    case '5+': score += 16; break;
+  
+  // ============ 3) MONETIZACIÓN (20%) ============
+  // We don't have price/royalties as base keyword fields currently
+  // But if they exist in future, we'd use them here
+  // For now, score is neutral in this category
+  
+  // ============ 4) VIABILIDAD EDITORIAL (10%) ============
+  if (v) {
+    // contentFeasibilityScore: 0-3 → +0 to +10
+    score += Math.min(v.contentFeasibilityScore, 3) * 3.33;
+    
+    // extraOpportunityScore: 0-2 → +0 to +5
+    score += Math.min(v.extraOpportunityScore, 2) * 2.5;
   }
-
-  // 5) hasBooksUnder100Reviews
-  if (validation.hasBooksUnder100Reviews === 'yes') score += 10;
-  else if (validation.hasBooksUnder100Reviews === 'no') score -= 10;
-
-  // 6) booksOver200ReviewsBucket (penaliza suave)
-  switch (validation.booksOver200ReviewsBucket) {
-    case '0-5': score += 0; break;
-    case '5-9': score -= 2; break;
-    case '9-15': score -= 4; break;
-    case '>15': score -= 6; break;
+  
+  // ============ 5) PENALIZACIONES DURAS ============
+  // hasTrademark = true → multiply by 0.3
+  if (v?.hasTrademark) {
+    score = score * 0.3;
   }
-
-  // 7) priceBucket
-  switch (validation.priceBucket) {
-    case '<9.99': score -= 12; break;
-    case '9.99-12': score += 6; break;
-    case '>12': score += 12; break;
+  
+  // trafficSource != amazon → -10
+  if (v && v.trafficSource !== 'amazon') {
+    score -= 10;
   }
-
-  // 8) royaltiesBucket
-  switch (validation.royaltiesBucket) {
-    case '<1.99': score -= 15; break;
-    case '2-3.99': score += 0; break;
-    case '4-5.99': score += 12; break;
-    case '>6': score += 18; break;
-  }
-
-  // 9) mainTrafficSource
-  switch (validation.mainTrafficSource) {
-    case 'amazon': score += 10; break;
-    case 'personal_brand': score -= 15; break;
-    case 'social': score -= 15; break;
-    case 'other': score -= 5; break;
-  }
-
-  // Clamp 0..100
-  return Math.max(0, Math.min(100, score));
+  
+  // Normalize to 0-100
+  // Base calculation gives roughly -30 to +50, so we scale and clamp
+  const normalized = Math.round(((score + 30) / 80) * 100);
+  return Math.max(0, Math.min(100, normalized));
 };
 
-export const hasMinimumValidationData = (validation: Partial<KeywordValidation>): boolean => {
-  return !!(validation.brandRegistered && validation.volumeBucket && validation.competitorsBucket);
-};
-
-export const calculateValidationStatus = (validation: Partial<KeywordValidation>): ValidationStatus => {
-  // Check for override first
-  if (validation.validationStatusOverride) {
+// Calculate status from score
+export const calculateValidationStatus = (score: number, validation?: Partial<KeywordValidation>): ValidationStatus => {
+  // Override takes precedence
+  if (validation?.validationStatusOverride) {
     return validation.validationStatusOverride;
   }
-
-  // Check minimum data
-  if (!hasMinimumValidationData(validation)) {
-    return 'unvalidated';
-  }
-
-  const score = validation.validationScore ?? calculateValidationScore(validation);
-
+  
   if (score >= 70) return 'validated';
-  if (score <= 35) return 'discarded';
-  return 'reviewing';
+  if (score <= 30) return 'discarded';
+  return 'discovering';
 };
 
 // ============ RELEVANCE MAPPING ============
 
 export const scoreToRelevanceLevel = (score: number): RelevanceLevel => {
   if (score >= 75) return 'very-high';
-  if (score >= 56) return 'high';
-  if (score >= 36) return 'low';
+  if (score >= 55) return 'high';
+  if (score >= 35) return 'low';
   return 'none';
 };
 
 export const relevanceLevelToScore = (relevance: RelevanceLevel): number => {
   switch (relevance) {
-    case 'very-high': return 87; // midpoint of 75-100
-    case 'high': return 65; // midpoint of 56-74
-    case 'low': return 45; // midpoint of 36-55
-    case 'none': return 17; // midpoint of 0-35
+    case 'very-high': return 87;
+    case 'high': return 65;
+    case 'low': return 45;
+    case 'none': return 17;
   }
 };
 
@@ -292,48 +268,39 @@ export interface ValidationAlert {
   field: string;
 }
 
-export const getValidationAlerts = (validation: Partial<KeywordValidation>): ValidationAlert[] => {
+export const getValidationAlerts = (keyword: Keyword): ValidationAlert[] => {
   const alerts: ValidationAlert[] = [];
-
-  if (validation.brandRegistered === 'yes') {
-    alerts.push({ type: 'error', field: 'brandRegistered', message: 'Marca registrada - alto riesgo' });
+  const v = keyword.validation;
+  
+  if (v?.hasTrademark) {
+    alerts.push({ type: 'error', field: 'hasTrademark', message: 'Marca registrada - penalización severa (×0.3)' });
   }
-
-  if (validation.competitorsBucket === '>10000') {
-    alerts.push({ type: 'error', field: 'competitorsBucket', message: 'Competencia extrema (>10,000)' });
+  
+  if (v?.trafficSource && v.trafficSource !== 'amazon') {
+    alerts.push({ type: 'warning', field: 'trafficSource', message: `Tráfico no orgánico (${v.trafficSource})` });
   }
-
-  if (validation.priceBucket === '<9.99') {
-    alerts.push({ type: 'warning', field: 'priceBucket', message: 'Precio bajo (<$9.99)' });
+  
+  if (v?.booksOver200Reviews === 'many') {
+    alerts.push({ type: 'warning', field: 'booksOver200Reviews', message: 'Muchos libros con +200 reviews' });
   }
-
-  if (validation.royaltiesBucket === '<1.99') {
-    alerts.push({ type: 'warning', field: 'royaltiesBucket', message: 'Regalías bajas (<$1.99)' });
+  
+  if (v?.booksUnder100Reviews === false) {
+    alerts.push({ type: 'warning', field: 'booksUnder100Reviews', message: 'Sin espacio para entrar (no hay libros con -100 reviews)' });
   }
-
-  if (validation.mainTrafficSource === 'personal_brand' || validation.mainTrafficSource === 'social') {
-    alerts.push({ type: 'error', field: 'mainTrafficSource', message: 'Tráfico no orgánico (RRSS/Marca)' });
+  
+  // Base data alerts
+  if (keyword.searchVolume <= 50) {
+    alerts.push({ type: 'warning', field: 'searchVolume', message: 'Volumen de búsqueda muy bajo' });
   }
-
-  if (validation.hasBooksUnder100Reviews === 'no') {
-    alerts.push({ type: 'warning', field: 'hasBooksUnder100Reviews', message: 'Sin espacio para entrar' });
+  
+  if (keyword.competitionLevel === 'high') {
+    alerts.push({ type: 'warning', field: 'competitionLevel', message: 'Competencia alta' });
   }
-
+  
   return alerts;
 };
 
-// ============ DEFAULT VALIDATION ============
-
-export const getDefaultValidation = (): KeywordValidation => ({
-  validationNotes: '',
-  excelCriteria: getDefaultChecklist(),
-  validationScore: 50,
-  validationStatus: 'unvalidated',
-  relevanceMode: 'manual',
-  updatedAt: new Date(),
-});
-
-// ============ SCORE COLOR ============
+// ============ SCORE COLORS ============
 
 export const getScoreColor = (score: number): string => {
   if (score >= 70) return 'text-green-600';
@@ -347,4 +314,86 @@ export const getScoreBgColor = (score: number): string => {
   if (score >= 50) return 'bg-yellow-500/20';
   if (score >= 35) return 'bg-orange-500/20';
   return 'bg-red-500/20';
+};
+
+// ============ SCORE IMPACT PREVIEW ============
+// Shows how each field impacts the score
+
+export interface ScoreImpact {
+  field: string;
+  label: string;
+  impact: number;
+  type: 'positive' | 'negative' | 'neutral';
+}
+
+export const getScoreImpacts = (keyword: Keyword): ScoreImpact[] => {
+  const impacts: ScoreImpact[] = [];
+  const v = keyword.validation;
+  
+  // Volume impact
+  const volume = keyword.searchVolume || 0;
+  let volumeImpact = 0;
+  if (volume <= 50) volumeImpact = -10;
+  else if (volume <= 100) volumeImpact = -5;
+  else if (volume <= 600) volumeImpact = 10;
+  else volumeImpact = 20;
+  impacts.push({
+    field: 'volume',
+    label: `Volumen: ${volume.toLocaleString()}`,
+    impact: volumeImpact,
+    type: volumeImpact > 0 ? 'positive' : volumeImpact < 0 ? 'negative' : 'neutral',
+  });
+  
+  // Competition impact
+  let compImpact = 0;
+  switch (keyword.competitionLevel) {
+    case 'low': compImpact = 15; break;
+    case 'medium': compImpact = 0; break;
+    case 'high': compImpact = -10; break;
+  }
+  impacts.push({
+    field: 'competition',
+    label: `Competencia: ${keyword.competitionLevel}`,
+    impact: compImpact,
+    type: compImpact > 0 ? 'positive' : compImpact < 0 ? 'negative' : 'neutral',
+  });
+  
+  if (v) {
+    // Autosuggest
+    if (v.autosuggestPresence) {
+      impacts.push({ field: 'autosuggest', label: 'Autosuggest: Sí', impact: 5, type: 'positive' });
+    }
+    
+    // Trademark
+    if (v.hasTrademark) {
+      impacts.push({ field: 'trademark', label: 'Marca registrada', impact: -70, type: 'negative' });
+    }
+    
+    // Traffic source
+    if (v.trafficSource !== 'amazon') {
+      impacts.push({ field: 'traffic', label: `Tráfico: ${v.trafficSource}`, impact: -10, type: 'negative' });
+    }
+    
+    // Feasibility
+    if (v.contentFeasibilityScore > 0) {
+      impacts.push({
+        field: 'feasibility',
+        label: `Viabilidad: ${v.contentFeasibilityScore}/3`,
+        impact: Math.round(v.contentFeasibilityScore * 3.33),
+        type: 'positive',
+      });
+    }
+    
+    // Extra opportunity
+    if (v.extraOpportunityScore > 0) {
+      impacts.push({
+        field: 'opportunity',
+        label: `Oportunidad extra: ${v.extraOpportunityScore}/2`,
+        impact: Math.round(v.extraOpportunityScore * 2.5),
+        type: 'positive',
+      });
+    }
+  }
+  
+  return impacts;
 };
