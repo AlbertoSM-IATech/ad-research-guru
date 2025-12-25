@@ -117,7 +117,8 @@ export interface UsePersistenceOptions {
 
 export function usePersistence(
   state: UsePersistenceOptions,
-  hasHydrated: boolean
+  hasHydrated: boolean,
+  onSave?: () => void
 ): void {
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   
@@ -141,6 +142,8 @@ export function usePersistence(
         campaignPlansByMarket: state.campaignPlansByMarket,
         showInsights: state.showInsights,
       });
+      // Notify caller that save completed
+      onSave?.();
     }, DEBOUNCE_MS);
     
     return () => {
@@ -158,5 +161,6 @@ export function usePersistence(
     state.categoriesByMarket,
     state.campaignPlansByMarket,
     state.showInsights,
+    onSave,
   ]);
 }
