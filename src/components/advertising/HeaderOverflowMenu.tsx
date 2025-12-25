@@ -9,7 +9,8 @@ import {
   Layers,
   FlaskConical,
   Trash2,
-  FileJson
+  HardDriveDownload,
+  HardDriveUpload
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -40,6 +41,7 @@ interface HeaderOverflowMenuProps {
   isDemoMode: boolean;
   onResetData: () => void;
   onExportBackup: () => void;
+  onImportBackup: () => void;
 }
 
 export const HeaderOverflowMenu = ({
@@ -51,6 +53,7 @@ export const HeaderOverflowMenu = ({
   isDemoMode,
   onResetData,
   onExportBackup,
+  onImportBackup,
 }: HeaderOverflowMenuProps) => {
   const [showResetDialog, setShowResetDialog] = useState(false);
 
@@ -111,8 +114,12 @@ export const HeaderOverflowMenu = ({
             Ajustes del módulo
           </DropdownMenuItem>
           <DropdownMenuItem onClick={onExportBackup} className="gap-2 cursor-pointer">
-            <FileJson className="h-4 w-4" />
-            Exportar backup (JSON)
+            <HardDriveDownload className="h-4 w-4" />
+            Exportar backup completo
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={onImportBackup} className="gap-2 cursor-pointer">
+            <HardDriveUpload className="h-4 w-4" />
+            Importar backup
           </DropdownMenuItem>
           <DropdownMenuItem 
             onClick={() => setShowResetDialog(true)} 
