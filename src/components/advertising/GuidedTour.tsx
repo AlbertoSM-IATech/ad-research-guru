@@ -1,5 +1,5 @@
-import { useState, useEffect, useRef } from 'react';
-import { X, ChevronLeft, ChevronRight, HelpCircle, Sparkles, ArrowDown, ArrowUp, ArrowLeft, ArrowRight } from 'lucide-react';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { X, ChevronLeft, ChevronRight, HelpCircle, Sparkles, ArrowDown, ArrowUp, ArrowLeft, ArrowRight, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -12,6 +12,10 @@ interface TourStep {
   target?: string; // CSS selector for highlighting
   position: 'top' | 'bottom' | 'left' | 'right' | 'center';
   pointer?: 'up' | 'down' | 'left' | 'right'; // Arrow direction pointing to element
+  // UI state requirements for this step
+  requiresTab?: 'keywords' | 'asins' | 'categories';
+  requiresInsightsOpen?: boolean;
+  requiresBookPanelOpen?: boolean;
 }
 
 const TOUR_STEPS: TourStep[] = [
@@ -36,19 +40,12 @@ const TOUR_STEPS: TourStep[] = [
     target: '[data-tour="book-info"]',
     position: 'bottom',
     pointer: 'up',
-  },
-  {
-    id: 'stats',
-    title: '📍 Panel de Estadísticas',
-    description: 'Mira las tarjetas de estadísticas → Aquí verás un resumen de tus keywords, ASINs y categorías con métricas clave.',
-    target: '[data-tour="stats"]',
-    position: 'bottom',
-    pointer: 'up',
+    requiresBookPanelOpen: true,
   },
   {
     id: 'tabs',
     title: '📍 Pestañas de Navegación',
-    description: 'Observa las pestañas: Keywords, ASIN, Categorías, Visualizaciones → Navega entre secciones haciendo clic en ellas.',
+    description: 'Observa las pestañas: Keywords, ASIN, Categorías → Navega entre secciones haciendo clic en ellas.',
     target: '[data-tour="tabs"]',
     position: 'bottom',
     pointer: 'up',
@@ -60,6 +57,7 @@ const TOUR_STEPS: TourStep[] = [
     target: '[data-tour="keywords-section"]',
     position: 'top',
     pointer: 'down',
+    requiresTab: 'keywords',
   },
   {
     id: 'bulk-import',
@@ -68,6 +66,7 @@ const TOUR_STEPS: TourStep[] = [
     target: '[data-tour="bulk-import"]',
     position: 'bottom',
     pointer: 'up',
+    requiresTab: 'keywords',
   },
   {
     id: 'relevance',
@@ -82,12 +81,13 @@ const TOUR_STEPS: TourStep[] = [
     position: 'center',
   },
   {
-    id: 'visualizations',
-    title: '📍 Visualizaciones',
-    description: 'Haz clic en la pestaña "Visualizaciones" → Accede a gráficas interactivas como el Mapa de Oportunidades, nube de palabras y más.',
-    target: '[data-tour="tabs"]',
-    position: 'bottom',
-    pointer: 'up',
+    id: 'stats',
+    title: '📍 Panel de Estadísticas',
+    description: 'Mira las tarjetas de estadísticas → Aquí verás un resumen de tus keywords, ASINs y categorías con métricas clave.',
+    target: '[data-tour="stats"]',
+    position: 'top',
+    pointer: 'down',
+    requiresInsightsOpen: true,
   },
   {
     id: 'finish',
@@ -99,24 +99,54 @@ const TOUR_STEPS: TourStep[] = [
 
 const STORAGE_KEY = 'publify-tour-completed';
 
+export interface UIStateRequest {
+  activeTab?: 'keywords' | 'asins' | 'categories';
+  showInsights?: boolean;
+  isBookPanelOpen?: boolean;
+}
+
 interface GuidedTourProps {
   isOpen: boolean;
   onClose: () => void;
   onComplete: () => void;
+  onRequestUIState?: (state: UIStateRequest) => void;
 }
 
-export const GuidedTour = ({ isOpen, onClose, onComplete }: GuidedTourProps) => {
+export const GuidedTour = ({ isOpen, onClose, onComplete, onRequestUIState }: GuidedTourProps) => {
   const [currentStep, setCurrentStep] = useState(0);
   const [targetRect, setTargetRect] = useState<DOMRect | null>(null);
+  const [targetNotFound, setTargetNotFound] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);
   
   const step = TOUR_STEPS[currentStep];
   const progress = ((currentStep + 1) / TOUR_STEPS.length) * 100;
 
-  // Find and highlight target element
-  useEffect(() => {
-    if (!isOpen || !step.target) {
+  // Prepare UI state before trying to find the target
+  const prepareUIState = useCallback((tourStep: TourStep) => {
+    if (!onRequestUIState) return;
+    
+    const stateRequest: UIStateRequest = {};
+    
+    if (tourStep.requiresTab) {
+      stateRequest.activeTab = tourStep.requiresTab;
+    }
+    if (tourStep.requiresInsightsOpen) {
+      stateRequest.showInsights = true;
+    }
+    if (tourStep.requiresBookPanelOpen) {
+      stateRequest.isBookPanelOpen = true;
+    }
+    
+    if (Object.keys(stateRequest).length > 0) {
+      onRequestUIState(stateRequest);
+    }
+  }, [onRequestUIState]);
+
+  // Find target element and update rect
+  const updateTargetRect = useCallback(() => {
+    if (!step.target) {
       setTargetRect(null);
+      setTargetNotFound(false);
       return;
     }
     
@@ -124,13 +154,68 @@ export const GuidedTour = ({ isOpen, onClose, onComplete }: GuidedTourProps) => 
     if (element) {
       const rect = element.getBoundingClientRect();
       setTargetRect(rect);
-      
-      // Scroll element into view
-      element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      setTargetNotFound(false);
     } else {
       setTargetRect(null);
+      setTargetNotFound(true);
     }
-  }, [isOpen, step.target, currentStep]);
+  }, [step.target]);
+
+  // Effect: Prepare UI state and find target when step changes
+  useEffect(() => {
+    if (!isOpen) return;
+    
+    // Reset state
+    setTargetRect(null);
+    setTargetNotFound(false);
+    
+    // If no target, nothing to do
+    if (!step.target) return;
+    
+    // First, prepare the UI state (open panels, switch tabs, etc.)
+    prepareUIState(step);
+    
+    // Wait for React to re-render, then find the element
+    const findAndScrollTimeout = setTimeout(() => {
+      const element = document.querySelector(step.target!);
+      if (element) {
+        // Scroll element into view
+        element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        
+        // Wait for scroll to complete, then recalculate rect
+        setTimeout(() => {
+          requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+              updateTargetRect();
+            });
+          });
+        }, 300);
+      } else {
+        setTargetNotFound(true);
+      }
+    }, 100);
+    
+    return () => clearTimeout(findAndScrollTimeout);
+  }, [isOpen, currentStep, step.target, prepareUIState, updateTargetRect]);
+
+  // Effect: Recalculate on scroll and resize
+  useEffect(() => {
+    if (!isOpen || !step.target) return;
+    
+    const handleScrollOrResize = () => {
+      requestAnimationFrame(() => {
+        updateTargetRect();
+      });
+    };
+    
+    window.addEventListener('scroll', handleScrollOrResize, { passive: true });
+    window.addEventListener('resize', handleScrollOrResize, { passive: true });
+    
+    return () => {
+      window.removeEventListener('scroll', handleScrollOrResize);
+      window.removeEventListener('resize', handleScrollOrResize);
+    };
+  }, [isOpen, step.target, updateTargetRect]);
 
   const handleNext = () => {
     if (currentStep < TOUR_STEPS.length - 1) {
@@ -168,19 +253,32 @@ export const GuidedTour = ({ isOpen, onClose, onComplete }: GuidedTourProps) => 
     
     const padding = 20;
     const cardWidth = 450;
+    const cardHeight = 280; // Approximate card height
     
     switch (step.position) {
       case 'bottom':
         return {
           position: 'fixed',
-          top: Math.min(targetRect.bottom + padding, window.innerHeight - 300),
+          top: Math.min(targetRect.bottom + padding, window.innerHeight - cardHeight),
           left: Math.max(padding, Math.min(targetRect.left, window.innerWidth - cardWidth - padding)),
         };
       case 'top':
         return {
           position: 'fixed',
-          bottom: window.innerHeight - targetRect.top + padding,
+          bottom: Math.max(padding, window.innerHeight - targetRect.top + padding),
           left: Math.max(padding, Math.min(targetRect.left, window.innerWidth - cardWidth - padding)),
+        };
+      case 'left':
+        return {
+          position: 'fixed',
+          top: Math.max(padding, Math.min(targetRect.top, window.innerHeight - cardHeight)),
+          right: Math.max(padding, window.innerWidth - targetRect.left + padding),
+        };
+      case 'right':
+        return {
+          position: 'fixed',
+          top: Math.max(padding, Math.min(targetRect.top, window.innerHeight - cardHeight)),
+          left: Math.min(targetRect.right + padding, window.innerWidth - cardWidth - padding),
         };
       default:
         return {};
@@ -188,7 +286,7 @@ export const GuidedTour = ({ isOpen, onClose, onComplete }: GuidedTourProps) => 
   };
 
   const PointerArrow = () => {
-    if (!step.pointer) return null;
+    if (!step.pointer || targetNotFound) return null;
     
     const arrowClass = "w-6 h-6 text-primary animate-bounce";
     
@@ -206,6 +304,9 @@ export const GuidedTour = ({ isOpen, onClose, onComplete }: GuidedTourProps) => 
     }
   };
 
+  // Determine if we should show centered (no target found or center position)
+  const showCentered = step.position === 'center' || (step.target && targetNotFound);
+
   return (
     <div className="fixed inset-0 z-[100] pointer-events-none">
       {/* Semi-transparent overlay with cutout for target */}
@@ -215,7 +316,7 @@ export const GuidedTour = ({ isOpen, onClose, onComplete }: GuidedTourProps) => 
       />
 
       {/* Highlight box around target element */}
-      {targetRect && (
+      {targetRect && !targetNotFound && (
         <div
           className="absolute border-2 border-primary rounded-lg shadow-lg shadow-primary/30 pointer-events-none animate-pulse"
           style={{
@@ -232,9 +333,9 @@ export const GuidedTour = ({ isOpen, onClose, onComplete }: GuidedTourProps) => 
       <Card 
         ref={cardRef}
         className={`pointer-events-auto max-w-md shadow-2xl border-primary/20 bg-card animate-in fade-in-0 zoom-in-95 ${
-          step.position === 'center' ? 'fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2' : ''
+          showCentered ? 'fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2' : ''
         }`}
-        style={step.position !== 'center' ? getCardStyle() : undefined}
+        style={!showCentered ? getCardStyle() : undefined}
       >
         <CardContent className="pt-6">
           {/* Close button */}
@@ -254,7 +355,7 @@ export const GuidedTour = ({ isOpen, onClose, onComplete }: GuidedTourProps) => 
                 <Sparkles className="w-3 h-3" />
                 Paso {currentStep + 1} de {TOUR_STEPS.length}
               </Badge>
-              {step.pointer && (
+              {step.pointer && !targetNotFound && (
                 <div className="flex items-center gap-1 text-xs text-primary">
                   <PointerArrow />
                   <span>Mira aquí</span>
@@ -263,6 +364,14 @@ export const GuidedTour = ({ isOpen, onClose, onComplete }: GuidedTourProps) => 
             </div>
             <Progress value={progress} className="h-1" />
           </div>
+
+          {/* Target not found warning */}
+          {targetNotFound && step.target && (
+            <div className="mb-3 p-2 rounded-md bg-amber-500/10 border border-amber-500/30 flex items-center gap-2 text-xs text-amber-600 dark:text-amber-400">
+              <AlertCircle className="w-4 h-4 shrink-0" />
+              <span>No se pudo resaltar el elemento. Pulsa Siguiente para continuar.</span>
+            </div>
+          )}
 
           {/* Content */}
           <div className="space-y-4">

@@ -17,7 +17,7 @@ import { ThemeToggle } from '@/components/ThemeToggle';
 import { AdvancedExportModal } from './AdvancedExportModal';
 import { AdvancedImportModal } from './AdvancedImportModal';
 import { CampaignPlanManager } from './CampaignPlanManager';
-import { GuidedTour, useTourStatus } from './GuidedTour';
+import { GuidedTour, useTourStatus, type UIStateRequest } from './GuidedTour';
 import { KeyboardShortcutsManager } from './KeyboardShortcutsManager';
 import { AIAssistantDrawer } from './ai/AIAssistantDrawer';
 import { HeaderOverflowMenu } from './HeaderOverflowMenu';
@@ -809,10 +809,12 @@ export const AdvertisingResearch = () => {
             {/* Controls */}
             <div className="flex items-center gap-3">
               {/* Marketplace Selector */}
-              <MarketplaceSelector 
-                value={selectedMarketplace} 
-                onChange={setSelectedMarketplace} 
-              />
+              <div data-tour="marketplace">
+                <MarketplaceSelector 
+                  value={selectedMarketplace} 
+                  onChange={setSelectedMarketplace} 
+                />
+              </div>
               
               {/* Global Search */}
               <div className="hidden md:block" data-tour="global-search">
@@ -1086,11 +1088,13 @@ export const AdvertisingResearch = () => {
             </CollapsibleTrigger>
             
             <CollapsibleContent className="pt-4 space-y-6">
-              <StatsPanel 
-                keywords={currentKeywords} 
-                asins={currentASINs} 
-                categories={currentCategories} 
-              />
+              <div data-tour="stats">
+                <StatsPanel 
+                  keywords={currentKeywords} 
+                  asins={currentASINs} 
+                  categories={currentCategories} 
+                />
+              </div>
               
               <Separator />
               
@@ -1122,12 +1126,24 @@ export const AdvertisingResearch = () => {
       />
       
       {/* Guided Tour - Solo desde overflow */}
+      {/* Guided Tour */}
       <GuidedTour
         isOpen={showTour}
         onClose={() => setShowTour(false)}
         onComplete={() => {
           setHasCompletedTour(true);
           setShowTour(false);
+        }}
+        onRequestUIState={(state: UIStateRequest) => {
+          if (state.activeTab !== undefined) {
+            setActiveTab(state.activeTab);
+          }
+          if (state.showInsights !== undefined) {
+            setShowInsights(state.showInsights);
+          }
+          if (state.isBookPanelOpen !== undefined) {
+            setIsBookPanelOpen(state.isBookPanelOpen);
+          }
         }}
       />
       
