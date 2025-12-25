@@ -81,6 +81,9 @@ export const AdvertisingResearch = () => {
   const [lastSyncAt, setLastSyncAt] = useState<Date | null>(null);
   const [isSyncing, setIsSyncing] = useState(false);
   
+  // Pending changes counter
+  const [pendingChangesCount, setPendingChangesCount] = useState(0);
+  
   const [selectedMarketplace, setSelectedMarketplace] = useState('us');
   const [activeTab, setActiveTab] = useState<'keywords' | 'asins' | 'categories'>('keywords');
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -181,10 +184,40 @@ export const AdvertisingResearch = () => {
     return () => clearInterval(interval);
   }, [hasHydrated]);
 
+  // ============= PENDING CHANGES TRACKING =============
+  // Use a ref to track if this is the first render after hydration
+  const isFirstRenderAfterHydration = useRef(true);
+  
+  // Track changes to persistable state (increment pendingChangesCount)
+  useEffect(() => {
+    // Don't count changes before hydration
+    if (!hasHydrated) return;
+    
+    // Skip the first render after hydration (initial load)
+    if (isFirstRenderAfterHydration.current) {
+      isFirstRenderAfterHydration.current = false;
+      return;
+    }
+    
+    // Increment pending changes count
+    setPendingChangesCount(prev => prev + 1);
+  }, [
+    hasHydrated,
+    selectedMarketplace,
+    activeTab,
+    bookInfo,
+    keywordsByMarket,
+    asinsByMarket,
+    categoriesByMarket,
+    campaignPlansByMarket,
+    showInsights,
+  ]);
+
   // ============= PERSISTENCE TO LOCALSTORAGE =============
   const handleSyncComplete = useCallback(() => {
     setLastSyncAt(new Date());
     setIsSyncing(true);
+    setPendingChangesCount(0); // Reset pending changes
     // Reset syncing animation after 1.5s
     setTimeout(() => setIsSyncing(false), 1500);
   }, []);
@@ -524,6 +557,7 @@ export const AdvertisingResearch = () => {
     setSelection({ keywords: new Set(), asins: new Set(), categories: new Set() });
     setShowInsights(false);
     setHasLoadedExamples(false); // This will trigger demo data reload
+    setPendingChangesCount(0); // Reset pending changes
     
     // 3. Close any open modals
     setShowExportModal(false);
@@ -615,6 +649,9 @@ export const AdvertisingResearch = () => {
     // Clear selection
     setSelection({ keywords: new Set(), asins: new Set(), categories: new Set() });
     
+    // Reset pending changes (backup is now the source of truth)
+    setPendingChangesCount(0);
+    
     // Close backup modal
     setShowBackupImportModal(false);
     
@@ -663,23 +700,37 @@ export const AdvertisingResearch = () => {
               <h1 className="font-heading text-2xl font-bold text-foreground">
                 Investigación Publicitaria
               </h1>
-              {/* Last sync indicator - Desktop */}
-              <span 
-                className={`hidden md:inline-flex items-center gap-1.5 text-xs text-muted-foreground transition-all duration-300 ${
-                  isSyncing ? 'text-primary' : ''
-                }`}
-              >
+              {/* Sync status indicators - Desktop */}
+              <div className="hidden md:flex items-center gap-3">
+                {/* Pending changes indicator */}
                 <span 
-                  className={`w-1.5 h-1.5 rounded-full transition-all duration-300 ${
-                    isSyncing 
-                      ? 'bg-primary animate-pulse scale-125' 
-                      : lastSyncAt 
-                        ? 'bg-green-500' 
-                        : 'bg-muted-foreground/50'
+                  className={`inline-flex items-center gap-1.5 text-xs transition-all duration-300 ${
+                    pendingChangesCount > 0 
+                      ? 'text-amber-500 dark:text-amber-400' 
+                      : 'text-muted-foreground'
+                  } ${isSyncing ? 'animate-pulse' : ''}`}
+                >
+                  <span 
+                    className={`w-1.5 h-1.5 rounded-full transition-all duration-300 ${
+                      pendingChangesCount > 0 
+                        ? 'bg-amber-500 dark:bg-amber-400' 
+                        : 'bg-green-500'
+                    } ${isSyncing ? 'animate-pulse scale-125' : ''}`}
+                  />
+                  {pendingChangesCount > 0 
+                    ? `Cambios pendientes: ${pendingChangesCount}` 
+                    : 'Todo sincronizado'}
+                </span>
+                
+                {/* Last sync time */}
+                <span 
+                  className={`inline-flex items-center gap-1.5 text-xs text-muted-foreground transition-all duration-300 ${
+                    isSyncing ? 'text-primary' : ''
                   }`}
-                />
-                Última sincronización: {formatLastSync(lastSyncAt)}
-              </span>
+                >
+                  Última sincronización: {formatLastSync(lastSyncAt)}
+                </span>
+              </div>
             </div>
             
             {/* Controls */}
@@ -737,22 +788,36 @@ export const AdvertisingResearch = () => {
             </div>
           </div>
           
-          {/* Last sync indicator - Mobile */}
-          <div 
-            className={`md:hidden mt-2 text-xs flex items-center gap-1.5 transition-all duration-300 ${
-              isSyncing ? 'text-primary' : 'text-muted-foreground'
-            }`}
-          >
+          {/* Sync status indicators - Mobile */}
+          <div className="md:hidden mt-2 flex flex-wrap items-center gap-x-4 gap-y-1">
+            {/* Pending changes indicator */}
             <span 
-              className={`w-1.5 h-1.5 rounded-full transition-all duration-300 ${
-                isSyncing 
-                  ? 'bg-primary animate-pulse scale-125' 
-                  : lastSyncAt 
-                    ? 'bg-green-500' 
-                    : 'bg-muted-foreground/50'
+              className={`inline-flex items-center gap-1.5 text-xs transition-all duration-300 ${
+                pendingChangesCount > 0 
+                  ? 'text-amber-500 dark:text-amber-400' 
+                  : 'text-muted-foreground'
+              } ${isSyncing ? 'animate-pulse' : ''}`}
+            >
+              <span 
+                className={`w-1.5 h-1.5 rounded-full transition-all duration-300 ${
+                  pendingChangesCount > 0 
+                    ? 'bg-amber-500 dark:bg-amber-400' 
+                    : 'bg-green-500'
+                } ${isSyncing ? 'animate-pulse scale-125' : ''}`}
+              />
+              {pendingChangesCount > 0 
+                ? `Cambios pendientes: ${pendingChangesCount}` 
+                : 'Todo sincronizado'}
+            </span>
+            
+            {/* Last sync time */}
+            <span 
+              className={`inline-flex items-center gap-1.5 text-xs text-muted-foreground transition-all duration-300 ${
+                isSyncing ? 'text-primary' : ''
               }`}
-            />
-            Última sincronización: {formatLastSync(lastSyncAt)}
+            >
+              Última sincronización: {formatLastSync(lastSyncAt)}
+            </span>
           </div>
           
           {/* Mobile search */}
