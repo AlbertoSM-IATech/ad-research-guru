@@ -456,10 +456,39 @@ export const AdvertisingResearch = () => {
     setIsDemoMode(newMode);
   }, [isDemoMode]);
 
-  // Reset data handler - clears localStorage and reloads
+  // Reset data handler - clears localStorage and resets all states to initial values
   const handleResetData = useCallback(() => {
+    // 1. Clear localStorage
     localStorage.removeItem('ad-research:v1');
-    window.location.reload();
+    
+    // 2. Reset all states to initial values
+    setSelectedMarketplace('us');
+    setActiveTab('keywords');
+    setBookInfo({ title: '', subtitle: '', description: '', categories: [] });
+    setKeywordsByMarket({});
+    setAsinsByMarket({});
+    setCategoriesByMarket({});
+    setCampaignPlansByMarket({});
+    setGlobalSearchTerm('');
+    setGlobalFilter('all');
+    setGlobalSort('relevance');
+    setSelection({ keywords: new Set(), asins: new Set(), categories: new Set() });
+    setShowInsights(false);
+    setHasLoadedExamples(false); // This will trigger demo data reload
+    
+    // 3. Close any open modals
+    setShowExportModal(false);
+    setShowImportModal(false);
+    setShowCampaignPlanner(false);
+    
+    // 4. Close AI assistant and reopen book panel
+    setIsAIAssistantOpen(false);
+    setIsBookPanelOpen(true);
+    
+    // 5. Show confirmation toast
+    import('sonner').then(({ toast }) => {
+      toast.success('Datos reseteados');
+    });
   }, []);
 
   // Export backup handler - downloads current state as JSON
