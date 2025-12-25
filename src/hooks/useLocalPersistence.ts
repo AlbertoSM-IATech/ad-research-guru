@@ -56,6 +56,20 @@ function deserializeDates<T>(obj: T): T {
   return obj;
 }
 
+export function getLastSyncAt(): Date | null {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return null;
+    
+    const parsed = JSON.parse(raw);
+    if (parsed.version !== 1 || !parsed.updatedAt) return null;
+    
+    return new Date(parsed.updatedAt);
+  } catch {
+    return null;
+  }
+}
+
 export function loadPersistedState(): PersistedStateV1 | null {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
