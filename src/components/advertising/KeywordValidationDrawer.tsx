@@ -208,16 +208,16 @@ export const KeywordValidationDrawer = ({
                   Forzar estado (opcional)
                 </Label>
                 <Select
-                  value={validation.validationStatusOverride || ''}
+                  value={validation.validationStatusOverride || 'auto'}
                   onValueChange={(value) => 
-                    handleFieldChange('validationStatusOverride', value as ValidationStatus || undefined)
+                    handleFieldChange('validationStatusOverride', value === 'auto' ? undefined : value as ValidationStatus)
                   }
                 >
                   <SelectTrigger className="w-full">
                     <SelectValue placeholder="Usar estado automático" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Automático</SelectItem>
+                    <SelectItem value="auto">Automático</SelectItem>
                     {VALIDATION_STATUS_OPTIONS.map(opt => (
                       <SelectItem key={opt.value} value={opt.value}>
                         {opt.label}
