@@ -456,6 +456,52 @@ export const AdvertisingResearch = () => {
     setIsDemoMode(newMode);
   }, [isDemoMode]);
 
+  // Reset data handler - clears localStorage and reloads
+  const handleResetData = useCallback(() => {
+    localStorage.removeItem('ad-research:v1');
+    window.location.reload();
+  }, []);
+
+  // Export backup handler - downloads current state as JSON
+  const handleExportBackup = useCallback(() => {
+    const serializeData = <T,>(data: T): T => {
+      return JSON.parse(JSON.stringify(data, (key, value) => {
+        if (value instanceof Date) {
+          return value.toISOString();
+        }
+        return value;
+      }));
+    };
+
+    const backup = {
+      version: 1,
+      updatedAt: new Date().toISOString(),
+      selectedMarketplace,
+      activeTab,
+      bookInfo: serializeData(bookInfo),
+      keywordsByMarket: serializeData(keywordsByMarket),
+      asinsByMarket: serializeData(asinsByMarket),
+      categoriesByMarket: serializeData(categoriesByMarket),
+      campaignPlansByMarket: serializeData(campaignPlansByMarket),
+      showInsights,
+    };
+
+    const jsonString = JSON.stringify(backup, null, 2);
+    const blob = new Blob([jsonString], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    
+    const date = new Date().toISOString().split('T')[0];
+    const filename = `ad-research-backup-${date}.json`;
+    
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }, [selectedMarketplace, activeTab, bookInfo, keywordsByMarket, asinsByMarket, categoriesByMarket, campaignPlansByMarket, showInsights]);
+
   // Education sections (accessible from overflow menu)
   const educationSections = [{
     id: 'concepts',
@@ -541,6 +587,8 @@ export const AdvertisingResearch = () => {
                 onOpenCampaignPlanner={() => setShowCampaignPlanner(true)}
                 onToggleDemo={handleToggleDemo}
                 isDemoMode={isDemoMode}
+                onResetData={handleResetData}
+                onExportBackup={handleExportBackup}
               />
             </div>
           </div>
