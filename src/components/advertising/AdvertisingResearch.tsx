@@ -79,6 +79,7 @@ export const AdvertisingResearch = () => {
   
   // Last sync indicator
   const [lastSyncAt, setLastSyncAt] = useState<Date | null>(null);
+  const [isSyncing, setIsSyncing] = useState(false);
   
   const [selectedMarketplace, setSelectedMarketplace] = useState('us');
   const [activeTab, setActiveTab] = useState<'keywords' | 'asins' | 'categories'>('keywords');
@@ -181,6 +182,13 @@ export const AdvertisingResearch = () => {
   }, [hasHydrated]);
 
   // ============= PERSISTENCE TO LOCALSTORAGE =============
+  const handleSyncComplete = useCallback(() => {
+    setLastSyncAt(new Date());
+    setIsSyncing(true);
+    // Reset syncing animation after 1.5s
+    setTimeout(() => setIsSyncing(false), 1500);
+  }, []);
+
   usePersistence(
     {
       selectedMarketplace,
@@ -192,7 +200,8 @@ export const AdvertisingResearch = () => {
       campaignPlansByMarket,
       showInsights,
     },
-    hasHydrated
+    hasHydrated,
+    handleSyncComplete
   );
 
   const bookContextComplete = isBookContextComplete(bookInfo);
@@ -655,7 +664,20 @@ export const AdvertisingResearch = () => {
                 Investigación Publicitaria
               </h1>
               {/* Last sync indicator - Desktop */}
-              <span className="hidden md:inline text-xs text-muted-foreground">
+              <span 
+                className={`hidden md:inline-flex items-center gap-1.5 text-xs text-muted-foreground transition-all duration-300 ${
+                  isSyncing ? 'text-primary' : ''
+                }`}
+              >
+                <span 
+                  className={`w-1.5 h-1.5 rounded-full transition-all duration-300 ${
+                    isSyncing 
+                      ? 'bg-primary animate-pulse scale-125' 
+                      : lastSyncAt 
+                        ? 'bg-green-500' 
+                        : 'bg-muted-foreground/50'
+                  }`}
+                />
                 Última sincronización: {formatLastSync(lastSyncAt)}
               </span>
             </div>
@@ -716,7 +738,20 @@ export const AdvertisingResearch = () => {
           </div>
           
           {/* Last sync indicator - Mobile */}
-          <div className="md:hidden mt-2 text-xs text-muted-foreground">
+          <div 
+            className={`md:hidden mt-2 text-xs flex items-center gap-1.5 transition-all duration-300 ${
+              isSyncing ? 'text-primary' : 'text-muted-foreground'
+            }`}
+          >
+            <span 
+              className={`w-1.5 h-1.5 rounded-full transition-all duration-300 ${
+                isSyncing 
+                  ? 'bg-primary animate-pulse scale-125' 
+                  : lastSyncAt 
+                    ? 'bg-green-500' 
+                    : 'bg-muted-foreground/50'
+              }`}
+            />
             Última sincronización: {formatLastSync(lastSyncAt)}
           </div>
           
