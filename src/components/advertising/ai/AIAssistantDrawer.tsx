@@ -161,6 +161,19 @@ function ChatTab({
   const inputRef = useRef<HTMLInputElement>(null);
   const { isLoading, streamAI, cancel } = useAIStream();
 
+  // 1) Reset messages when context changes
+  const contextKey = [
+    marketplaceId,
+    bookInfo.title || "",
+    bookInfo.subtitle || "",
+    bookInfo.description || "",
+    (bookInfo.categories || []).join(","),
+  ].join("|").toLowerCase().trim();
+
+  useEffect(() => {
+    setMessages([]);
+  }, [contextKey]);
+
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
@@ -177,22 +190,28 @@ function ChatTab({
       timestamp: new Date(),
     };
 
-    setMessages((prev) => [...prev, userMessage]);
+    const assistantId = `assistant-${Date.now()}`;
+    const assistantPlaceholder: ChatMessage = {
+      id: assistantId,
+      role: "assistant",
+      content: "",
+      timestamp: new Date(),
+    };
+
+    // 2) Build nextMessages locally to avoid stale state
+    const nextMessages = [...messages, userMessage, assistantPlaceholder];
+    setMessages(nextMessages);
     setInputValue("");
 
-    const assistantId = `assistant-${Date.now()}`;
-    setMessages((prev) => [
-      ...prev,
-      { id: assistantId, role: "assistant", content: "", timestamp: new Date() },
-    ]);
+    // Filter out the empty placeholder for the API payload
+    const payloadMessages = nextMessages
+      .filter((m) => m.id !== assistantId)
+      .map((m) => ({ role: m.role, content: m.content }));
 
     await streamAI(
       {
         action: AI_CONFIG.actions.CHAT,
-        messages: [
-          ...messages.map((m) => ({ role: m.role, content: m.content })),
-          { role: "user" as const, content: userMessage.content },
-        ],
+        messages: payloadMessages,
         context: {
           bookInfo: {
             title: bookInfo.title,
