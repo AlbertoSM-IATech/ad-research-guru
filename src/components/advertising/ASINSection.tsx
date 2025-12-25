@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Plus, Trash2, Target, Search, Upload, Swords } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -53,6 +53,9 @@ export const ASINSection = ({
   const [quickAddASIN, setQuickAddASIN] = useState('');
   const [showBulkImport, setShowBulkImport] = useState(false);
   const [showCompetitiveAnalysis, setShowCompetitiveAnalysis] = useState(false);
+
+  // Memoize callback to avoid infinite loops
+  const stableOnSelectedIdsChange = useCallback(onSelectedIdsChange, [onSelectedIdsChange]);
 
   const handleQuickAdd = () => {
     const asinValue = quickAddASIN.toUpperCase().trim();
@@ -136,6 +139,15 @@ export const ASINSection = ({
   const filteredASINs = asins.filter((a) =>
     searchTerm ? a.asin.toLowerCase().includes(searchTerm.toLowerCase()) : true
   );
+
+  // Purge invalid selection IDs when filtered list changes
+  useEffect(() => {
+    const validIds = new Set(filteredASINs.map(a => a.id));
+    const nextSelected = new Set([...selectedIds].filter(id => validIds.has(id)));
+    if (nextSelected.size !== selectedIds.size) {
+      stableOnSelectedIdsChange(nextSelected);
+    }
+  }, [filteredASINs, selectedIds, stableOnSelectedIdsChange]);
 
   return (
     <div className="space-y-6 animate-fade-in">

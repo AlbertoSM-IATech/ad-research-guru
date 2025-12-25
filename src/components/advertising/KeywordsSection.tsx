@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import {
   Plus,
   Search,
@@ -103,6 +103,9 @@ export const KeywordsSection = ({
   const [quickAddKeyword, setQuickAddKeyword] = useState('');
   const [viewMode, setViewMode] = useState<ViewMode>('table');
   const [historyKeyword, setHistoryKeyword] = useState<Keyword | null>(null);
+
+  // Memoize callback to avoid infinite loops
+  const stableOnSelectedIdsChange = useCallback(onSelectedIdsChange, [onSelectedIdsChange]);
 
   const handleQuickAdd = () => {
     if (!quickAddKeyword.trim()) return;
@@ -271,6 +274,15 @@ export const KeywordsSection = ({
         return 0;
       });
   }, [keywords, searchTerm, filters, sortField, sortOrder]);
+
+  // Purge invalid selection IDs when filtered list changes
+  useEffect(() => {
+    const validIds = new Set(filteredKeywords.map(k => k.id));
+    const nextSelected = new Set([...selectedIds].filter(id => validIds.has(id)));
+    if (nextSelected.size !== selectedIds.size) {
+      stableOnSelectedIdsChange(nextSelected);
+    }
+  }, [filteredKeywords, selectedIds, stableOnSelectedIdsChange]);
 
   const totalPages = Math.ceil(filteredKeywords.length / ITEMS_PER_PAGE);
   const paginatedKeywords = filteredKeywords.slice(
