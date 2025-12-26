@@ -42,6 +42,7 @@ import { KeywordHistoryModal } from './KeywordHistoryModal';
 import { VariantDetector } from './VariantDetector';
 import { KeywordDetailPanel } from './KeywordDetailPanel';
 import { MarketScoreCell } from './MarketScoreCell';
+import { NewKeywordWizard } from './NewKeywordWizard';
 import {
   type Keyword,
   type CampaignType,
@@ -130,25 +131,35 @@ export const KeywordsSection = ({
   const [quickAddKeyword, setQuickAddKeyword] = useState('');
   const [viewMode, setViewMode] = useState<ViewMode>('table');
   const [historyKeyword, setHistoryKeyword] = useState<Keyword | null>(null);
+  const [isWizardOpen, setIsWizardOpen] = useState(false);
+  const [wizardInitialKeyword, setWizardInitialKeyword] = useState('');
   const [validationKeyword, setValidationKeyword] = useState<Keyword | null>(null);
 
   // Memoize callback to avoid infinite loops
   const stableOnSelectedIdsChange = useCallback(onSelectedIdsChange, [onSelectedIdsChange]);
 
+  // Open wizard instead of adding directly
   const handleQuickAdd = () => {
     if (!quickAddKeyword.trim()) return;
-    
-    const relevance = calculateRelevance(quickAddKeyword.trim(), bookInfo);
-    const intent = classifyIntent(quickAddKeyword.trim());
-    
-    onAdd(createKeywordDefaults({
-      keyword: quickAddKeyword.trim(),
-      marketplaceId,
-      relevance,
-      intent,
-    }));
+    setWizardInitialKeyword(quickAddKeyword.trim());
+    setIsWizardOpen(true);
     setQuickAddKeyword('');
-    toast({ title: 'Keyword añadida' });
+  };
+  
+  // Handle wizard completion
+  const handleWizardComplete = (keyword: Omit<Keyword, 'id' | 'createdAt' | 'updatedAt'>) => {
+    onAdd(keyword);
+    setWizardInitialKeyword('');
+    toast({ 
+      title: 'Keyword creada', 
+      description: `Market Score: ${keyword.marketScore}/100` 
+    });
+  };
+  
+  // Open wizard for new keyword (no pre-filled keyword)
+  const handleOpenNewKeywordWizard = () => {
+    setWizardInitialKeyword('');
+    setIsWizardOpen(true);
   };
 
   const handleSort = (field: SortField) => {
@@ -393,6 +404,10 @@ export const KeywordsSection = ({
               toast({ title: 'Variantes separadas' });
             }}
           />
+          <Button variant="outline" size="sm" onClick={handleOpenNewKeywordWizard} className="gap-2">
+            <Plus className="w-4 h-4" />
+            Añadir keyword
+          </Button>
           <Button data-tour="bulk-import" variant="outline" size="sm" onClick={() => setIsBulkImportOpen(true)} className="gap-2">
             <Upload className="w-4 h-4" />
             Añadir en lote
@@ -679,6 +694,17 @@ export const KeywordsSection = ({
         isOpen={!!validationKeyword}
         onClose={() => setValidationKeyword(null)}
         onSave={handleKeywordDetailSave}
+      />
+      
+      {/* New Keyword Wizard */}
+      <NewKeywordWizard
+        open={isWizardOpen}
+        onOpenChange={setIsWizardOpen}
+        onComplete={handleWizardComplete}
+        marketplaceId={marketplaceId}
+        bookInfo={bookInfo}
+        existingKeywords={keywords}
+        initialKeyword={wizardInitialKeyword}
       />
     </div>
   );
