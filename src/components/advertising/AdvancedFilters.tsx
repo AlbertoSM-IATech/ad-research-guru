@@ -22,6 +22,12 @@ import {
   INTENT_TYPES,
   KEYWORD_STATES,
 } from '@/types/advertising';
+import { 
+  type KeywordPurpose, 
+  type KeywordStatus,
+  KEYWORD_PURPOSE_OPTIONS,
+  KEYWORD_STATUS_OPTIONS,
+} from '@/lib/market-score';
 import { cn } from '@/lib/utils';
 
 export interface AdvancedFiltersState {
@@ -33,6 +39,8 @@ export interface AdvancedFiltersState {
   relevance: RelevanceLevel | 'all';
   intent: IntentType | 'all';
   state: KeywordState | 'all';
+  purpose: KeywordPurpose | 'all';
+  status: KeywordStatus | 'all';
 }
 
 interface AdvancedFiltersProps {
@@ -60,6 +68,8 @@ export const AdvancedFilters = ({ filters, onFiltersChange }: AdvancedFiltersPro
       relevance: 'all',
       intent: 'all',
       state: 'all',
+      purpose: 'all',
+      status: 'all',
     });
   };
 
@@ -107,7 +117,51 @@ export const AdvancedFilters = ({ filters, onFiltersChange }: AdvancedFiltersPro
       </div>
 
       {isExpanded && (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-4 bg-muted/30 rounded-lg border border-border animate-scale-in">
+        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4 p-4 bg-muted/30 rounded-lg border border-border animate-scale-in">
+          {/* Purpose (NEW) */}
+          <div className="space-y-2">
+            <Label className="text-xs">Propósito</Label>
+            <Select
+              value={filters.purpose}
+              onValueChange={(v) => updateFilter('purpose', v as KeywordPurpose | 'all')}
+            >
+              <SelectTrigger className="h-9">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent className="bg-popover border-border z-50">
+                <SelectItem value="all">Todos</SelectItem>
+                {KEYWORD_PURPOSE_OPTIONS.map((opt) => (
+                  <SelectItem key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Status (NEW) */}
+          <div className="space-y-2">
+            <Label className="text-xs">Estado validación</Label>
+            <Select
+              value={filters.status}
+              onValueChange={(v) => updateFilter('status', v as KeywordStatus | 'all')}
+            >
+              <SelectTrigger className="h-9">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent className="bg-popover border-border z-50">
+                <SelectItem value="all">Todos</SelectItem>
+                {KEYWORD_STATUS_OPTIONS.map((opt) => (
+                  <SelectItem key={opt.value} value={opt.value}>
+                    <span className={cn('px-1 rounded', opt.color)}>
+                      {opt.label}
+                    </span>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
           {/* Competition */}
           <div className="space-y-2">
             <Label className="text-xs">Competencia</Label>
@@ -193,9 +247,9 @@ export const AdvancedFilters = ({ filters, onFiltersChange }: AdvancedFiltersPro
             </Select>
           </div>
 
-          {/* State */}
+          {/* State (legacy) */}
           <div className="space-y-2">
-            <Label className="text-xs">Estado</Label>
+            <Label className="text-xs">Estado (legacy)</Label>
             <Select
               value={filters.state}
               onValueChange={(v) => updateFilter('state', v as KeywordState | 'all')}
@@ -243,14 +297,12 @@ export const AdvancedFilters = ({ filters, onFiltersChange }: AdvancedFiltersPro
 
           {/* Max Competition */}
           <div className="space-y-2">
-            <Label className="text-xs">Competencia máx.</Label>
+            <Label className="text-xs">Competidores máx.</Label>
             <Input
               type="number"
               value={filters.maxCompetition}
               onChange={(e) => updateFilter('maxCompetition', e.target.value)}
-              placeholder="100"
-              min={0}
-              max={100}
+              placeholder="∞"
               className="h-9"
             />
           </div>
