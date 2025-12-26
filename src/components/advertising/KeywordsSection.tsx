@@ -33,9 +33,8 @@ import { AdvancedFilters, type AdvancedFiltersState } from './AdvancedFilters';
 import { KeywordCardView } from './KeywordCardView';
 import { KeywordHistoryModal } from './KeywordHistoryModal';
 import { VariantDetector } from './VariantDetector';
-import { KeywordValidationDrawer } from './KeywordValidationDrawer';
+import { KeywordDetailPanel } from './KeywordDetailPanel';
 import { ValidationBadge } from './ValidationBadge';
-// AIAutoClassifier removed - IA now unified in AIAssistantDrawer
 import {
   type Keyword,
   type CampaignType,
@@ -51,13 +50,8 @@ import {
   calculateRelevance,
   classifyIntent,
 } from '@/types/advertising';
-import {
-  type MarketData,
-  type StrategicData,
-  calculateMarketScore,
-  getDefaultMarketData,
-} from '@/lib/market-score';
-import { scoreToRelevanceLevel } from '@/lib/keyword-validation';
+import { calculateMarketScore, getDefaultMarketData } from '@/lib/market-score';
+import { createKeywordDefaults } from '@/lib/keyword-helpers';
 import { useToast } from '@/hooks/use-toast';
 
 interface KeywordsSectionProps {
@@ -124,17 +118,12 @@ export const KeywordsSection = ({
     const relevance = calculateRelevance(quickAddKeyword.trim(), bookInfo);
     const intent = classifyIntent(quickAddKeyword.trim());
     
-    onAdd({
+    onAdd(createKeywordDefaults({
       keyword: quickAddKeyword.trim(),
-      searchVolume: 0,
-      competitionLevel: 'medium',
-      campaignTypes: ['SP'],
-      notes: '',
       marketplaceId,
       relevance,
       intent,
-      state: 'pending',
-    });
+    }));
     setQuickAddKeyword('');
     toast({ title: 'Keyword añadida' });
   };
