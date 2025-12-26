@@ -41,6 +41,7 @@ import {
   calculateRelevance,
   classifyIntent,
 } from '@/types/advertising';
+import { createKeywordDefaults } from '@/lib/keyword-helpers';
 
 interface BulkKeywordImportProps {
   isOpen: boolean;
@@ -136,7 +137,7 @@ export const BulkKeywordImport = ({
   const handleImport = () => {
     const keywordsToImport = parsedKeywords
       .filter(k => !skipDuplicates || !k.isDuplicate)
-      .map((k) => ({
+      .map((k) => createKeywordDefaults({
         keyword: k.keyword,
         searchVolume: k.searchVolume,
         competitionLevel: k.competitionLevel,

@@ -9,6 +9,7 @@ import {
   type IntentType,
   type KeywordState,
 } from '@/types/advertising';
+import { createKeywordDefaults } from '@/lib/keyword-helpers';
 
 // Keyword themes for variety
 const keywordThemes = {
@@ -145,7 +146,7 @@ function generateKeyword(marketplaceId: string, usedKeywords: Set<string>): Omit
       ])
     : '';
 
-  return {
+  return createKeywordDefaults({
     keyword,
     searchVolume: randomVolume(),
     competitionLevel: randomFrom(competitionLevels),
@@ -155,8 +156,7 @@ function generateKeyword(marketplaceId: string, usedKeywords: Set<string>): Omit
     relevance: randomFrom(relevanceLevels),
     intent: randomFrom(intentTypes),
     state: randomFrom(keywordStates),
-    history: [],
-  };
+  });
 }
 
 export function generateDemoKeywords(
@@ -182,13 +182,12 @@ export function generateDemoKeywords(
   
   guaranteedKeywords.forEach(gk => {
     usedKeywords.add(gk.keyword.toLowerCase());
-    keywords.push({
+    keywords.push(createKeywordDefaults({
       ...gk,
       campaignTypes: randomFrom(campaignTypeOptions),
       notes: '',
       marketplaceId,
-      history: [],
-    });
+    }));
   });
   
   // Generate remaining keywords

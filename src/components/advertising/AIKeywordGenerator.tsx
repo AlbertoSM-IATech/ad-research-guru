@@ -16,6 +16,7 @@ import { useAIStream } from "@/hooks/useAIStream";
 import { AI_CONFIG } from "@/lib/ai-config";
 import { useToast } from "@/hooks/use-toast";
 import type { BookInfo, Keyword } from "@/types/advertising";
+import { createKeywordDefaults } from "@/lib/keyword-helpers";
 
 interface AIKeywordGeneratorProps {
   bookInfo: BookInfo;
@@ -149,16 +150,16 @@ Recuerda generar keywords en el idioma apropiado para el marketplace.`,
       return;
     }
 
-    const newKeywords: Array<Omit<Keyword, "id" | "createdAt" | "updatedAt">> = selected.map((k) => ({
+    const newKeywords = selected.map((k) => createKeywordDefaults({
       keyword: k.keyword,
       searchVolume: k.estimatedVolume === "high" ? 5000 : k.estimatedVolume === "medium" ? 1000 : 100,
-      competitionLevel: (k.estimatedVolume === "high" ? "high" : k.estimatedVolume === "medium" ? "medium" : "low") as "low" | "medium" | "high",
-      campaignTypes: ["SP"] as Array<"SP" | "SB" | "SBV" | "SD">,
+      competitionLevel: k.estimatedVolume === "high" ? "high" : k.estimatedVolume === "medium" ? "medium" : "low",
+      campaignTypes: ["SP"],
       notes: `[IA] ${k.reason}`,
       marketplaceId,
-      relevance: (k.relevance === "high" ? "very-high" : k.relevance === "medium" ? "high" : "low") as "very-high" | "high" | "low" | "none",
-      intent: (k.intent === "transactional" ? "purchase" : k.intent === "informational" ? "research" : "research") as "purchase" | "research" | "competition" | "problem",
-      state: "pending" as "pending" | "tested-works" | "low-competition" | "discarded",
+      relevance: k.relevance === "high" ? "very-high" : k.relevance === "medium" ? "high" : "low",
+      intent: k.intent === "transactional" ? "purchase" : "research",
+      state: "pending",
     }));
 
     onAddKeywords(newKeywords);

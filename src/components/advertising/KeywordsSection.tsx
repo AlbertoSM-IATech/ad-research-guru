@@ -189,34 +189,24 @@ export const KeywordsSection = ({
     onSelectedIdsChange(new Set());
   };
 
-  // Handle validation save - uses Market Score V2
-  const handleSaveValidation = (keywordId: string, marketData: MarketData, strategicData: StrategicData, newScore: number) => {
-    // Update the keyword with market data, strategic data, and derived relevance
-    const updates: Partial<Keyword> = { 
-      marketData,
-      strategicData,
-      marketScore: newScore,
-      // Also sync legacy fields for backward compatibility
-      searchVolume: marketData.searchVolume,
-      // Always update relevance from the market score
-      relevance: scoreToRelevanceLevel(newScore),
-    };
-    
+  // Handle keyword update from detail panel
+  const handleKeywordDetailSave = (keywordId: string, updates: Partial<Keyword>) => {
     onUpdate(keywordId, updates);
-    toast({ title: 'Validación guardada', description: `Market Score: ${newScore}/100` });
+    toast({ title: 'Keyword guardada', description: `Market Score: ${updates.marketScore}/100` });
   };
 
   // Get keyword market score
   const getKeywordMarketScore = (keyword: Keyword): number => {
-    if (keyword.marketScore !== undefined) return keyword.marketScore;
-    // Calculate from marketData if available
-    if (keyword.marketData) return calculateMarketScore(keyword.marketData);
-    // Fallback: calculate from legacy fields
-    const legacyData: MarketData = {
+    if (keyword.marketScore !== undefined && keyword.marketScore > 0) return keyword.marketScore;
+    // Calculate from keyword fields
+    const data = {
       ...getDefaultMarketData(),
       searchVolume: keyword.searchVolume || 0,
+      competitors: keyword.competitors || 0,
+      price: keyword.price || 9.99,
+      royalties: keyword.royalties || 2.00,
     };
-    return calculateMarketScore(legacyData);
+    return calculateMarketScore(data).total;
   };
 
   // Handle update with history tracking
@@ -645,12 +635,12 @@ export const KeywordsSection = ({
         onClose={() => setHistoryKeyword(null)}
       />
 
-      {/* Validation Drawer */}
-      <KeywordValidationDrawer
+      {/* Keyword Detail Panel */}
+      <KeywordDetailPanel
         keyword={validationKeyword}
         isOpen={!!validationKeyword}
         onClose={() => setValidationKeyword(null)}
-        onSave={handleSaveValidation}
+        onSave={handleKeywordDetailSave}
       />
     </div>
   );
