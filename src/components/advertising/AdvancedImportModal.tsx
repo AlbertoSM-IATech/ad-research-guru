@@ -24,6 +24,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Checkbox } from '@/components/ui/checkbox';
 import { ImportHelpTooltip } from './ImportHelpTooltip';
 import { type Keyword, type ImportMappingTemplate, normalizeText, calculateRelevance, classifyIntent, type BookInfo } from '@/types/advertising';
+import { createKeywordDefaults } from '@/lib/keyword-helpers';
 import { useToast } from '@/hooks/use-toast';
 
 interface AdvancedImportModalProps {
@@ -268,17 +269,16 @@ export const AdvancedImportModal = ({
   const handleImport = () => {
     const toImport = parsedRows
       .filter(r => r.isValid && (!skipDuplicates || !r.isDuplicate))
-      .map(r => ({
+      .map(r => createKeywordDefaults({
         keyword: r.mappedData.keyword!,
         searchVolume: r.mappedData.searchVolume || 0,
-        competitionLevel: r.mappedData.competitionLevel || 'medium' as const,
+        competitionLevel: r.mappedData.competitionLevel || 'medium',
         notes: r.mappedData.notes || '',
         relevance: r.mappedData.relevance,
         intent: r.mappedData.intent,
-        state: 'pending' as const,
-        campaignTypes: ['SP' as const],
+        state: 'pending',
+        campaignTypes: ['SP'],
         marketplaceId,
-        history: [],
       }));
     
     onImport(toImport);

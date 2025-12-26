@@ -51,6 +51,7 @@ import {
   generateDemoASINs, 
   generateDemoCategories 
 } from '@/lib/demo-data-generator';
+import { createKeywordDefaults } from '@/lib/keyword-helpers';
 
 const generateId = () => Math.random().toString(36).substring(2, 15);
 
@@ -542,15 +543,11 @@ export const AdvertisingResearch = () => {
 
   // Suggestion handler
   const handleAddSuggestion = useCallback((keyword: string) => {
-    handleAddKeyword({
+    handleAddKeyword(createKeywordDefaults({
       keyword,
-      searchVolume: 0,
-      competitionLevel: 'medium',
-      campaignTypes: ['SP'],
-      notes: 'Añadida desde sugerencias',
       marketplaceId: selectedMarketplace,
-      state: 'pending'
-    });
+      notes: 'Añadida desde sugerencias',
+    }));
   }, [handleAddKeyword, selectedMarketplace]);
 
   // Keyboard shortcut handlers

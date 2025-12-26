@@ -62,6 +62,7 @@ import {
   INTENT_TYPES,
   KEYWORD_STATES,
 } from "@/types/advertising";
+import { createKeywordDefaults } from "@/lib/keyword-helpers";
 
 type ActiveTab = "keywords" | "asins" | "categories";
 
@@ -491,16 +492,16 @@ Recuerda generar keywords en el idioma apropiado para el marketplace.`,
       return;
     }
 
-    const newKeywords: Array<Omit<Keyword, "id" | "createdAt" | "updatedAt">> = selected.map((k) => ({
+    const newKeywords = selected.map((k) => createKeywordDefaults({
       keyword: k.keyword,
       searchVolume: k.estimatedVolume === "high" ? 5000 : k.estimatedVolume === "medium" ? 1000 : 100,
       competitionLevel: k.estimatedVolume === "high" ? "high" : k.estimatedVolume === "medium" ? "medium" : "low",
-      campaignTypes: ["SP"] as CampaignType[],
+      campaignTypes: ["SP"],
       notes: `[IA] ${k.reason}`,
       marketplaceId,
       relevance: k.relevance === "high" ? "very-high" : k.relevance === "medium" ? "high" : "low",
       intent: k.intent === "transactional" ? "purchase" : "research",
-      state: "pending" as KeywordState,
+      state: "pending",
     }));
 
     onAddKeywords(newKeywords);
