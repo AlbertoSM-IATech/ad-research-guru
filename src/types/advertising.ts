@@ -50,33 +50,39 @@ export interface ImportMappingTemplate {
   createdAt: Date;
 }
 
-// Import validation type
-import type { KeywordValidation } from '@/lib/keyword-validation';
+// Import market score types
+import type { MarketData, StrategicData } from '@/lib/market-score';
 
 export interface Keyword {
   id: string;
   keyword: string;
-  searchVolume: number;
-  competitionLevel: CompetitionLevel;
-  competitionNote?: string; // Optional note like "526 productos"
-  campaignTypes: CampaignType[];
-  notes: string;
   marketplaceId: string;
   createdAt: Date;
   updatedAt: Date;
-  // New advanced fields
+  
+  // ============ LEGACY FIELDS (for backward compatibility) ============
+  // These map to marketData but kept for existing code
+  searchVolume: number;
+  competitionLevel: CompetitionLevel;
+  competitionNote?: string;
   relevance?: RelevanceLevel;
+  
+  // ============ MARKET DATA V2 (new unified model) ============
+  marketData?: MarketData;
+  marketScore?: number; // 0-100, calculated from marketData
+  
+  // ============ STRATEGIC DATA (NO afecta Market Score) ============
+  strategicData?: StrategicData;
+  
+  // ============ OPERATIONAL FIELDS ============
+  campaignTypes: CampaignType[];
+  notes: string;
   intent?: IntentType;
   state?: KeywordState;
   variantGroup?: string;
-  // History tracking
   history?: HistoryEntry[];
-  // Budget estimation
   estimatedBudget?: number;
-  // Campaign plan assignment
   campaignPlanId?: string;
-  // Validation (optional - backwards compatible)
-  validation?: KeywordValidation;
 }
 
 export interface TargetASIN {

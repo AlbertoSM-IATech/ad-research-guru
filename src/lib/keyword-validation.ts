@@ -1,19 +1,9 @@
-// Keyword Validation Types and Scoring Logic - UNIFIED MODEL
-// This module provides qualitative signals that ENRICH the keyword data
-// without duplicating base fields (volume, competitors, price, royalties)
-
-import type { Keyword, RelevanceLevel } from '@/types/advertising';
-
-// ============ TYPES ============
+// This file is deprecated - use market-score.ts instead
+// Kept for backward compatibility during migration
 
 export type ValidationStatus = 'discovering' | 'validated' | 'discarded' | 'approved';
-
-// Traffic source - only 'amazon' is positive
 export type TrafficSource = 'amazon' | 'brand' | 'social' | 'external';
-
-// Books over 200 reviews - soft penalty
 export type BooksOver200Reviews = 'none' | 'few' | 'many';
-
 export type ChecklistAnswer = 'yes' | 'no' | 'na';
 
 export interface ChecklistItem {
@@ -29,38 +19,31 @@ export interface ChecklistGroup {
   items: ChecklistItem[];
 }
 
-// NEW UNIFIED VALIDATION MODEL
-// These are QUALITATIVE signals, NOT duplications of table data
+// Re-export from market-score for compatibility
+export {
+  calculateMarketScore,
+  getMarketScoreLevel,
+  getMarketScoreColor,
+  getMarketScoreBgColor,
+  MARKET_SCORE_LEVELS,
+} from './market-score';
+
+// Deprecated - use market-score functions instead
 export interface KeywordValidation {
-  // Qualitative signals only (not duplicated from Keyword base fields)
-  hasTrademark: boolean;                    // true = heavy penalty (×0.3)
-  autosuggestPresence: boolean;             // true = demand signal (+5)
-  profitableBooksCount: number;             // 0-5+ (higher = better)
-  booksOver200Reviews: BooksOver200Reviews; // penalizes softly if 'many'
-  booksUnder100Reviews: boolean;            // true = space to enter (+5)
-  trafficSource: TrafficSource;             // only 'amazon' is neutral/positive
-  
-  // Editorial viability (0-3 questions answered yes)
-  contentFeasibilityScore: number;          // 0-3 (+0 to +10)
-  
-  // Extra opportunity (0-2)
-  extraOpportunityScore: number;            // 0-2 (+0 to +5)
-  
-  // Status
+  hasTrademark: boolean;
+  autosuggestPresence: boolean;
+  profitableBooksCount: number;
+  booksOver200Reviews: BooksOver200Reviews;
+  booksUnder100Reviews: boolean;
+  trafficSource: TrafficSource;
+  contentFeasibilityScore: number;
+  extraOpportunityScore: number;
   validationStatus: ValidationStatus;
   validationStatusOverride?: ValidationStatus;
-  
-  // Notes
   validationNotes: string;
-  
-  // Checklist for detailed analysis
   checklist: ChecklistGroup[];
-  
-  // Metadata
   updatedAt: Date;
 }
-
-// ============ CONSTANTS ============
 
 export const TRAFFIC_SOURCE_OPTIONS: { value: TrafficSource; label: string; color: string; penalty: boolean }[] = [
   { value: 'amazon', label: 'Amazon orgánico', color: 'bg-green-500/20 text-green-600 border-green-500/30', penalty: false },
@@ -90,8 +73,6 @@ export const PROFITABLE_BOOKS_OPTIONS = [
   { value: 4, label: '4 libros', color: 'bg-green-500/20 text-green-600' },
   { value: 5, label: '5+ libros', color: 'bg-emerald-500/20 text-emerald-600' },
 ];
-
-// ============ DEFAULT CHECKLIST ============
 
 export const getDefaultChecklist = (): ChecklistGroup[] => [
   {
@@ -133,8 +114,6 @@ export const getDefaultChecklist = (): ChecklistGroup[] => [
   },
 ];
 
-// ============ DEFAULT VALIDATION ============
-
 export const getDefaultValidation = (): KeywordValidation => ({
   hasTrademark: false,
   autosuggestPresence: false,
@@ -150,117 +129,57 @@ export const getDefaultValidation = (): KeywordValidation => ({
   updatedAt: new Date(),
 });
 
-// ============ UNIFIED SCORING LOGIC ============
-// Uses BOTH keyword base data AND validation qualitative signals
+// ============ DEPRECATED FUNCTIONS ============
+// These are now replaced by market-score.ts
 
+import type { Keyword, RelevanceLevel } from '@/types/advertising';
+import { 
+  calculateMarketScore, 
+  getDefaultMarketData, 
+  type MarketData 
+} from './market-score';
+
+// Legacy function - now uses Market Score
 export const calculateRelevanceScore = (keyword: Keyword): number => {
-  const v = keyword.validation;
-  let score = 0;
-  
-  // ============ 1) DEMANDA (40%) ============
-  // Volume from keyword base data
-  const volume = keyword.searchVolume || 0;
-  if (volume <= 50) score -= 10;
-  else if (volume <= 100) score -= 5;
-  else if (volume <= 600) score += 10;
-  else score += 20;
-  
-  // Autosuggest presence (from validation)
-  if (v?.autosuggestPresence) score += 5;
-  
-  // ============ 2) COMPETENCIA (30%) ============
-  // We use competitionNote if available (raw number), otherwise infer from level
-  const competitorsRaw = keyword.competitionNote ? parseInt(keyword.competitionNote.replace(/[^\d]/g, '')) : null;
-  
-  if (competitorsRaw !== null && !isNaN(competitorsRaw)) {
-    if (competitorsRaw < 1000) score += 20;
-    else if (competitorsRaw <= 4000) score += 10;
-    else if (competitorsRaw <= 10000) score -= 5;
-    else score -= 15;
-  } else {
-    // Fallback to competition level
-    switch (keyword.competitionLevel) {
-      case 'low': score += 15; break;
-      case 'medium': score += 0; break;
-      case 'high': score -= 10; break;
-    }
+  if (keyword.marketData) {
+    return calculateMarketScore(keyword.marketData);
   }
-  
-  // Books over 200 reviews (soft penalty)
-  if (v) {
-    switch (v.booksOver200Reviews) {
-      case 'none': score += 0; break;
-      case 'few': score -= 3; break;
-      case 'many': score -= 7; break;
-    }
-    
-    // Books under 100 reviews (space to enter)
-    if (v.booksUnder100Reviews) score += 5;
-    else if (v.booksUnder100Reviews === false) score -= 5;
-  }
-  
-  // ============ 3) MONETIZACIÓN (20%) ============
-  // We don't have price/royalties as base keyword fields currently
-  // But if they exist in future, we'd use them here
-  // For now, score is neutral in this category
-  
-  // ============ 4) VIABILIDAD EDITORIAL (10%) ============
-  if (v) {
-    // contentFeasibilityScore: 0-3 → +0 to +10
-    score += Math.min(v.contentFeasibilityScore, 3) * 3.33;
-    
-    // extraOpportunityScore: 0-2 → +0 to +5
-    score += Math.min(v.extraOpportunityScore, 2) * 2.5;
-  }
-  
-  // ============ 5) PENALIZACIONES DURAS ============
-  // hasTrademark = true → multiply by 0.3
-  if (v?.hasTrademark) {
-    score = score * 0.3;
-  }
-  
-  // trafficSource != amazon → -10
-  if (v && v.trafficSource !== 'amazon') {
-    score -= 10;
-  }
-  
-  // Normalize to 0-100
-  // Base calculation gives roughly -30 to +50, so we scale and clamp
-  const normalized = Math.round(((score + 30) / 80) * 100);
-  return Math.max(0, Math.min(100, normalized));
+  // Fallback: derive from legacy fields
+  const legacyMarketData: MarketData = {
+    searchVolume: keyword.searchVolume || 0,
+    competitors: keyword.competitionNote 
+      ? parseInt(keyword.competitionNote.replace(/[^\d]/g, '')) || 0 
+      : keyword.competitionLevel === 'low' ? 500 : keyword.competitionLevel === 'high' ? 15000 : 3000,
+    brandPresent: false,
+    priceBucket: '9.99-14.99',
+    royaltiesBucket: '2-3.99',
+    highReviewCountBucket: 'none',
+  };
+  return calculateMarketScore(legacyMarketData);
 };
 
-// Calculate status from score
-export const calculateValidationStatus = (score: number, validation?: Partial<KeywordValidation>): ValidationStatus => {
-  // Override takes precedence
-  if (validation?.validationStatusOverride) {
-    return validation.validationStatusOverride;
-  }
-  
+export const calculateValidationStatus = (score: number): ValidationStatus => {
   if (score >= 70) return 'validated';
-  if (score <= 30) return 'discarded';
-  return 'discovering';
+  if (score >= 50) return 'discovering';
+  if (score >= 30) return 'discovering';
+  return 'discarded';
 };
-
-// ============ RELEVANCE MAPPING ============
 
 export const scoreToRelevanceLevel = (score: number): RelevanceLevel => {
-  if (score >= 75) return 'very-high';
-  if (score >= 55) return 'high';
-  if (score >= 35) return 'low';
+  if (score >= 70) return 'very-high';
+  if (score >= 50) return 'high';
+  if (score >= 30) return 'low';
   return 'none';
 };
 
 export const relevanceLevelToScore = (relevance: RelevanceLevel): number => {
   switch (relevance) {
-    case 'very-high': return 87;
-    case 'high': return 65;
-    case 'low': return 45;
-    case 'none': return 17;
+    case 'very-high': return 85;
+    case 'high': return 60;
+    case 'low': return 40;
+    case 'none': return 15;
   }
 };
-
-// ============ ALERTS ============
 
 export interface ValidationAlert {
   type: 'error' | 'warning';
@@ -270,25 +189,7 @@ export interface ValidationAlert {
 
 export const getValidationAlerts = (keyword: Keyword): ValidationAlert[] => {
   const alerts: ValidationAlert[] = [];
-  const v = keyword.validation;
   
-  if (v?.hasTrademark) {
-    alerts.push({ type: 'error', field: 'hasTrademark', message: 'Marca registrada - penalización severa (×0.3)' });
-  }
-  
-  if (v?.trafficSource && v.trafficSource !== 'amazon') {
-    alerts.push({ type: 'warning', field: 'trafficSource', message: `Tráfico no orgánico (${v.trafficSource})` });
-  }
-  
-  if (v?.booksOver200Reviews === 'many') {
-    alerts.push({ type: 'warning', field: 'booksOver200Reviews', message: 'Muchos libros con +200 reviews' });
-  }
-  
-  if (v?.booksUnder100Reviews === false) {
-    alerts.push({ type: 'warning', field: 'booksUnder100Reviews', message: 'Sin espacio para entrar (no hay libros con -100 reviews)' });
-  }
-  
-  // Base data alerts
   if (keyword.searchVolume <= 50) {
     alerts.push({ type: 'warning', field: 'searchVolume', message: 'Volumen de búsqueda muy bajo' });
   }
@@ -300,24 +201,19 @@ export const getValidationAlerts = (keyword: Keyword): ValidationAlert[] => {
   return alerts;
 };
 
-// ============ SCORE COLORS ============
-
 export const getScoreColor = (score: number): string => {
   if (score >= 70) return 'text-green-600';
-  if (score >= 50) return 'text-yellow-600';
-  if (score >= 35) return 'text-orange-600';
+  if (score >= 50) return 'text-blue-600';
+  if (score >= 30) return 'text-yellow-600';
   return 'text-red-600';
 };
 
 export const getScoreBgColor = (score: number): string => {
   if (score >= 70) return 'bg-green-500/20';
-  if (score >= 50) return 'bg-yellow-500/20';
-  if (score >= 35) return 'bg-orange-500/20';
+  if (score >= 50) return 'bg-blue-500/20';
+  if (score >= 30) return 'bg-yellow-500/20';
   return 'bg-red-500/20';
 };
-
-// ============ SCORE IMPACT PREVIEW ============
-// Shows how each field impacts the score
 
 export interface ScoreImpact {
   field: string;
@@ -328,72 +224,33 @@ export interface ScoreImpact {
 
 export const getScoreImpacts = (keyword: Keyword): ScoreImpact[] => {
   const impacts: ScoreImpact[] = [];
-  const v = keyword.validation;
-  
-  // Volume impact
   const volume = keyword.searchVolume || 0;
+  
   let volumeImpact = 0;
-  if (volume <= 50) volumeImpact = -10;
-  else if (volume <= 100) volumeImpact = -5;
-  else if (volume <= 600) volumeImpact = 10;
-  else volumeImpact = 20;
+  if (volume <= 50) volumeImpact = 0;
+  else if (volume <= 100) volumeImpact = 10;
+  else if (volume <= 600) volumeImpact = 20;
+  else volumeImpact = 30;
+  
   impacts.push({
     field: 'volume',
     label: `Volumen: ${volume.toLocaleString()}`,
     impact: volumeImpact,
-    type: volumeImpact > 0 ? 'positive' : volumeImpact < 0 ? 'negative' : 'neutral',
+    type: volumeImpact > 10 ? 'positive' : volumeImpact < 10 ? 'negative' : 'neutral',
   });
   
-  // Competition impact
   let compImpact = 0;
   switch (keyword.competitionLevel) {
-    case 'low': compImpact = 15; break;
-    case 'medium': compImpact = 0; break;
-    case 'high': compImpact = -10; break;
+    case 'low': compImpact = 25; break;
+    case 'medium': compImpact = 18; break;
+    case 'high': compImpact = 0; break;
   }
   impacts.push({
     field: 'competition',
     label: `Competencia: ${keyword.competitionLevel}`,
     impact: compImpact,
-    type: compImpact > 0 ? 'positive' : compImpact < 0 ? 'negative' : 'neutral',
+    type: compImpact > 10 ? 'positive' : compImpact < 10 ? 'negative' : 'neutral',
   });
-  
-  if (v) {
-    // Autosuggest
-    if (v.autosuggestPresence) {
-      impacts.push({ field: 'autosuggest', label: 'Autosuggest: Sí', impact: 5, type: 'positive' });
-    }
-    
-    // Trademark
-    if (v.hasTrademark) {
-      impacts.push({ field: 'trademark', label: 'Marca registrada', impact: -70, type: 'negative' });
-    }
-    
-    // Traffic source
-    if (v.trafficSource !== 'amazon') {
-      impacts.push({ field: 'traffic', label: `Tráfico: ${v.trafficSource}`, impact: -10, type: 'negative' });
-    }
-    
-    // Feasibility
-    if (v.contentFeasibilityScore > 0) {
-      impacts.push({
-        field: 'feasibility',
-        label: `Viabilidad: ${v.contentFeasibilityScore}/3`,
-        impact: Math.round(v.contentFeasibilityScore * 3.33),
-        type: 'positive',
-      });
-    }
-    
-    // Extra opportunity
-    if (v.extraOpportunityScore > 0) {
-      impacts.push({
-        field: 'opportunity',
-        label: `Oportunidad extra: ${v.extraOpportunityScore}/2`,
-        impact: Math.round(v.extraOpportunityScore * 2.5),
-        type: 'positive',
-      });
-    }
-  }
   
   return impacts;
 };
