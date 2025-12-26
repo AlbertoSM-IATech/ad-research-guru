@@ -20,7 +20,13 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Badge } from '@/components/ui/badge';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { InfoTooltip } from './InfoTooltip';
 import { InlineEditableCell } from './InlineEditableCell';
 import { InlineCampaignTypeSelect } from './InlineCampaignTypeSelect';
@@ -30,11 +36,12 @@ import { BulkKeywordImport } from './BulkKeywordImport';
 import { BulkCopyTools } from './BulkCopyTools';
 import { BulkActionsToolbar } from './BulkActionsToolbar';
 import { AdvancedFilters, type AdvancedFiltersState } from './AdvancedFilters';
+import { QuickFiltersBar } from './QuickFiltersBar';
 import { KeywordCardView } from './KeywordCardView';
 import { KeywordHistoryModal } from './KeywordHistoryModal';
 import { VariantDetector } from './VariantDetector';
 import { KeywordDetailPanel } from './KeywordDetailPanel';
-import { ValidationBadge } from './ValidationBadge';
+import { MarketScoreCell } from './MarketScoreCell';
 import {
   type Keyword,
   type CampaignType,
@@ -52,7 +59,21 @@ import {
 } from '@/types/advertising';
 import { calculateMarketScore, getDefaultMarketData } from '@/lib/market-score';
 import { createKeywordDefaults } from '@/lib/keyword-helpers';
+import { 
+  sortKeywords, 
+  getKeywordMarketScore, 
+  isMarketDataIncomplete,
+  SORT_OPTIONS,
+  type SortField,
+  type SortOrder,
+} from '@/lib/keyword-sorting';
+import {
+  applyKeywordFilters,
+  applyQuickFilter,
+  type QuickFilter,
+} from '@/lib/keyword-filters';
 import { useToast } from '@/hooks/use-toast';
+import { cn } from '@/lib/utils';
 
 interface KeywordsSectionProps {
   keywords: Keyword[];
@@ -69,8 +90,6 @@ interface KeywordsSectionProps {
   onSelectedIdsChange: (ids: Set<string>) => void;
 }
 
-type SortField = 'keyword' | 'searchVolume' | 'competitionLevel' | 'relevance' | 'state';
-type SortOrder = 'asc' | 'desc';
 type ViewMode = 'table' | 'cards';
 
 const ITEMS_PER_PAGE = 20;
@@ -99,9 +118,13 @@ export const KeywordsSection = ({
     relevance: 'all',
     intent: 'all',
     state: 'all',
+    purpose: 'all',
+    status: 'all',
   });
-  const [sortField, setSortField] = useState<SortField>('keyword');
-  const [sortOrder, setSortOrder] = useState<SortOrder>('asc');
+  const [quickFilter, setQuickFilter] = useState<QuickFilter>('all');
+  // Default sort: marketScore DESC
+  const [sortField, setSortField] = useState<SortField>('marketScore');
+  const [sortOrder, setSortOrder] = useState<SortOrder>('desc');
   const [currentPage, setCurrentPage] = useState(1);
   const [isBulkImportOpen, setIsBulkImportOpen] = useState(false);
   const [quickAddKeyword, setQuickAddKeyword] = useState('');
@@ -133,8 +156,15 @@ export const KeywordsSection = ({
       setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
     } else {
       setSortField(field);
-      setSortOrder('asc');
+      // Default order based on field
+      setSortOrder(field === 'marketScore' || field === 'searchVolume' ? 'desc' : 'asc');
     }
+  };
+
+  const handleSortOptionChange = (value: string) => {
+    const [field, order] = value.split('-') as [SortField, SortOrder];
+    setSortField(field);
+    setSortOrder(order);
   };
 
   const toggleSelectAll = () => {
@@ -195,20 +225,6 @@ export const KeywordsSection = ({
     toast({ title: 'Keyword guardada', description: `Market Score: ${updates.marketScore}/100` });
   };
 
-  // Get keyword market score
-  const getKeywordMarketScore = (keyword: Keyword): number => {
-    if (keyword.marketScore !== undefined && keyword.marketScore > 0) return keyword.marketScore;
-    // Calculate from keyword fields
-    const data = {
-      ...getDefaultMarketData(),
-      searchVolume: keyword.searchVolume || 0,
-      competitors: keyword.competitors || 0,
-      price: keyword.price || 9.99,
-      royalties: keyword.royalties || 2.00,
-    };
-    return calculateMarketScore(data).total;
-  };
-
   // Handle update with history tracking
   const handleUpdateWithHistory = (id: string, updates: Partial<Keyword>) => {
     const keyword = keywords.find(k => k.id === id);
@@ -241,59 +257,71 @@ export const KeywordsSection = ({
     }
   };
 
+  // Handle quick filter change - resets advanced filters
+  const handleQuickFilterChange = (filter: QuickFilter) => {
+    setQuickFilter(filter);
+    if (filter !== 'all') {
+      // Reset advanced filters when using quick filter
+      setFilters({
+        competition: 'all',
+        campaignType: 'all',
+        minVolume: '',
+        maxVolume: '',
+        maxCompetition: '',
+        relevance: 'all',
+        intent: 'all',
+        state: 'all',
+        purpose: 'all',
+        status: 'all',
+      });
+    }
+    setCurrentPage(1);
+  };
+
+  // Handle advanced filter change - resets quick filter
+  const handleAdvancedFiltersChange = (newFilters: AdvancedFiltersState) => {
+    setFilters(newFilters);
+    setQuickFilter('all');
+    setCurrentPage(1);
+  };
+
+  // Calculate quick filter counts
+  const quickFilterCounts = useMemo(() => {
+    return {
+      all: keywords.length,
+      'ready-for-ads': applyQuickFilter(keywords, 'ready-for-ads').length,
+      candidates: applyQuickFilter(keywords, 'candidates').length,
+      discard: applyQuickFilter(keywords, 'discard').length,
+    };
+  }, [keywords]);
+
   // Filter and sort keywords
   const filteredKeywords = useMemo(() => {
-    return keywords
-      .filter((k) => {
-        if (searchTerm && !k.keyword.toLowerCase().includes(searchTerm.toLowerCase())) {
-          return false;
-        }
-        if (filters.competition !== 'all' && k.competitionLevel !== filters.competition) {
-          return false;
-        }
-        if (filters.campaignType !== 'all' && !k.campaignTypes.includes(filters.campaignType)) {
-          return false;
-        }
-        if (filters.minVolume && k.searchVolume < parseInt(filters.minVolume)) {
-          return false;
-        }
-        if (filters.maxVolume && k.searchVolume > parseInt(filters.maxVolume)) {
-          return false;
-        }
-        if (filters.relevance !== 'all' && k.relevance !== filters.relevance) {
-          return false;
-        }
-        if (filters.intent !== 'all' && k.intent !== filters.intent) {
-          return false;
-        }
-        if (filters.state !== 'all' && k.state !== filters.state) {
-          return false;
-        }
-        return true;
-      })
-      .sort((a, b) => {
-        const modifier = sortOrder === 'asc' ? 1 : -1;
-        if (sortField === 'keyword') {
-          return a.keyword.localeCompare(b.keyword) * modifier;
-        }
-        if (sortField === 'searchVolume') {
-          return (a.searchVolume - b.searchVolume) * modifier;
-        }
-        if (sortField === 'competitionLevel') {
-          const order = ['low', 'medium', 'high'];
-          return (order.indexOf(a.competitionLevel) - order.indexOf(b.competitionLevel)) * modifier;
-        }
-        if (sortField === 'relevance') {
-          const order = ['very-high', 'high', 'low', 'none'];
-          return (order.indexOf(a.relevance || 'none') - order.indexOf(b.relevance || 'none')) * modifier;
-        }
-        if (sortField === 'state') {
-          const order = ['tested-works', 'pending', 'low-competition', 'discarded'];
-          return (order.indexOf(a.state || 'pending') - order.indexOf(b.state || 'pending')) * modifier;
-        }
-        return 0;
-      });
-  }, [keywords, searchTerm, filters, sortField, sortOrder]);
+    let result = keywords;
+
+    // Apply quick filter first if active
+    if (quickFilter !== 'all') {
+      result = applyQuickFilter(result, quickFilter);
+    }
+
+    // Then apply search and advanced filters
+    result = applyKeywordFilters(result, {
+      searchTerm,
+      purpose: filters.purpose,
+      status: filters.status,
+      competition: filters.competition,
+      campaignType: filters.campaignType,
+      minVolume: filters.minVolume,
+      maxVolume: filters.maxVolume,
+      maxCompetition: filters.maxCompetition,
+      relevance: filters.relevance,
+      intent: filters.intent,
+      state: filters.state,
+    });
+
+    // Finally sort
+    return sortKeywords(result, sortField, sortOrder);
+  }, [keywords, searchTerm, filters, quickFilter, sortField, sortOrder]);
 
   // Purge invalid selection IDs when filtered list changes
   useEffect(() => {
@@ -309,6 +337,14 @@ export const KeywordsSection = ({
     (currentPage - 1) * ITEMS_PER_PAGE,
     currentPage * ITEMS_PER_PAGE
   );
+
+  // Get row background color based on market score
+  const getRowScoreClass = (score: number): string => {
+    if (score >= 70) return 'bg-green-500/5 hover:bg-green-500/10';
+    if (score >= 40) return 'bg-yellow-500/5 hover:bg-yellow-500/10';
+    if (score > 0) return 'bg-red-500/5 hover:bg-red-500/10';
+    return 'hover:bg-muted/30';
+  };
 
   return (
     <div data-tour="keywords-section" className="space-y-6 animate-fade-in">
@@ -357,10 +393,9 @@ export const KeywordsSection = ({
               toast({ title: 'Variantes separadas' });
             }}
           />
-          {/* AIAutoClassifier removed - IA ahora unificada en el drawer lateral */}
           <Button data-tour="bulk-import" variant="outline" size="sm" onClick={() => setIsBulkImportOpen(true)} className="gap-2">
             <Upload className="w-4 h-4" />
-            Añadir palabras clave en lote
+            Añadir en lote
           </Button>
           {selectedIds.size > 0 && (
             <Button variant="destructive" size="sm" onClick={handleDeleteSelected} className="gap-2">
@@ -380,6 +415,13 @@ export const KeywordsSection = ({
         onDelete={handleDeleteSelected}
       />
 
+      {/* Quick Filters */}
+      <QuickFiltersBar
+        activeFilter={quickFilter}
+        onFilterChange={handleQuickFilterChange}
+        counts={quickFilterCounts}
+      />
+
       {/* Quick Add */}
       <div className="flex gap-2 p-4 bg-muted/30 rounded-lg">
         <Input
@@ -397,24 +439,42 @@ export const KeywordsSection = ({
 
       {/* Search and Filters */}
       <div className="space-y-4">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input
-            placeholder="Buscar keywords..."
-            value={searchTerm}
-            onChange={(e) => {
-              setSearchTerm(e.target.value);
-              setCurrentPage(1);
-            }}
-            className="pl-10"
-          />
+        <div className="flex gap-3">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Input
+              placeholder="Buscar keywords..."
+              value={searchTerm}
+              onChange={(e) => {
+                setSearchTerm(e.target.value);
+                setCurrentPage(1);
+              }}
+              className="pl-10"
+            />
+          </div>
+          {/* Sort selector */}
+          <Select
+            value={`${sortField}-${sortOrder}`}
+            onValueChange={handleSortOptionChange}
+          >
+            <SelectTrigger className="w-[220px]">
+              <SelectValue placeholder="Ordenar por..." />
+            </SelectTrigger>
+            <SelectContent className="bg-popover border-border z-50">
+              {SORT_OPTIONS.map((opt) => (
+                <SelectItem key={`${opt.field}-${opt.order}`} value={`${opt.field}-${opt.order}`}>
+                  {opt.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
-        <AdvancedFilters filters={filters} onFiltersChange={setFilters} />
+        <AdvancedFilters filters={filters} onFiltersChange={handleAdvancedFiltersChange} />
       </div>
 
       {/* Results count */}
       <div className="text-sm text-muted-foreground">
-        {filteredKeywords.length} de {keywords.length} keywords
+        Mostrando {filteredKeywords.length} de {keywords.length} keywords
         {selectedIds.size > 0 && ` • ${selectedIds.size} seleccionadas`}
       </div>
 
@@ -434,36 +494,23 @@ export const KeywordsSection = ({
                   <TableHead className="cursor-pointer hover:text-foreground" onClick={() => handleSort('keyword')}>
                     <div className="flex items-center gap-1">Keyword <ArrowUpDown className="w-3 h-3" /></div>
                   </TableHead>
-                  <TableHead className="cursor-pointer hover:text-foreground w-[120px]" onClick={() => handleSort('searchVolume')}>
+                  <TableHead className="cursor-pointer hover:text-foreground w-[100px]" onClick={() => handleSort('searchVolume')}>
                     <div className="flex items-center gap-1">
-                      Vol. búsqueda
+                      Volumen
                       <ArrowUpDown className="w-3 h-3" />
-                      <InfoTooltip content="Número estimado de veces que los usuarios buscan esta palabra clave mensualmente en Amazon. Este valor puede variar por mercado y no es proporcionado por Amazon directamente, por lo que el publisher puede introducir valores manuales o basados en herramientas externas." />
-                    </div>
-                  </TableHead>
-                  <TableHead className="cursor-pointer hover:text-foreground w-[150px]" onClick={() => handleSort('competitionLevel')}>
-                    <div className="flex items-center gap-1">
-                      Competidores
-                      <ArrowUpDown className="w-3 h-3" />
-                      <InfoTooltip content="Número total de productos que aparecen en Amazon al introducir esta palabra clave. Este dato representa la saturación de la búsqueda. Es subjetivo y depende del mercado, por lo que se deberá seleccionar manualmente Alta / Media / Baja." />
                     </div>
                   </TableHead>
                   <TableHead className="w-[120px]">
                     <div className="flex items-center gap-1">
-                      Validación
-                      <InfoTooltip content="Validación de viabilidad de la keyword. Incluye score y estado." />
+                      Competidores
+                      <InfoTooltip content="Número de resultados en Amazon" />
                     </div>
                   </TableHead>
-                  <TableHead className="cursor-pointer hover:text-foreground w-[120px]" onClick={() => handleSort('relevance')}>
+                  <TableHead className="cursor-pointer hover:text-foreground w-[130px]" onClick={() => handleSort('marketScore')}>
                     <div className="flex items-center gap-1">
-                      Relevancia <ArrowUpDown className="w-3 h-3" />
-                      <InfoTooltip content="🔵 Muy relevante, 🟢 Relevante, 🟡 Baja, 🔴 No relevante. Si 'Auto', deriva del score de validación." />
-                    </div>
-                  </TableHead>
-                  <TableHead className="w-[110px]">
-                    <div className="flex items-center gap-1">
-                      Intención
-                      <InfoTooltip content="Compra, Investigación, Competencia, Problema" />
+                      Market Score
+                      <ArrowUpDown className="w-3 h-3" />
+                      <InfoTooltip content="Score de mercado 0-100. Click para ver desglose." />
                     </div>
                   </TableHead>
                   <TableHead className="cursor-pointer hover:text-foreground w-[100px]" onClick={() => handleSort('state')}>
@@ -475,117 +522,108 @@ export const KeywordsSection = ({
                       <InfoTooltip content="SP, SB, SBV, SD" />
                     </div>
                   </TableHead>
-                  <TableHead className="w-[150px]">Notas</TableHead>
                   <TableHead className="w-[80px]">Acciones</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {paginatedKeywords.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={10} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
                       {keywords.length === 0
                         ? 'No hay keywords. Añade tu primera keyword o importa en lote.'
                         : 'No se encontraron keywords con los filtros aplicados.'}
                     </TableCell>
                   </TableRow>
                 ) : (
-                  paginatedKeywords.map((keyword) => (
-                    <TableRow key={keyword.id} className="hover:bg-muted/30">
-                      <TableCell>
-                        <Checkbox checked={selectedIds.has(keyword.id)} onCheckedChange={() => toggleSelect(keyword.id)} />
-                      </TableCell>
-                      <TableCell>
-                        <InlineEditableCell
-                          value={keyword.keyword}
-                          onSave={(value) => handleUpdateWithHistory(keyword.id, { keyword: String(value) })}
-                          placeholder="Keyword..."
-                          className="font-medium"
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <InlineEditableCell
-                          value={keyword.searchVolume}
-                          onSave={(value) => handleUpdateWithHistory(keyword.id, { searchVolume: Number(value) })}
-                          type="number"
-                          min={0}
-                          formatter={(v) => Number(v).toLocaleString()}
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <InlineCompetitionLevelSelect
-                          value={keyword.competitionLevel}
-                          note={keyword.competitionNote}
-                          onChange={(level, note) => handleUpdateWithHistory(keyword.id, { competitionLevel: level, competitionNote: note })}
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <ValidationBadge
-                          marketData={keyword.marketData}
-                          score={getKeywordMarketScore(keyword)}
-                          onValidate={() => setValidationKeyword(keyword)}
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <InlineSelectBadge
-                          value={keyword.relevance || 'none'}
-                          options={RELEVANCE_LEVELS.map(r => ({ value: r.value, label: r.label, icon: r.icon }))}
-                          onChange={(v) => handleUpdateWithHistory(keyword.id, { relevance: v as RelevanceLevel })}
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <InlineSelectBadge
-                          value={keyword.intent || 'research'}
-                          options={INTENT_TYPES.map(i => ({ value: i.value, label: i.label }))}
-                          onChange={(value) => handleUpdateWithHistory(keyword.id, { intent: value as IntentType })}
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <InlineSelectBadge
-                          value={keyword.state || 'pending'}
-                          options={KEYWORD_STATES.map(s => ({ value: s.value, label: s.label, icon: s.icon }))}
-                          onChange={(value) => handleUpdateWithHistory(keyword.id, { state: value as KeywordState })}
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <InlineCampaignTypeSelect
-                          value={keyword.campaignTypes}
-                          onChange={(types) => handleUpdateWithHistory(keyword.id, { campaignTypes: types })}
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <InlineEditableCell
-                          value={keyword.notes}
-                          onSave={(value) => handleUpdateWithHistory(keyword.id, { notes: String(value) })}
-                          type="textarea"
-                          placeholder="Notas..."
-                          className="text-sm text-muted-foreground max-w-[150px]"
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-1">
-                          {keyword.history && keyword.history.length > 0 && (
+                  paginatedKeywords.map((keyword) => {
+                    const score = getKeywordMarketScore(keyword);
+                    const incomplete = isMarketDataIncomplete(keyword);
+                    
+                    return (
+                      <TableRow 
+                        key={keyword.id} 
+                        className={cn(
+                          'transition-colors cursor-pointer',
+                          getRowScoreClass(score)
+                        )}
+                        onClick={() => setValidationKeyword(keyword)}
+                      >
+                        <TableCell onClick={(e) => e.stopPropagation()}>
+                          <Checkbox checked={selectedIds.has(keyword.id)} onCheckedChange={() => toggleSelect(keyword.id)} />
+                        </TableCell>
+                        <TableCell onClick={(e) => e.stopPropagation()}>
+                          <InlineEditableCell
+                            value={keyword.keyword}
+                            onSave={(value) => handleUpdateWithHistory(keyword.id, { keyword: String(value) })}
+                            placeholder="Keyword..."
+                            className="font-medium"
+                          />
+                        </TableCell>
+                        <TableCell onClick={(e) => e.stopPropagation()}>
+                          <InlineEditableCell
+                            value={keyword.searchVolume}
+                            onSave={(value) => handleUpdateWithHistory(keyword.id, { searchVolume: Number(value) })}
+                            type="number"
+                            min={0}
+                            formatter={(v) => Number(v).toLocaleString()}
+                          />
+                        </TableCell>
+                        <TableCell onClick={(e) => e.stopPropagation()}>
+                          <InlineEditableCell
+                            value={keyword.competitors || 0}
+                            onSave={(value) => handleUpdateWithHistory(keyword.id, { competitors: Number(value) })}
+                            type="number"
+                            min={0}
+                            formatter={(v) => Number(v).toLocaleString()}
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <MarketScoreCell
+                            marketData={keyword.marketData}
+                            score={score}
+                            isIncomplete={incomplete}
+                            onValidate={() => setValidationKeyword(keyword)}
+                          />
+                        </TableCell>
+                        <TableCell onClick={(e) => e.stopPropagation()}>
+                          <InlineSelectBadge
+                            value={keyword.state || 'pending'}
+                            options={KEYWORD_STATES.map(s => ({ value: s.value, label: s.label, icon: s.icon }))}
+                            onChange={(value) => handleUpdateWithHistory(keyword.id, { state: value as KeywordState })}
+                          />
+                        </TableCell>
+                        <TableCell onClick={(e) => e.stopPropagation()}>
+                          <InlineCampaignTypeSelect
+                            value={keyword.campaignTypes}
+                            onChange={(types) => handleUpdateWithHistory(keyword.id, { campaignTypes: types })}
+                          />
+                        </TableCell>
+                        <TableCell onClick={(e) => e.stopPropagation()}>
+                          <div className="flex items-center gap-1">
+                            {keyword.history && keyword.history.length > 0 && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => setHistoryKeyword(keyword)}
+                                className="text-muted-foreground hover:text-primary"
+                                title="Ver historial"
+                              >
+                                <History className="w-4 h-4" />
+                              </Button>
+                            )}
                             <Button
                               variant="ghost"
                               size="sm"
-                              onClick={() => setHistoryKeyword(keyword)}
-                              className="text-muted-foreground hover:text-primary"
-                              title="Ver historial"
+                              onClick={() => onDelete(keyword.id)}
+                              className="text-muted-foreground hover:text-destructive"
                             >
-                              <History className="w-4 h-4" />
+                              <Trash2 className="w-4 h-4" />
                             </Button>
-                          )}
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => onDelete(keyword.id)}
-                            className="text-muted-foreground hover:text-destructive"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })
                 )}
               </TableBody>
             </Table>
