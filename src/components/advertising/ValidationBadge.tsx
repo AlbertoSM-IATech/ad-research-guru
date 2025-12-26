@@ -2,21 +2,21 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ClipboardCheck } from 'lucide-react';
 import {
-  type KeywordValidation,
-  VALIDATION_STATUS_OPTIONS,
-  getScoreColor,
-  getScoreBgColor,
-} from '@/lib/keyword-validation';
+  type MarketData,
+  getMarketScoreInfo,
+  getMarketScoreColor,
+  getMarketScoreBgColor,
+} from '@/lib/market-score';
 import { cn } from '@/lib/utils';
 
 interface ValidationBadgeProps {
-  validation?: KeywordValidation;
+  marketData?: MarketData;
   score: number;
   onValidate: () => void;
 }
 
-export const ValidationBadge = ({ validation, score, onValidate }: ValidationBadgeProps) => {
-  if (!validation) {
+export const ValidationBadge = ({ marketData, score, onValidate }: ValidationBadgeProps) => {
+  if (!marketData) {
     return (
       <Button
         variant="ghost"
@@ -30,8 +30,7 @@ export const ValidationBadge = ({ validation, score, onValidate }: ValidationBad
     );
   }
 
-  const status = validation.validationStatusOverride || validation.validationStatus;
-  const statusInfo = VALIDATION_STATUS_OPTIONS.find(s => s.value === status);
+  const scoreInfo = getMarketScoreInfo(score);
 
   return (
     <div className="flex items-center gap-1">
@@ -39,17 +38,17 @@ export const ValidationBadge = ({ validation, score, onValidate }: ValidationBad
         variant="outline"
         className={cn(
           'text-[10px] px-1.5 py-0 cursor-pointer hover:opacity-80',
-          statusInfo?.color
+          scoreInfo.color
         )}
         onClick={onValidate}
       >
-        {statusInfo?.label}
+        {scoreInfo.label}
       </Badge>
       <span
         className={cn(
           'text-xs font-medium cursor-pointer hover:opacity-80 px-1 py-0.5 rounded',
-          getScoreBgColor(score),
-          getScoreColor(score)
+          getMarketScoreBgColor(score),
+          getMarketScoreColor(score)
         )}
         onClick={onValidate}
       >

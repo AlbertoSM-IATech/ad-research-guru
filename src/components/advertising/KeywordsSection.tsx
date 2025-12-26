@@ -52,11 +52,12 @@ import {
   classifyIntent,
 } from '@/types/advertising';
 import {
-  type KeywordValidation,
-  scoreToRelevanceLevel,
-  calculateRelevanceScore,
-  VALIDATION_STATUS_OPTIONS,
-} from '@/lib/keyword-validation';
+  type MarketData,
+  type StrategicData,
+  calculateMarketScore,
+  getDefaultMarketData,
+} from '@/lib/market-score';
+import { scoreToRelevanceLevel } from '@/lib/keyword-validation';
 import { useToast } from '@/hooks/use-toast';
 
 interface KeywordsSectionProps {
@@ -199,22 +200,34 @@ export const KeywordsSection = ({
     onSelectedIdsChange(new Set());
   };
 
-  // Handle validation save - now uses unified scoring
-  const handleSaveValidation = (keywordId: string, validation: KeywordValidation, newScore: number) => {
-    // Update the keyword with validation and derived relevance
+  // Handle validation save - uses Market Score V2
+  const handleSaveValidation = (keywordId: string, marketData: MarketData, strategicData: StrategicData, newScore: number) => {
+    // Update the keyword with market data, strategic data, and derived relevance
     const updates: Partial<Keyword> = { 
-      validation,
-      // Always update relevance from the unified score
+      marketData,
+      strategicData,
+      marketScore: newScore,
+      // Also sync legacy fields for backward compatibility
+      searchVolume: marketData.searchVolume,
+      // Always update relevance from the market score
       relevance: scoreToRelevanceLevel(newScore),
     };
     
     onUpdate(keywordId, updates);
-    toast({ title: 'Validación guardada', description: `Score: ${newScore}/100` });
+    toast({ title: 'Validación guardada', description: `Market Score: ${newScore}/100` });
   };
 
-  // Get keyword score (calculated from base data + validation)
-  const getKeywordScore = (keyword: Keyword): number => {
-    return calculateRelevanceScore(keyword);
+  // Get keyword market score
+  const getKeywordMarketScore = (keyword: Keyword): number => {
+    if (keyword.marketScore !== undefined) return keyword.marketScore;
+    // Calculate from marketData if available
+    if (keyword.marketData) return calculateMarketScore(keyword.marketData);
+    // Fallback: calculate from legacy fields
+    const legacyData: MarketData = {
+      ...getDefaultMarketData(),
+      searchVolume: keyword.searchVolume || 0,
+    };
+    return calculateMarketScore(legacyData);
   };
 
   // Handle update with history tracking
@@ -528,8 +541,8 @@ export const KeywordsSection = ({
                       </TableCell>
                       <TableCell>
                         <ValidationBadge
-                          validation={keyword.validation}
-                          score={getKeywordScore(keyword)}
+                          marketData={keyword.marketData}
+                          score={getKeywordMarketScore(keyword)}
                           onValidate={() => setValidationKeyword(keyword)}
                         />
                       </TableCell>
