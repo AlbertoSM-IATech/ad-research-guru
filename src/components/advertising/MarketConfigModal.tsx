@@ -245,6 +245,16 @@ export const MarketConfigModal = ({
             />
           </div>
 
+          {/* Warning alert */}
+          <Alert className="bg-amber-500/10 border-amber-500/30">
+            <Info className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+            <AlertDescription className="text-xs text-amber-700 dark:text-amber-300">
+              <strong>⚠️ Los valores ideales son tu criterio personal, no una verdad universal.</strong>
+              <br />
+              Ajusta estas métricas antes de analizar keywords para obtener un Market Score coherente con tu estrategia.
+            </AlertDescription>
+          </Alert>
+
           {/* Info alert */}
           <Alert className="bg-muted/50">
             <Info className="w-4 h-4" />

@@ -69,6 +69,11 @@ export const KeywordDetailPanel = ({
   const [brandRisk, setBrandRisk] = useState<BrandRisk>('low');
   const [trafficSource, setTrafficSource] = useState<TrafficSource>('amazon');
   
+  // Market Structure state (15 pts block)
+  const [hasProfitableBooks, setHasProfitableBooks] = useState(false);
+  const [hasBooksOver200Reviews, setHasBooksOver200Reviews] = useState(false);
+  const [hasBooksUnder100Reviews, setHasBooksUnder100Reviews] = useState(false);
+  
   // Editorial Data state
   const [canCreate, setCanCreate] = useState<boolean | null>(null);
   const [canDoBetter, setCanDoBetter] = useState<boolean | null>(null);
@@ -92,6 +97,12 @@ export const KeywordDetailPanel = ({
       setRoyalties(keyword.royalties || md.royalties);
       setBrandRisk(md.brandRisk);
       setTrafficSource(md.trafficSource);
+      
+      // Market Structure data
+      const ms = keyword.marketStructure;
+      setHasProfitableBooks(ms?.hasProfitableBooks ?? false);
+      setHasBooksOver200Reviews(ms?.hasBooksOver200Reviews ?? false);
+      setHasBooksUnder100Reviews(ms?.hasBooksUnder100Reviews ?? false);
       
       // Editorial data
       const ed = keyword.editorialData ?? getDefaultEditorialData();
@@ -118,7 +129,14 @@ export const KeywordDetailPanel = ({
     trafficSource,
   }), [searchVolume, competitors, price, royalties, brandRisk, trafficSource]);
 
-  const scoreBreakdown = useMemo(() => calculateMarketScore(marketData, marketplaceId), [marketData, marketplaceId]);
+  // Market Structure for scoring
+  const marketStructure = useMemo(() => ({
+    hasProfitableBooks,
+    hasBooksOver200Reviews,
+    hasBooksUnder100Reviews,
+  }), [hasProfitableBooks, hasBooksOver200Reviews, hasBooksUnder100Reviews]);
+
+  const scoreBreakdown = useMemo(() => calculateMarketScore(marketData, marketplaceId, marketStructure), [marketData, marketplaceId, marketStructure]);
   const scoreInfo = useMemo(() => getMarketScoreInfo(scoreBreakdown.total), [scoreBreakdown.total]);
 
   // Calculate Editorial Score
@@ -146,6 +164,7 @@ export const KeywordDetailPanel = ({
       royalties,
       marketScore: scoreBreakdown.total,
       marketData,
+      marketStructure,
       editorialData,
       editorialScore,
       status: finalStatus,
@@ -179,6 +198,12 @@ export const KeywordDetailPanel = ({
     setRoyalties(keyword.royalties || md.royalties);
     setBrandRisk(md.brandRisk);
     setTrafficSource(md.trafficSource);
+    
+    // Reset market structure
+    const ms = keyword.marketStructure;
+    setHasProfitableBooks(ms?.hasProfitableBooks ?? false);
+    setHasBooksOver200Reviews(ms?.hasBooksOver200Reviews ?? false);
+    setHasBooksUnder100Reviews(ms?.hasBooksUnder100Reviews ?? false);
     
     const ed = keyword.editorialData ?? getDefaultEditorialData();
     setCanCreate(ed.checklist.canCreate);
@@ -263,6 +288,10 @@ export const KeywordDetailPanel = ({
                     <div className="flex justify-between">
                       <span>Regalías</span>
                       <span className="font-mono">{scoreBreakdown.royalties.points}/{scoreBreakdown.royalties.max}</span>
+                    </div>
+                    <div className="flex justify-between text-primary">
+                      <span>Estructura mercado</span>
+                      <span className="font-mono">{scoreBreakdown.marketStructure.points}/{scoreBreakdown.marketStructure.max}</span>
                     </div>
                     {scoreBreakdown.penalties.points !== 0 && (
                       <div className="flex justify-between text-red-500">
@@ -445,7 +474,118 @@ export const KeywordDetailPanel = ({
 
           <Separator />
 
-          {/* ========== SECCIÓN 3: EVALUACIÓN EDITORIAL ========== */}
+          {/* ========== SECCIÓN 3: ESTRUCTURA DEL MERCADO (15 pts) ========== */}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-2">
+                Estructura del Mercado
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Info className="w-3.5 h-3.5 text-muted-foreground cursor-help" />
+                    </TooltipTrigger>
+                    <TooltipContent side="right" className="max-w-xs">
+                      Señales de estructura del mercado. Aporta hasta 15 puntos al Market Score total.
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </h3>
+              <Badge variant="outline" className="text-sm">
+                {scoreBreakdown.marketStructure.points}/{scoreBreakdown.marketStructure.max}
+              </Badge>
+            </div>
+
+            <div className="space-y-3">
+              {/* Libros rentables */}
+              <div className="flex items-center justify-between p-3 rounded-lg bg-muted/30 border border-border/50">
+                <div className="flex items-center gap-2">
+                  <Checkbox
+                    id="profitableBooks"
+                    checked={hasProfitableBooks}
+                    onCheckedChange={(checked) => setHasProfitableBooks(checked === true)}
+                  />
+                  <div className="flex items-center gap-1">
+                    <label htmlFor="profitableBooks" className="text-sm cursor-pointer">
+                      📚 Libros rentables (≥3)
+                    </label>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Info className="w-3.5 h-3.5 text-muted-foreground cursor-help" />
+                        </TooltipTrigger>
+                        <TooltipContent side="right" className="max-w-xs">
+                          Confirma que el nicho genera ingresos reales de forma consistente.
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </div>
+                </div>
+                <Badge variant={hasProfitableBooks ? 'default' : 'secondary'} className="text-xs">
+                  +6 pts
+                </Badge>
+              </div>
+
+              {/* Libros +200 reviews */}
+              <div className="flex items-center justify-between p-3 rounded-lg bg-muted/30 border border-border/50">
+                <div className="flex items-center gap-2">
+                  <Checkbox
+                    id="booksOver200"
+                    checked={hasBooksOver200Reviews}
+                    onCheckedChange={(checked) => setHasBooksOver200Reviews(checked === true)}
+                  />
+                  <div className="flex items-center gap-1">
+                    <label htmlFor="booksOver200" className="text-sm cursor-pointer">
+                      ⭐ Libros con +200 reviews
+                    </label>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Info className="w-3.5 h-3.5 text-muted-foreground cursor-help" />
+                        </TooltipTrigger>
+                        <TooltipContent side="right" className="max-w-xs">
+                          Indica interés y demanda sostenida del mercado.
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </div>
+                </div>
+                <Badge variant={hasBooksOver200Reviews ? 'default' : 'secondary'} className="text-xs">
+                  +5 pts
+                </Badge>
+              </div>
+
+              {/* Libros -100 reviews */}
+              <div className="flex items-center justify-between p-3 rounded-lg bg-muted/30 border border-border/50">
+                <div className="flex items-center gap-2">
+                  <Checkbox
+                    id="booksUnder100"
+                    checked={hasBooksUnder100Reviews}
+                    onCheckedChange={(checked) => setHasBooksUnder100Reviews(checked === true)}
+                  />
+                  <div className="flex items-center gap-1">
+                    <label htmlFor="booksUnder100" className="text-sm cursor-pointer">
+                      🌱 Libros con -100 reviews
+                    </label>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Info className="w-3.5 h-3.5 text-muted-foreground cursor-help" />
+                        </TooltipTrigger>
+                        <TooltipContent side="right" className="max-w-xs">
+                          Señal de facilidad de entrada sin marca fuerte.
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </div>
+                </div>
+                <Badge variant={hasBooksUnder100Reviews ? 'default' : 'secondary'} className="text-xs">
+                  +4 pts
+                </Badge>
+              </div>
+            </div>
+          </div>
+
+          <Separator />
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">

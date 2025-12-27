@@ -58,6 +58,13 @@ import type {
   KeywordPurpose 
 } from '@/lib/market-score';
 
+// Market Structure data for scoring (15 pts block)
+export interface MarketStructure {
+  hasProfitableBooks?: boolean;    // ≥3 libros rentables → +6 pts
+  hasBooksOver200Reviews?: boolean; // ≥1 libro con +200 reviews → +5 pts
+  hasBooksUnder100Reviews?: boolean; // ≥1 libro con -100 reviews → +4 pts
+}
+
 export interface Keyword {
   id: string;
   keyword: string;
@@ -86,6 +93,9 @@ export interface Keyword {
   competitionLevel: CompetitionLevel;
   competitionNote?: string;
   relevance?: RelevanceLevel;
+  
+  // ============ MARKET STRUCTURE (15 pts block) ============
+  marketStructure?: MarketStructure;
   
   // ============ OPERATIONAL FIELDS ============
   campaignTypes: CampaignType[];

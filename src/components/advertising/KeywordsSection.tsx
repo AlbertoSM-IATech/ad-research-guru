@@ -605,6 +605,30 @@ export const KeywordsSection = ({
                   <TableHead className="cursor-pointer hover:text-foreground w-[100px]" onClick={() => handleSort('state')}>
                     <div className="flex items-center gap-1">Estado <ArrowUpDown className="w-3 h-3" /></div>
                   </TableHead>
+                  <TableHead className="w-[40px]">
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span className="cursor-help">📚</span>
+                      </TooltipTrigger>
+                      <TooltipContent>Libros rentables (≥3)</TooltipContent>
+                    </Tooltip>
+                  </TableHead>
+                  <TableHead className="w-[40px]">
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span className="cursor-help">⭐</span>
+                      </TooltipTrigger>
+                      <TooltipContent>Libros +200 reviews</TooltipContent>
+                    </Tooltip>
+                  </TableHead>
+                  <TableHead className="w-[40px]">
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span className="cursor-help">🌱</span>
+                      </TooltipTrigger>
+                      <TooltipContent>Libros -100 reviews</TooltipContent>
+                    </Tooltip>
+                  </TableHead>
                   <TableHead className="w-[150px]">
                     <div className="flex items-center gap-1">
                       Campaña
@@ -617,7 +641,7 @@ export const KeywordsSection = ({
               <TableBody>
                 {paginatedKeywords.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={11} className="text-center py-8 text-muted-foreground">
                       {keywords.length === 0
                         ? 'No hay keywords. Añade tu primera keyword o importa en lote.'
                         : 'No se encontraron keywords con los filtros aplicados.'}
@@ -680,6 +704,15 @@ export const KeywordsSection = ({
                             options={KEYWORD_STATES.map(s => ({ value: s.value, label: s.label, icon: s.icon }))}
                             onChange={(value) => handleUpdateWithHistory(keyword.id, { state: value as KeywordState })}
                           />
+                        </TableCell>
+                        <TableCell className="text-center">
+                          {keyword.marketStructure?.hasProfitableBooks ? '✅' : '—'}
+                        </TableCell>
+                        <TableCell className="text-center">
+                          {keyword.marketStructure?.hasBooksOver200Reviews ? '✅' : '—'}
+                        </TableCell>
+                        <TableCell className="text-center">
+                          {keyword.marketStructure?.hasBooksUnder100Reviews ? '✅' : '—'}
                         </TableCell>
                         <TableCell onClick={(e) => e.stopPropagation()}>
                           <InlineCampaignTypeSelect
