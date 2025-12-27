@@ -207,12 +207,7 @@ export function NewKeywordWizard({
     if (open) {
       setCurrentStep(1);
       setStep1(getInitialStep1(initialKeyword, marketplaceId));
-      setStep2({
-        ...getDefaultStep2Data(),
-        hasProfitableBooks: false,
-        hasBooksOver200Reviews: false,
-        hasBooksUnder100Reviews: false,
-      });
+      setStep2(getDefaultStep2Data());
       setStep3(getDefaultStep3Data());
       setEditorialChecks({});
       setStatus('pending');
@@ -244,9 +239,12 @@ export function NewKeywordWizard({
   
   const previewScore = useMemo(() => {
     const marketStructure = {
-      hasProfitableBooks: step2.hasProfitableBooks ?? false,
-      hasBooksOver200Reviews: step2.hasBooksOver200Reviews ?? false,
-      hasBooksUnder100Reviews: step2.hasBooksUnder100Reviews ?? false,
+      understandable: step2.understandable ?? false,
+      amazonSuggested: step2.amazonSuggested ?? false,
+      profitableBooks: step2.profitableBooks ?? false,
+      indieAuthors: step2.indieAuthors ?? false,
+      intentMatch: step2.intentMatch ?? false,
+      variants: step2.variants ?? false,
     };
     return calculateMarketScore({
       searchVolume: step2.searchVolume,
@@ -645,57 +643,99 @@ export function NewKeywordWizard({
                 </div>
               </div>
               
-              {/* Estructura del Mercado (15 pts) - Added to Step 2 */}
+              {/* Estructura del Mercado (12 pts) - 6 checks x 2pts */}
               <div className="space-y-3 p-4 rounded-lg border border-border bg-muted/30">
                 <div className="flex items-center justify-between">
                   <h4 className="text-sm font-medium flex items-center gap-2">
                     Estructura del Mercado
-                    <FieldTooltip content="Señales de estructura del mercado. Aporta hasta 15 puntos al Market Score." />
+                    <FieldTooltip content="Señales de estructura del mercado. Aporta hasta 12 puntos al Market Score (6 checks × 2pts)." />
                   </h4>
-                  <span className="text-xs text-muted-foreground">Máx +15 pts</span>
+                  <span className="text-xs text-muted-foreground">Máx +12 pts</span>
                 </div>
                 
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="flex items-center justify-between p-2 rounded bg-muted/50">
                     <div className="flex items-center gap-2">
                       <Checkbox
-                        id="hasProfitableBooks"
-                        checked={step2.hasProfitableBooks === true}
-                        onCheckedChange={(checked) => setStep2({ ...step2, hasProfitableBooks: checked === true })}
+                        id="understandable"
+                        checked={step2.understandable === true}
+                        onCheckedChange={(checked) => setStep2({ ...step2, understandable: checked === true })}
                       />
-                      <Label htmlFor="hasProfitableBooks" className="text-sm cursor-pointer">
-                        📚 Libros rentables (≥3)
+                      <Label htmlFor="understandable" className="text-xs cursor-pointer">
+                        Se entiende por sí sola
                       </Label>
                     </div>
-                    <span className="text-xs text-green-600 dark:text-green-400">+6 pts</span>
+                    <span className="text-[10px] text-green-600 dark:text-green-400">+2</span>
                   </div>
                   
-                  <div className="flex items-center justify-between">
+                  <div className="flex items-center justify-between p-2 rounded bg-muted/50">
                     <div className="flex items-center gap-2">
                       <Checkbox
-                        id="hasBooksOver200"
-                        checked={step2.hasBooksOver200Reviews === true}
-                        onCheckedChange={(checked) => setStep2({ ...step2, hasBooksOver200Reviews: checked === true })}
+                        id="amazonSuggested"
+                        checked={step2.amazonSuggested === true}
+                        onCheckedChange={(checked) => setStep2({ ...step2, amazonSuggested: checked === true })}
                       />
-                      <Label htmlFor="hasBooksOver200" className="text-sm cursor-pointer">
-                        ⭐ Libros con +200 reviews
+                      <Label htmlFor="amazonSuggested" className="text-xs cursor-pointer">
+                        Sugerencia Amazon
                       </Label>
                     </div>
-                    <span className="text-xs text-yellow-600 dark:text-yellow-400">+5 pts</span>
+                    <span className="text-[10px] text-green-600 dark:text-green-400">+2</span>
                   </div>
                   
-                  <div className="flex items-center justify-between">
+                  <div className="flex items-center justify-between p-2 rounded bg-muted/50">
                     <div className="flex items-center gap-2">
                       <Checkbox
-                        id="hasBooksUnder100"
-                        checked={step2.hasBooksUnder100Reviews === true}
-                        onCheckedChange={(checked) => setStep2({ ...step2, hasBooksUnder100Reviews: checked === true })}
+                        id="profitableBooks"
+                        checked={step2.profitableBooks === true}
+                        onCheckedChange={(checked) => setStep2({ ...step2, profitableBooks: checked === true })}
                       />
-                      <Label htmlFor="hasBooksUnder100" className="text-sm cursor-pointer">
-                        🌱 Libros con -100 reviews
+                      <Label htmlFor="profitableBooks" className="text-xs cursor-pointer">
+                        ≥3 libros vendiendo
                       </Label>
                     </div>
-                    <span className="text-xs text-blue-600 dark:text-blue-400">+4 pts</span>
+                    <span className="text-[10px] text-green-600 dark:text-green-400">+2</span>
+                  </div>
+                  
+                  <div className="flex items-center justify-between p-2 rounded bg-muted/50">
+                    <div className="flex items-center gap-2">
+                      <Checkbox
+                        id="indieAuthors"
+                        checked={step2.indieAuthors === true}
+                        onCheckedChange={(checked) => setStep2({ ...step2, indieAuthors: checked === true })}
+                      />
+                      <Label htmlFor="indieAuthors" className="text-xs cursor-pointer">
+                        Autores indie vendiendo
+                      </Label>
+                    </div>
+                    <span className="text-[10px] text-green-600 dark:text-green-400">+2</span>
+                  </div>
+                  
+                  <div className="flex items-center justify-between p-2 rounded bg-muted/50">
+                    <div className="flex items-center gap-2">
+                      <Checkbox
+                        id="intentMatch"
+                        checked={step2.intentMatch === true}
+                        onCheckedChange={(checked) => setStep2({ ...step2, intentMatch: checked === true })}
+                      />
+                      <Label htmlFor="intentMatch" className="text-xs cursor-pointer">
+                        Top refleja intención
+                      </Label>
+                    </div>
+                    <span className="text-[10px] text-green-600 dark:text-green-400">+2</span>
+                  </div>
+                  
+                  <div className="flex items-center justify-between p-2 rounded bg-muted/50">
+                    <div className="flex items-center gap-2">
+                      <Checkbox
+                        id="variants"
+                        checked={step2.variants === true}
+                        onCheckedChange={(checked) => setStep2({ ...step2, variants: checked === true })}
+                      />
+                      <Label htmlFor="variants" className="text-xs cursor-pointer">
+                        Variantes con potencial
+                      </Label>
+                    </div>
+                    <span className="text-[10px] text-green-600 dark:text-green-400">+2</span>
                   </div>
                 </div>
               </div>
