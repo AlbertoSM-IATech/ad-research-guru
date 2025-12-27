@@ -46,6 +46,20 @@ import {
   KEYWORD_STATUS_OPTIONS,
 } from '@/lib/market-score';
 
+// Editorial checks aligned with wizard
+const EDITORIAL_CHECKS = [
+  { id: 'keywordClear', label: 'La keyword se entiende por sí sola' },
+  { id: 'amazonSuggestion', label: 'Aparece como sugerencia en Amazon' },
+  { id: 'booksSellingWell', label: 'Veo al menos 3 libros vendiendo bien' },
+  { id: 'indieAuthors', label: 'Hay autores independientes vendiendo' },
+  { id: 'topReflectsIntent', label: 'El top refleja realmente la intención de esta keyword' },
+  { id: 'canProduce', label: 'Puedo producir este tipo de libro' },
+  { id: 'canDoBetter', label: 'Puedo hacerlo mejor o más útil' },
+  { id: 'canDifferentiate', label: 'Puedo diferenciarlo claramente' },
+  { id: 'hasVariants', label: 'Hay variantes cercanas con potencial' },
+  { id: 'hasInterest', label: 'Tengo interés en el tema (opcional)' },
+];
+
 interface KeywordDetailPanelProps {
   keyword: Keyword | null;
   isOpen: boolean;
@@ -74,14 +88,9 @@ export const KeywordDetailPanel = ({
   const [hasBooksOver200Reviews, setHasBooksOver200Reviews] = useState(false);
   const [hasBooksUnder100Reviews, setHasBooksUnder100Reviews] = useState(false);
   
-  // Editorial Data state
-  const [canCreate, setCanCreate] = useState<boolean | null>(null);
-  const [canDoBetter, setCanDoBetter] = useState<boolean | null>(null);
-  const [canDifferentiate, setCanDifferentiate] = useState<boolean | null>(null);
-  const [fitsStrategy, setFitsStrategy] = useState<boolean | null>(null);
+  // Editorial Data state (10 checks aligned with wizard)
+  const [editorialChecks, setEditorialChecks] = useState<Record<string, boolean>>({});
   const [editorialNotes, setEditorialNotes] = useState('');
-  
-  // Status
   const [status, setStatus] = useState<KeywordStatus>('pending');
   const [statusManuallySet, setStatusManuallySet] = useState(false);
   const [notes, setNotes] = useState('');
@@ -104,12 +113,15 @@ export const KeywordDetailPanel = ({
       setHasBooksOver200Reviews(ms?.hasBooksOver200Reviews ?? false);
       setHasBooksUnder100Reviews(ms?.hasBooksUnder100Reviews ?? false);
       
-      // Editorial data
+      // Editorial data - load from keyword editorialScore or build from checklist
       const ed = keyword.editorialData ?? getDefaultEditorialData();
-      setCanCreate(ed.checklist.canCreate);
-      setCanDoBetter(ed.checklist.canDoBetter);
-      setCanDifferentiate(ed.checklist.canDifferentiate);
-      setFitsStrategy(ed.checklist.fitsStrategy);
+      // Convert legacy checklist to editorial checks format
+      const checks: Record<string, boolean> = {};
+      if (ed.checklist.canCreate === true) checks.canProduce = true;
+      if (ed.checklist.canDoBetter === true) checks.canDoBetter = true;
+      if (ed.checklist.canDifferentiate === true) checks.canDifferentiate = true;
+      if (ed.checklist.fitsStrategy === true) checks.hasInterest = true;
+      setEditorialChecks(checks);
       setEditorialNotes(ed.notes);
       
       // Status & notes
@@ -139,13 +151,18 @@ export const KeywordDetailPanel = ({
   const scoreBreakdown = useMemo(() => calculateMarketScore(marketData, marketplaceId, marketStructure), [marketData, marketplaceId, marketStructure]);
   const scoreInfo = useMemo(() => getMarketScoreInfo(scoreBreakdown.total), [scoreBreakdown.total]);
 
-  // Calculate Editorial Score
+  // Calculate Editorial Score from checks
   const editorialData: EditorialData = useMemo(() => ({
-    checklist: { canCreate, canDoBetter, canDifferentiate, fitsStrategy },
+    checklist: { 
+      canCreate: editorialChecks.canProduce ?? null, 
+      canDoBetter: editorialChecks.canDoBetter ?? null, 
+      canDifferentiate: editorialChecks.canDifferentiate ?? null, 
+      fitsStrategy: editorialChecks.hasInterest ?? null 
+    },
     notes: editorialNotes,
-  }), [canCreate, canDoBetter, canDifferentiate, fitsStrategy, editorialNotes]);
+  }), [editorialChecks, editorialNotes]);
 
-  const editorialScore = useMemo(() => calculateEditorialScore(editorialData), [editorialData]);
+  const editorialScore = useMemo(() => Object.values(editorialChecks).filter(Boolean).length, [editorialChecks]);
 
   // Auto-update status based on score if not manually set
   const autoStatus = useMemo(() => getAutoStatusFromScore(scoreBreakdown.total), [scoreBreakdown.total]);
@@ -206,10 +223,12 @@ export const KeywordDetailPanel = ({
     setHasBooksUnder100Reviews(ms?.hasBooksUnder100Reviews ?? false);
     
     const ed = keyword.editorialData ?? getDefaultEditorialData();
-    setCanCreate(ed.checklist.canCreate);
-    setCanDoBetter(ed.checklist.canDoBetter);
-    setCanDifferentiate(ed.checklist.canDifferentiate);
-    setFitsStrategy(ed.checklist.fitsStrategy);
+    const checks: Record<string, boolean> = {};
+    if (ed.checklist.canCreate === true) checks.canProduce = true;
+    if (ed.checklist.canDoBetter === true) checks.canDoBetter = true;
+    if (ed.checklist.canDifferentiate === true) checks.canDifferentiate = true;
+    if (ed.checklist.fitsStrategy === true) checks.hasInterest = true;
+    setEditorialChecks(checks);
     setEditorialNotes(ed.notes);
     
     setStatus(keyword.status || 'pending');
@@ -589,97 +608,32 @@ export const KeywordDetailPanel = ({
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
-                Evaluación Editorial
+                Contexto Editorial
               </h3>
               <Badge variant="outline" className="text-sm">
-                {editorialScore}/4
+                {editorialScore}/10
               </Badge>
             </div>
             
             <p className="text-xs text-muted-foreground">
-              Esta sección NO afecta el Market Score. Es contexto para decisión editorial.
+              Esta sección NO afecta el Market Score. Sirve para decisión editorial/estrategia.
             </p>
 
-            <div className="space-y-3">
-              <div className="flex items-center justify-between p-2 rounded-lg bg-muted/30">
-                <span className="text-sm">¿Puedo crear este libro?</span>
-                <div className="flex gap-2">
-                  <Button
-                    variant={canCreate === true ? 'default' : 'outline'}
-                    size="sm"
-                    onClick={() => setCanCreate(canCreate === true ? null : true)}
-                  >
-                    Sí
-                  </Button>
-                  <Button
-                    variant={canCreate === false ? 'destructive' : 'outline'}
-                    size="sm"
-                    onClick={() => setCanCreate(canCreate === false ? null : false)}
-                  >
-                    No
-                  </Button>
+            <div className="space-y-2">
+              {EDITORIAL_CHECKS.map((check) => (
+                <div key={check.id} className="flex items-center space-x-3 p-2 rounded-lg bg-muted/30">
+                  <Checkbox
+                    id={`detail-${check.id}`}
+                    checked={editorialChecks[check.id] === true}
+                    onCheckedChange={(checked) =>
+                      setEditorialChecks({ ...editorialChecks, [check.id]: checked === true })
+                    }
+                  />
+                  <label htmlFor={`detail-${check.id}`} className="cursor-pointer text-sm flex-1">
+                    {check.label}
+                  </label>
                 </div>
-              </div>
-
-              <div className="flex items-center justify-between p-2 rounded-lg bg-muted/30">
-                <span className="text-sm">¿Puedo hacerlo mejor?</span>
-                <div className="flex gap-2">
-                  <Button
-                    variant={canDoBetter === true ? 'default' : 'outline'}
-                    size="sm"
-                    onClick={() => setCanDoBetter(canDoBetter === true ? null : true)}
-                  >
-                    Sí
-                  </Button>
-                  <Button
-                    variant={canDoBetter === false ? 'destructive' : 'outline'}
-                    size="sm"
-                    onClick={() => setCanDoBetter(canDoBetter === false ? null : false)}
-                  >
-                    No
-                  </Button>
-                </div>
-              </div>
-
-              <div className="flex items-center justify-between p-2 rounded-lg bg-muted/30">
-                <span className="text-sm">¿Puedo diferenciarlo?</span>
-                <div className="flex gap-2">
-                  <Button
-                    variant={canDifferentiate === true ? 'default' : 'outline'}
-                    size="sm"
-                    onClick={() => setCanDifferentiate(canDifferentiate === true ? null : true)}
-                  >
-                    Sí
-                  </Button>
-                  <Button
-                    variant={canDifferentiate === false ? 'destructive' : 'outline'}
-                    size="sm"
-                    onClick={() => setCanDifferentiate(canDifferentiate === false ? null : false)}
-                  >
-                    No
-                  </Button>
-                </div>
-              </div>
-
-              <div className="flex items-center justify-between p-2 rounded-lg bg-muted/30">
-                <span className="text-sm">¿Encaja con mi estrategia editorial?</span>
-                <div className="flex gap-2">
-                  <Button
-                    variant={fitsStrategy === true ? 'default' : 'outline'}
-                    size="sm"
-                    onClick={() => setFitsStrategy(fitsStrategy === true ? null : true)}
-                  >
-                    Sí
-                  </Button>
-                  <Button
-                    variant={fitsStrategy === false ? 'destructive' : 'outline'}
-                    size="sm"
-                    onClick={() => setFitsStrategy(fitsStrategy === false ? null : false)}
-                  >
-                    No
-                  </Button>
-                </div>
-              </div>
+              ))}
             </div>
           </div>
 
