@@ -35,6 +35,14 @@ export interface EditorialData {
   notes: string;
 }
 
+// ============ MARKET STRUCTURE (15 pts block) ============
+
+export interface MarketStructure {
+  hasProfitableBooks?: boolean;    // ≥3 libros rentables → +6 pts
+  hasBooksOver200Reviews?: boolean; // ≥1 libro con +200 reviews → +5 pts
+  hasBooksUnder100Reviews?: boolean; // ≥1 libro con -100 reviews → +4 pts
+}
+
 // ============ SCORE BREAKDOWN ============
 
 export interface MarketScoreBreakdown {
@@ -42,6 +50,7 @@ export interface MarketScoreBreakdown {
   competitors: { points: number; max: number; label: string };
   price: { points: number; max: number; label: string };
   royalties: { points: number; max: number; label: string };
+  marketStructure: { points: number; max: number; label: string };
   penalties: { points: number; label: string };
   total: number;
 }
@@ -70,14 +79,19 @@ export const getDefaultEditorialData = (): EditorialData => ({
 });
 
 // ============ MARKET SCORE CALCULATION ============
-// Pesos:
-// - Volumen (30%)
-// - Competidores (25%)
-// - Precio (15%)
-// - Regalías (20%)
-// - Penalizaciones brandRisk + trafficSource (10%)
+// Pesos (total 100):
+// - Volumen: 30 pts
+// - Competidores: 35 pts
+// - Precio: 10 pts
+// - Regalías: 10 pts
+// - Estructura del mercado: 15 pts
+// - Penalizaciones: hasta -20 pts
 
-export function calculateMarketScore(data: MarketData, marketplaceId?: string): MarketScoreBreakdown {
+export function calculateMarketScore(
+  data: MarketData, 
+  marketplaceId?: string,
+  marketStructure?: MarketStructure
+): MarketScoreBreakdown {
   const config = getMarketScoreConfig(marketplaceId);
   const { thresholds } = config;
   
@@ -101,61 +115,80 @@ export function calculateMarketScore(data: MarketData, marketplaceId?: string): 
   }
   total += volumePoints;
   
-  // 2) COMPETIDORES (25 puntos máx)
+  // 2) COMPETIDORES (35 puntos máx - increased from 25)
   let competitorsPoints = 0;
   let competitorsLabel = '';
   if (data.competitors < thresholds.competitors.low) {
-    competitorsPoints = 25;
-    competitorsLabel = `<${thresholds.competitors.low} → 25pts`;
+    competitorsPoints = 35;
+    competitorsLabel = `<${thresholds.competitors.low} → 35pts`;
   } else if (data.competitors <= thresholds.competitors.medium) {
-    competitorsPoints = 18;
-    competitorsLabel = `${thresholds.competitors.low}-${thresholds.competitors.medium} → 18pts`;
+    competitorsPoints = 25;
+    competitorsLabel = `${thresholds.competitors.low}-${thresholds.competitors.medium} → 25pts`;
   } else if (data.competitors <= thresholds.competitors.high) {
-    competitorsPoints = 8;
-    competitorsLabel = `${thresholds.competitors.medium}-${thresholds.competitors.high} → 8pts`;
+    competitorsPoints = 12;
+    competitorsLabel = `${thresholds.competitors.medium}-${thresholds.competitors.high} → 12pts`;
   } else {
     competitorsPoints = 0;
     competitorsLabel = `>${thresholds.competitors.high} → 0pts`;
   }
   total += competitorsPoints;
   
-  // 3) PRECIO (15 puntos máx)
+  // 3) PRECIO (10 puntos máx - reduced from 15)
   let pricePoints = 0;
   let priceLabel = '';
   if (data.price < thresholds.price.low) {
     pricePoints = 0;
     priceLabel = `<$${thresholds.price.low} → 0pts`;
   } else if (data.price < thresholds.price.medium) {
-    pricePoints = 8;
-    priceLabel = `$${thresholds.price.low}-${thresholds.price.medium - 0.01} → 8pts`;
+    pricePoints = 4;
+    priceLabel = `$${thresholds.price.low}-${thresholds.price.medium - 0.01} → 4pts`;
   } else if (data.price < thresholds.price.high) {
-    pricePoints = 12;
-    priceLabel = `$${thresholds.price.medium}-${thresholds.price.high - 0.01} → 12pts`;
+    pricePoints = 7;
+    priceLabel = `$${thresholds.price.medium}-${thresholds.price.high - 0.01} → 7pts`;
   } else {
-    pricePoints = 15;
-    priceLabel = `≥$${thresholds.price.high} → 15pts`;
+    pricePoints = 10;
+    priceLabel = `≥$${thresholds.price.high} → 10pts`;
   }
   total += pricePoints;
   
-  // 4) REGALÍAS (20 puntos máx)
+  // 4) REGALÍAS (10 puntos máx - reduced from 20)
   let royaltiesPoints = 0;
   let royaltiesLabel = '';
   if (data.royalties < thresholds.royalties.low) {
     royaltiesPoints = 0;
     royaltiesLabel = `<$${thresholds.royalties.low} → 0pts`;
   } else if (data.royalties < thresholds.royalties.medium) {
-    royaltiesPoints = 8;
-    royaltiesLabel = `$${thresholds.royalties.low}-${thresholds.royalties.medium} → 8pts`;
+    royaltiesPoints = 4;
+    royaltiesLabel = `$${thresholds.royalties.low}-${thresholds.royalties.medium} → 4pts`;
   } else if (data.royalties < thresholds.royalties.high) {
-    royaltiesPoints = 14;
-    royaltiesLabel = `$${thresholds.royalties.medium}-${thresholds.royalties.high} → 14pts`;
+    royaltiesPoints = 7;
+    royaltiesLabel = `$${thresholds.royalties.medium}-${thresholds.royalties.high} → 7pts`;
   } else {
-    royaltiesPoints = 20;
-    royaltiesLabel = `>$${thresholds.royalties.high} → 20pts`;
+    royaltiesPoints = 10;
+    royaltiesLabel = `>$${thresholds.royalties.high} → 10pts`;
   }
   total += royaltiesPoints;
   
-  // 5) PENALIZACIONES (hasta -10 puntos)
+  // 5) ESTRUCTURA DEL MERCADO (15 puntos máx) - NEW BLOCK
+  let structurePoints = 0;
+  const structureLabels: string[] = [];
+  
+  if (marketStructure?.hasProfitableBooks) {
+    structurePoints += 6;
+    structureLabels.push('Libros rentables: +6');
+  }
+  if (marketStructure?.hasBooksOver200Reviews) {
+    structurePoints += 5;
+    structureLabels.push('+200 reviews: +5');
+  }
+  if (marketStructure?.hasBooksUnder100Reviews) {
+    structurePoints += 4;
+    structureLabels.push('-100 reviews: +4');
+  }
+  
+  total += structurePoints;
+  
+  // 6) PENALIZACIONES (hasta -20 puntos)
   let penaltyPoints = 0;
   const penalties: string[] = [];
   
@@ -179,9 +212,14 @@ export function calculateMarketScore(data: MarketData, marketplaceId?: string): 
   
   return {
     volume: { points: volumePoints, max: 30, label: volumeLabel },
-    competitors: { points: competitorsPoints, max: 25, label: competitorsLabel },
-    price: { points: pricePoints, max: 15, label: priceLabel },
-    royalties: { points: royaltiesPoints, max: 20, label: royaltiesLabel },
+    competitors: { points: competitorsPoints, max: 35, label: competitorsLabel },
+    price: { points: pricePoints, max: 10, label: priceLabel },
+    royalties: { points: royaltiesPoints, max: 10, label: royaltiesLabel },
+    marketStructure: { 
+      points: structurePoints, 
+      max: 15, 
+      label: structureLabels.length > 0 ? structureLabels.join(', ') : 'Sin datos de estructura' 
+    },
     penalties: { points: penaltyPoints, label: penalties.length > 0 ? penalties.join(', ') : 'Sin penalizaciones' },
     total,
   };
