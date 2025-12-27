@@ -25,12 +25,12 @@ export const MarketplaceSelector = ({ value, onChange }: MarketplaceSelectorProp
       </div>
 
       <Select value={value} onValueChange={onChange}>
-        <SelectTrigger className="w-[160px] h-9 bg-background border-border hover:border-primary/50 transition-colors">
+        <SelectTrigger className="w-[200px] h-9 bg-background border-border hover:border-primary/50 transition-colors">
           <SelectValue>
             {selectedMarketplace && (
               <span className="flex items-center gap-2">
                 <span className="text-lg">{selectedMarketplace.flag}</span>
-                <span className="font-medium text-sm">{selectedMarketplace.name}</span>
+                <span className="font-medium text-sm truncate">{selectedMarketplace.name}</span>
               </span>
             )}
           </SelectValue>
