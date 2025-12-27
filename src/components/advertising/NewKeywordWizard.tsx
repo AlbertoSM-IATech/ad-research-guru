@@ -37,6 +37,7 @@ import {
   Lightbulb,
   ClipboardCheck,
   Info,
+  Settings,
 } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import type { Keyword, BookInfo, IntentType } from '@/types/advertising';
@@ -64,6 +65,7 @@ import {
   isMarketDataComplete,
 } from '@/lib/keyword-builder';
 import { getMarketScoreConfig, loadUserConfigOverrides, MARKET_SCORE_CONFIG_BY_MARKETPLACE } from '@/lib/market-score-config';
+import { MarketConfigModal } from './MarketConfigModal';
 import { cn } from '@/lib/utils';
 
 // ============ TOOLTIPS ============
@@ -187,6 +189,8 @@ export function NewKeywordWizard({
   const [step3, setStep3] = useState<WizardStep3Data>(getDefaultStep3Data());
   const [editorialChecks, setEditorialChecks] = useState<Record<string, boolean>>({});
   const [status, setStatus] = useState<KeywordStatus>('pending');
+  const [configModalOpen, setConfigModalOpen] = useState(false);
+  const [configVersion, setConfigVersion] = useState(0); // Force re-check when config changes
   
   // ============ RESET FUNCTION ============
   const resetWizard = useCallback(() => {
@@ -255,7 +259,7 @@ export function NewKeywordWizard({
   // Get current market config for BONUS UX subtitle
   const marketConfig = useMemo(() => getMarketScoreConfig(marketplaceId), [marketplaceId]);
   
-  // Check if marketplace has user config or base config
+  // Check if marketplace has user config or base config (re-check when configVersion changes)
   const marketplaceConfigStatus = useMemo(() => {
     const userOverrides = loadUserConfigOverrides();
     const hasUserConfig = !!userOverrides[marketplaceId];
@@ -266,7 +270,7 @@ export function NewKeywordWizard({
       needsConfig: !hasUserConfig && !hasBaseConfig,
       usingDefaults: !hasUserConfig,
     };
-  }, [marketplaceId]);
+  }, [marketplaceId, configVersion]);
   
   const scoreInfo = getMarketScoreInfo(previewScore.total);
   const isDataComplete = isMarketDataComplete(step2);
@@ -518,17 +522,30 @@ export function NewKeywordWizard({
                 <Alert className="border-amber-500/50 bg-amber-500/10">
                   <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400" />
                   <AlertDescription className="text-amber-700 dark:text-amber-300 text-sm">
-                    <strong>⚠️ Antes de validar keywords en este mercado</strong>, define tus <strong>VALORES IDEALES</strong> en Configuración. 
-                    Sin eso, el scoring no estará adaptado a tu mercado y los resultados serán poco fiables.
-                    {marketplaceConfigStatus.hasBaseConfig ? (
-                      <span className="block text-xs mt-1 text-amber-600 dark:text-amber-400">
-                        Actualmente usando defaults base para {selectedMarketplace?.name}.
-                      </span>
-                    ) : (
-                      <span className="block text-xs mt-1 text-amber-600 dark:text-amber-400">
-                        Este mercado no tiene configuración base. Usando valores de España como referencia.
-                      </span>
-                    )}
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <strong>⚠️ Antes de validar keywords en este mercado</strong>, define tus <strong>VALORES IDEALES</strong> en Configuración. 
+                        Sin eso, el scoring no estará adaptado a tu mercado y los resultados serán poco fiables.
+                        {marketplaceConfigStatus.hasBaseConfig ? (
+                          <span className="block text-xs mt-1 text-amber-600 dark:text-amber-400">
+                            Actualmente usando defaults base para {selectedMarketplace?.name}.
+                          </span>
+                        ) : (
+                          <span className="block text-xs mt-1 text-amber-600 dark:text-amber-400">
+                            Este mercado no tiene configuración base. Usando valores de España como referencia.
+                          </span>
+                        )}
+                      </div>
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={() => setConfigModalOpen(true)}
+                        className="shrink-0 gap-1.5 border-amber-500/50 text-amber-700 dark:text-amber-300 hover:bg-amber-500/20"
+                      >
+                        <Settings className="w-3.5 h-3.5" />
+                        Ir a Configuración
+                      </Button>
+                    </div>
                   </AlertDescription>
                 </Alert>
               )}
@@ -552,12 +569,25 @@ export function NewKeywordWizard({
                 <Alert className="border-amber-500/50 bg-amber-500/10">
                   <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400" />
                   <AlertDescription className="text-amber-700 dark:text-amber-300 text-sm">
-                    <strong>⚠️ Configura primero tus valores ideales</strong> para obtener un scoring adaptado a este mercado.
-                    {!marketplaceConfigStatus.isConfigured && (
-                      <span className="block text-xs mt-1 text-amber-600 dark:text-amber-400">
-                        Los valores mostrados arriba son valores por defecto. El Market Score no estará personalizado hasta que configures el mercado.
-                      </span>
-                    )}
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <strong>⚠️ Configura primero tus valores ideales</strong> para obtener un scoring adaptado a este mercado.
+                        {!marketplaceConfigStatus.isConfigured && (
+                          <span className="block text-xs mt-1 text-amber-600 dark:text-amber-400">
+                            Los valores mostrados arriba son valores por defecto. El Market Score no estará personalizado hasta que configures el mercado.
+                          </span>
+                        )}
+                      </div>
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={() => setConfigModalOpen(true)}
+                        className="shrink-0 gap-1.5 border-amber-500/50 text-amber-700 dark:text-amber-300 hover:bg-amber-500/20"
+                      >
+                        <Settings className="w-3.5 h-3.5" />
+                        Configurar
+                      </Button>
+                    </div>
                   </AlertDescription>
                 </Alert>
               )}
@@ -1070,6 +1100,14 @@ export function NewKeywordWizard({
           </div>
         </DialogFooter>
       </DialogContent>
+      
+      {/* Market Configuration Modal - can be opened from wizard */}
+      <MarketConfigModal
+        isOpen={configModalOpen}
+        onClose={() => setConfigModalOpen(false)}
+        currentMarketplace={marketplaceId}
+        onConfigChange={() => setConfigVersion(v => v + 1)}
+      />
     </Dialog>
   );
 }
