@@ -514,10 +514,10 @@ export function NewKeywordWizard({
               <h3 className="text-lg font-medium">{getStep2Title(step1.purpose)}</h3>
               <p className="text-xs text-muted-foreground -mt-4">
                 Criterios actuales ({selectedMarketplace?.name || marketplaceId.toUpperCase()}): 
-                ideal volumen {marketConfig.ideal.searchVolume.toLocaleString()}, 
-                ideal competidores {marketConfig.ideal.competitors.toLocaleString()}, 
-                precio {marketConfig.ideal.price}$, 
-                regalías {marketConfig.ideal.royalties}$
+                ideal volumen {marketConfig.idealVolume.toLocaleString()}, 
+                ideal competidores {marketConfig.idealCompetitors.toLocaleString()}, 
+                precio {marketConfig.idealPrice}$, 
+                regalías {marketConfig.idealRoyalties}$
               </p>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">

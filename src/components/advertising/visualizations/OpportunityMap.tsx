@@ -46,7 +46,13 @@ const SEGMENT_CONFIG: Record<OpportunityLevel, { label: string; color: string; b
 
 export const OpportunityMap = ({ keywords, marketplaceId }: OpportunityMapProps) => {
   const config = getMarketScoreConfig(marketplaceId);
-  const { competitors: compThresholds } = config.thresholds;
+  
+  // Derive thresholds from competitorsAnchors
+  const compThresholds = useMemo(() => ({
+    low: config.competitorsAnchors.c0,
+    medium: config.competitorsAnchors.c1,
+    high: config.competitorsAnchors.c2,
+  }), [config]);
 
   const [isExpanded, setIsExpanded] = useState(false);
   const [activeSegment, setActiveSegment] = useState<OpportunityLevel | 'all'>('all');
@@ -437,24 +443,16 @@ export const OpportunityMap = ({ keywords, marketplaceId }: OpportunityMapProps)
                 
                 <div className="flex-1 overflow-hidden">
                   <TabsContent value="high" className="h-full m-0">
-                    <ScrollArea className="h-full">
-                      {renderSegmentList('high')}
-                    </ScrollArea>
+                    {renderSegmentList('high')}
                   </TabsContent>
                   <TabsContent value="medium" className="h-full m-0">
-                    <ScrollArea className="h-full">
-                      {renderSegmentList('medium')}
-                    </ScrollArea>
+                    {renderSegmentList('medium')}
                   </TabsContent>
                   <TabsContent value="low" className="h-full m-0">
-                    <ScrollArea className="h-full">
-                      {renderSegmentList('low')}
-                    </ScrollArea>
+                    {renderSegmentList('low')}
                   </TabsContent>
                   <TabsContent value="saturated" className="h-full m-0">
-                    <ScrollArea className="h-full">
-                      {renderSegmentList('saturated')}
-                    </ScrollArea>
+                    {renderSegmentList('saturated')}
                   </TabsContent>
                 </div>
               </Tabs>

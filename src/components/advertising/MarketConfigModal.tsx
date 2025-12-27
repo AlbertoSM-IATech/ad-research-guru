@@ -26,8 +26,6 @@ import {
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Info, RotateCcw, Save, Settings } from 'lucide-react';
 import {
-  type IdealTargets,
-  type UserMarketScoreOverrides,
   loadUserConfigOverrides,
   saveUserConfigOverrides,
   getDefaultMarketScoreConfig,
@@ -42,7 +40,7 @@ interface MarketConfigModalProps {
   onConfigChange?: () => void;
 }
 
-const SUPPORTED_MARKETPLACES = ['us', 'es'];
+const SUPPORTED_MARKETPLACES = ['us', 'es', 'uk', 'de', 'fr', 'it'];
 
 const FIELD_TOOLTIPS = {
   searchVolume: 'Volumen de búsqueda ideal mensual. Se usará para calibrar qué es "bueno" vs "excelente".',
@@ -59,27 +57,27 @@ export const MarketConfigModal = ({
 }: MarketConfigModalProps) => {
   const [selectedMarketplace, setSelectedMarketplace] = useState(currentMarketplace);
   const [idealVolume, setIdealVolume] = useState(600);
-  const [idealCompetitors, setIdealCompetitors] = useState(3000);
-  const [idealPrice, setIdealPrice] = useState(12);
-  const [idealRoyalties, setIdealRoyalties] = useState(4);
+  const [idealCompetitors, setIdealCompetitors] = useState(1000);
+  const [idealPrice, setIdealPrice] = useState(12.99);
+  const [idealRoyalties, setIdealRoyalties] = useState(4.5);
   const [hasChanges, setHasChanges] = useState(false);
 
   // Load current config when marketplace changes
   useEffect(() => {
     const config = getMarketScoreConfig(selectedMarketplace);
-    setIdealVolume(config.ideal.searchVolume);
-    setIdealCompetitors(config.ideal.competitors);
-    setIdealPrice(config.ideal.price);
-    setIdealRoyalties(config.ideal.royalties);
+    setIdealVolume(config.idealVolume);
+    setIdealCompetitors(config.idealCompetitors);
+    setIdealPrice(config.idealPrice);
+    setIdealRoyalties(config.idealRoyalties);
     setHasChanges(false);
   }, [selectedMarketplace, isOpen]);
 
   const handleRestore = () => {
     const defaultConfig = getDefaultMarketScoreConfig(selectedMarketplace);
-    setIdealVolume(defaultConfig.ideal.searchVolume);
-    setIdealCompetitors(defaultConfig.ideal.competitors);
-    setIdealPrice(defaultConfig.ideal.price);
-    setIdealRoyalties(defaultConfig.ideal.royalties);
+    setIdealVolume(defaultConfig.idealVolume);
+    setIdealCompetitors(defaultConfig.idealCompetitors);
+    setIdealPrice(defaultConfig.idealPrice);
+    setIdealRoyalties(defaultConfig.idealRoyalties);
     
     // Remove override for this marketplace
     const overrides = loadUserConfigOverrides();
@@ -92,10 +90,10 @@ export const MarketConfigModal = ({
   const handleSave = () => {
     const overrides = loadUserConfigOverrides();
     overrides[selectedMarketplace] = {
-      searchVolume: idealVolume,
-      competitors: idealCompetitors,
-      price: idealPrice,
-      royalties: idealRoyalties,
+      idealVolume,
+      idealCompetitors,
+      idealPrice,
+      idealRoyalties,
     };
     saveUserConfigOverrides(overrides);
     setHasChanges(false);
