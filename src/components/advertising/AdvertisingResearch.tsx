@@ -21,6 +21,7 @@ import { GuidedTour, useTourStatus, type UIStateRequest } from './GuidedTour';
 import { KeyboardShortcutsManager } from './KeyboardShortcutsManager';
 import { AIAssistantDrawer } from './ai/AIAssistantDrawer';
 import { HeaderOverflowMenu } from './HeaderOverflowMenu';
+import { MarketConfigModal } from './MarketConfigModal';
 import { BackupImportModal } from './BackupImportModal';
 import { isAIDemoMode, toggleAIDemoMode } from '@/lib/ai-demo-service';
 import { loadPersistedState, usePersistence, getLastSyncAt } from '@/hooks/useLocalPersistence';
@@ -110,6 +111,8 @@ export const AdvertisingResearch = () => {
   const [showImportModal, setShowImportModal] = useState(false);
   const [showBackupImportModal, setShowBackupImportModal] = useState(false);
   const [showCampaignPlanner, setShowCampaignPlanner] = useState(false);
+  const [showMarketConfigModal, setShowMarketConfigModal] = useState(false);
+  const [configVersion, setConfigVersion] = useState(0); // To trigger re-renders on config change
   
   // Book panel state - React controlled, no DOM hacks
   const [isBookPanelOpen, setIsBookPanelOpen] = useState(true);
@@ -881,6 +884,7 @@ export const AdvertisingResearch = () => {
                 onExportBackup={handleExportBackup}
                 onImportBackup={() => setShowBackupImportModal(true)}
                 onRegenerateDemo={handleRegenerateDemo}
+                onOpenMarketConfig={() => setShowMarketConfigModal(true)}
               />
             </div>
           </div>
@@ -1054,6 +1058,8 @@ export const AdvertisingResearch = () => {
                 bookInfo={bookInfo}
                 selectedIds={selection.keywords}
                 onSelectedIdsChange={(ids) => setTabSelection('keywords', ids)}
+                searchTerm={globalSearchTerm}
+                onSearchTermChange={setGlobalSearchTerm}
               />
             </TabsContent>
             <TabsContent value="asins" className="mt-4">
@@ -1217,6 +1223,14 @@ export const AdvertisingResearch = () => {
         isOpen={showBackupImportModal}
         onClose={() => setShowBackupImportModal(false)}
         onImport={handleImportBackup}
+      />
+      
+      {/* Market Config Modal */}
+      <MarketConfigModal
+        isOpen={showMarketConfigModal}
+        onClose={() => setShowMarketConfigModal(false)}
+        currentMarketplace={selectedMarketplace}
+        onConfigChange={() => setConfigVersion(v => v + 1)}
       />
     </div>
   );

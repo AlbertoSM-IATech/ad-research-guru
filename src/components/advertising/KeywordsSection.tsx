@@ -90,6 +90,9 @@ interface KeywordsSectionProps {
   // Lifted selection state
   selectedIds: Set<string>;
   onSelectedIdsChange: (ids: Set<string>) => void;
+  // Unified search - passed from parent
+  searchTerm: string;
+  onSearchTermChange: (term: string) => void;
 }
 
 type ViewMode = 'table' | 'cards';
@@ -108,9 +111,10 @@ export const KeywordsSection = ({
   bookInfo,
   selectedIds,
   onSelectedIdsChange,
+  searchTerm,
+  onSearchTermChange,
 }: KeywordsSectionProps) => {
   const { toast } = useToast();
-  const [searchTerm, setSearchTerm] = useState('');
   const [filters, setFilters] = useState<AdvancedFiltersState>({
     competition: 'all',
     campaignType: 'all',
@@ -472,7 +476,7 @@ export const KeywordsSection = ({
               placeholder="Buscar keywords..."
               value={searchTerm}
               onChange={(e) => {
-                setSearchTerm(e.target.value);
+                onSearchTermChange(e.target.value);
                 setCurrentPage(1);
               }}
               className="pl-10"
