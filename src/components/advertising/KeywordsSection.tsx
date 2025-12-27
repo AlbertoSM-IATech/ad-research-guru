@@ -8,6 +8,7 @@ import {
   LayoutGrid,
   LayoutList,
   History,
+  PanelRightOpen,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -625,6 +626,15 @@ export const KeywordsSection = ({
                         </TableCell>
                         <TableCell onClick={(e) => e.stopPropagation()}>
                           <div className="flex items-center gap-1">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => setValidationKeyword(keyword)}
+                              className="text-muted-foreground hover:text-primary"
+                              title="Abrir ficha"
+                            >
+                              <PanelRightOpen className="w-4 h-4" />
+                            </Button>
                             {keyword.history && keyword.history.length > 0 && (
                               <Button
                                 variant="ghost"

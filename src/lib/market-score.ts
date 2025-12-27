@@ -1,6 +1,8 @@
 // Market Score V2 - Sistema unificado de puntuación de mercado
 // Una keyword = una fuente de verdad
 
+import { getMarketScoreConfig } from './market-score-config';
+
 // ============ BRAND RISK & TRAFFIC SOURCE ============
 
 export type BrandRisk = 'low' | 'medium' | 'high';
@@ -75,78 +77,81 @@ export const getDefaultEditorialData = (): EditorialData => ({
 // - Regalías (20%)
 // - Penalizaciones brandRisk + trafficSource (10%)
 
-export function calculateMarketScore(data: MarketData): MarketScoreBreakdown {
+export function calculateMarketScore(data: MarketData, marketplaceId?: string): MarketScoreBreakdown {
+  const config = getMarketScoreConfig(marketplaceId);
+  const { thresholds } = config;
+  
   let total = 0;
   
   // 1) VOLUMEN (30 puntos máx)
   let volumePoints = 0;
   let volumeLabel = '';
-  if (data.searchVolume < 50) {
+  if (data.searchVolume < thresholds.volume.veryLow) {
     volumePoints = 0;
-    volumeLabel = '<50 → 0pts';
-  } else if (data.searchVolume <= 100) {
+    volumeLabel = `<${thresholds.volume.veryLow} → 0pts`;
+  } else if (data.searchVolume <= thresholds.volume.low) {
     volumePoints = 10;
-    volumeLabel = '50-100 → 10pts';
-  } else if (data.searchVolume <= 600) {
+    volumeLabel = `${thresholds.volume.veryLow}-${thresholds.volume.low} → 10pts`;
+  } else if (data.searchVolume <= thresholds.volume.medium) {
     volumePoints = 20;
-    volumeLabel = '101-600 → 20pts';
+    volumeLabel = `${thresholds.volume.low + 1}-${thresholds.volume.medium} → 20pts`;
   } else {
     volumePoints = 30;
-    volumeLabel = '>600 → 30pts';
+    volumeLabel = `>${thresholds.volume.medium} → 30pts`;
   }
   total += volumePoints;
   
   // 2) COMPETIDORES (25 puntos máx)
   let competitorsPoints = 0;
   let competitorsLabel = '';
-  if (data.competitors < 1000) {
+  if (data.competitors < thresholds.competitors.low) {
     competitorsPoints = 25;
-    competitorsLabel = '<1000 → 25pts';
-  } else if (data.competitors <= 4000) {
+    competitorsLabel = `<${thresholds.competitors.low} → 25pts`;
+  } else if (data.competitors <= thresholds.competitors.medium) {
     competitorsPoints = 18;
-    competitorsLabel = '1000-4000 → 18pts';
-  } else if (data.competitors <= 10000) {
+    competitorsLabel = `${thresholds.competitors.low}-${thresholds.competitors.medium} → 18pts`;
+  } else if (data.competitors <= thresholds.competitors.high) {
     competitorsPoints = 8;
-    competitorsLabel = '4000-10000 → 8pts';
+    competitorsLabel = `${thresholds.competitors.medium}-${thresholds.competitors.high} → 8pts`;
   } else {
     competitorsPoints = 0;
-    competitorsLabel = '>10000 → 0pts';
+    competitorsLabel = `>${thresholds.competitors.high} → 0pts`;
   }
   total += competitorsPoints;
   
   // 3) PRECIO (15 puntos máx)
   let pricePoints = 0;
   let priceLabel = '';
-  if (data.price < 9.99) {
+  if (data.price < thresholds.price.low) {
     pricePoints = 0;
-    priceLabel = '<$9.99 → 0pts';
-  } else if (data.price < 15) {
+    priceLabel = `<$${thresholds.price.low} → 0pts`;
+  } else if (data.price < thresholds.price.medium) {
     pricePoints = 8;
-    priceLabel = '$9.99-14.99 → 8pts';
-  } else if (data.price < 20) {
+    priceLabel = `$${thresholds.price.low}-${thresholds.price.medium - 0.01} → 8pts`;
+  } else if (data.price < thresholds.price.high) {
     pricePoints = 12;
-    priceLabel = '$15-19.99 → 12pts';
+    priceLabel = `$${thresholds.price.medium}-${thresholds.price.high - 0.01} → 12pts`;
   } else {
     pricePoints = 15;
-    priceLabel = '≥$20 → 15pts';
+    priceLabel = `≥$${thresholds.price.high} → 15pts`;
   }
   total += pricePoints;
   
   // 4) REGALÍAS (20 puntos máx)
   let royaltiesPoints = 0;
   let royaltiesLabel = '';
-  if (data.royalties < 2) {
+  if (data.royalties < thresholds.royalties.low) {
     royaltiesPoints = 0;
-    royaltiesLabel = '<$2 → 0pts';
-  } else if (data.royalties < 4) {
+    royaltiesLabel = `<$${thresholds.royalties.low} → 0pts`;
+  } else if (data.royalties < thresholds.royalties.medium) {
     royaltiesPoints = 8;
-    royaltiesLabel = '$2-4 → 8pts';
-  } else if (data.royalties < 7) {
+    royaltiesLabel = `$${thresholds.royalties.low}-${thresholds.royalties.medium} → 8pts`;
+  } else if (data.royalties < thresholds.royalties.high) {
     royaltiesPoints = 14;
-    royaltiesLabel = '$4-7 → 14pts';
+    royaltiesLabel = `$${thresholds.royalties.medium}-${thresholds.royalties.high} → 14pts`;
   } else {
     royaltiesPoints = 20;
-    royaltiesLabel = '>$7 → 20pts';
+    royaltiesLabel = `>$${thresholds.royalties.high} → 20pts`;
   }
   total += royaltiesPoints;
   
@@ -155,16 +160,16 @@ export function calculateMarketScore(data: MarketData): MarketScoreBreakdown {
   const penalties: string[] = [];
   
   if (data.brandRisk === 'high') {
-    penaltyPoints -= 6;
-    penalties.push('Brand risk alto: -6');
+    penaltyPoints -= thresholds.penalties.brandRiskHigh;
+    penalties.push(`Brand risk alto: -${thresholds.penalties.brandRiskHigh}`);
   } else if (data.brandRisk === 'medium') {
-    penaltyPoints -= 3;
-    penalties.push('Brand risk medio: -3');
+    penaltyPoints -= thresholds.penalties.brandRiskMedium;
+    penalties.push(`Brand risk medio: -${thresholds.penalties.brandRiskMedium}`);
   }
   
   if (data.trafficSource !== 'amazon') {
-    penaltyPoints -= 4;
-    penalties.push('Tráfico no Amazon: -4');
+    penaltyPoints -= thresholds.penalties.nonAmazonTraffic;
+    penalties.push(`Tráfico no Amazon: -${thresholds.penalties.nonAmazonTraffic}`);
   }
   
   total += penaltyPoints;
@@ -183,8 +188,8 @@ export function calculateMarketScore(data: MarketData): MarketScoreBreakdown {
 }
 
 // Simple score calculation (returns only total)
-export function getMarketScoreTotal(data: MarketData): number {
-  return calculateMarketScore(data).total;
+export function getMarketScoreTotal(data: MarketData, marketplaceId?: string): number {
+  return calculateMarketScore(data, marketplaceId).total;
 }
 
 // ============ EDITORIAL SCORE ============
