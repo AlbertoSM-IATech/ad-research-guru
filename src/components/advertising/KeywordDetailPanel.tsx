@@ -285,7 +285,19 @@ export const KeywordDetailPanel = ({
             <div className="grid grid-cols-2 gap-4">
               {/* Volumen */}
               <div className="space-y-2">
-                <Label htmlFor="volume">Volumen de búsqueda</Label>
+                <div className="flex items-center gap-1">
+                  <Label htmlFor="volume">Volumen de búsqueda</Label>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Info className="w-3.5 h-3.5 text-muted-foreground cursor-help" />
+                      </TooltipTrigger>
+                      <TooltipContent side="top" className="max-w-xs">
+                        Búsquedas mensuales estimadas en Amazon. Mayor volumen = más demanda potencial.
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </div>
                 <Input
                   id="volume"
                   type="number"
@@ -297,7 +309,19 @@ export const KeywordDetailPanel = ({
               
               {/* Competidores */}
               <div className="space-y-2">
-                <Label htmlFor="competitors">Competidores (resultados)</Label>
+                <div className="flex items-center gap-1">
+                  <Label htmlFor="competitors">Competidores (resultados)</Label>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Info className="w-3.5 h-3.5 text-muted-foreground cursor-help" />
+                      </TooltipTrigger>
+                      <TooltipContent side="top" className="max-w-xs">
+                        Número de resultados en Amazon para esta keyword. Menos competidores = mejor oportunidad.
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </div>
                 <Input
                   id="competitors"
                   type="number"
@@ -309,7 +333,19 @@ export const KeywordDetailPanel = ({
               
               {/* Precio */}
               <div className="space-y-2">
-                <Label htmlFor="price">Precio ($)</Label>
+                <div className="flex items-center gap-1">
+                  <Label htmlFor="price">Precio medio ($)</Label>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Info className="w-3.5 h-3.5 text-muted-foreground cursor-help" />
+                      </TooltipTrigger>
+                      <TooltipContent side="top" className="max-w-xs">
+                        Precio medio observado en los top resultados de la competencia. Precios &lt;9.99$ penalizan el score.
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </div>
                 <Input
                   id="price"
                   type="number"
@@ -322,7 +358,19 @@ export const KeywordDetailPanel = ({
               
               {/* Regalías */}
               <div className="space-y-2">
-                <Label htmlFor="royalties">Regalías ($)</Label>
+                <div className="flex items-center gap-1">
+                  <Label htmlFor="royalties">Regalías medias ($)</Label>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Info className="w-3.5 h-3.5 text-muted-foreground cursor-help" />
+                      </TooltipTrigger>
+                      <TooltipContent side="top" className="max-w-xs">
+                        Regalías medias aproximadas de la competencia. Mayor regalía = más margen para invertir en Ads.
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </div>
                 <Input
                   id="royalties"
                   type="number"
@@ -336,7 +384,19 @@ export const KeywordDetailPanel = ({
 
             {/* Brand Risk */}
             <div className="space-y-2">
-              <Label>Brand Risk</Label>
+              <div className="flex items-center gap-1">
+                <Label>Brand Risk</Label>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Info className="w-3.5 h-3.5 text-muted-foreground cursor-help" />
+                    </TooltipTrigger>
+                    <TooltipContent side="top" className="max-w-xs">
+                      Riesgo de marca registrada o propiedad intelectual. Un riesgo alto penaliza el Market Score.
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
               <Select value={brandRisk} onValueChange={(v) => setBrandRisk(v as BrandRisk)}>
                 <SelectTrigger>
                   <SelectValue />
@@ -353,7 +413,19 @@ export const KeywordDetailPanel = ({
 
             {/* Traffic Source */}
             <div className="space-y-2">
-              <Label>Fuente de tráfico</Label>
+              <div className="flex items-center gap-1">
+                <Label>Fuente de tráfico</Label>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Info className="w-3.5 h-3.5 text-muted-foreground cursor-help" />
+                    </TooltipTrigger>
+                    <TooltipContent side="top" className="max-w-xs">
+                      Si el tráfico depende de marca personal/RRSS, suele implicar competencia dura y puede penalizar el score.
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
               <Select value={trafficSource} onValueChange={(v) => setTrafficSource(v as TrafficSource)}>
                 <SelectTrigger>
                   <SelectValue />

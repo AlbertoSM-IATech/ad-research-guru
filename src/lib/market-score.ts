@@ -240,13 +240,13 @@ export function getMarketScoreInfo(score: number): {
   const level = getMarketScoreLevel(score);
   switch (level) {
     case 'excellent':
-      return { level, label: 'Excelente', color: 'text-green-600', bgColor: 'bg-green-500/20' };
+      return { level, label: 'Excelente', color: 'text-green-600 dark:text-green-400', bgColor: 'bg-green-500/20' };
     case 'good':
-      return { level, label: 'Bueno', color: 'text-blue-600', bgColor: 'bg-blue-500/20' };
+      return { level, label: 'Bueno', color: 'text-blue-600 dark:text-blue-400', bgColor: 'bg-blue-500/20' };
     case 'fair':
-      return { level, label: 'Regular', color: 'text-yellow-600', bgColor: 'bg-yellow-500/20' };
+      return { level, label: 'Regular', color: 'text-yellow-600 dark:text-yellow-400', bgColor: 'bg-yellow-500/20' };
     case 'poor':
-      return { level, label: 'Bajo', color: 'text-red-600', bgColor: 'bg-red-500/20' };
+      return { level, label: 'Bajo', color: 'text-red-600 dark:text-red-400', bgColor: 'bg-red-500/20' };
   }
 }
 
@@ -261,21 +261,21 @@ export function getMarketScoreBgColor(score: number): string {
 // ============ UI OPTIONS ============
 
 export const BRAND_RISK_OPTIONS: { value: BrandRisk; label: string; color: string }[] = [
-  { value: 'low', label: 'Bajo', color: 'bg-green-500/20 text-green-600' },
-  { value: 'medium', label: 'Medio', color: 'bg-yellow-500/20 text-yellow-600' },
-  { value: 'high', label: 'Alto', color: 'bg-red-500/20 text-red-600' },
+  { value: 'low', label: 'Bajo', color: 'bg-green-500/20 text-green-600 dark:text-green-400' },
+  { value: 'medium', label: 'Medio', color: 'bg-yellow-500/20 text-yellow-600 dark:text-yellow-400' },
+  { value: 'high', label: 'Alto', color: 'bg-red-500/20 text-red-600 dark:text-red-400' },
 ];
 
 export const TRAFFIC_SOURCE_OPTIONS: { value: TrafficSource; label: string; color: string }[] = [
-  { value: 'amazon', label: 'Amazon', color: 'bg-green-500/20 text-green-600' },
-  { value: 'external', label: 'Externo', color: 'bg-yellow-500/20 text-yellow-600' },
-  { value: 'brand', label: 'Marca', color: 'bg-red-500/20 text-red-600' },
+  { value: 'amazon', label: 'Amazon', color: 'bg-green-500/20 text-green-600 dark:text-green-400' },
+  { value: 'external', label: 'Externo', color: 'bg-yellow-500/20 text-yellow-600 dark:text-yellow-400' },
+  { value: 'brand', label: 'Marca', color: 'bg-red-500/20 text-red-600 dark:text-red-400' },
 ];
 
 export const KEYWORD_STATUS_OPTIONS: { value: KeywordStatus; label: string; color: string }[] = [
-  { value: 'pending', label: 'Pendiente', color: 'bg-yellow-500/20 text-yellow-600' },
-  { value: 'valid', label: 'Válida', color: 'bg-green-500/20 text-green-600' },
-  { value: 'discarded', label: 'Descartada', color: 'bg-red-500/20 text-red-600' },
+  { value: 'pending', label: 'Pendiente', color: 'bg-yellow-500/20 text-yellow-600 dark:text-yellow-400' },
+  { value: 'valid', label: 'Válida', color: 'bg-green-500/20 text-green-600 dark:text-green-400' },
+  { value: 'discarded', label: 'Descartada', color: 'bg-red-500/20 text-red-600 dark:text-red-400' },
 ];
 
 export const KEYWORD_PURPOSE_OPTIONS: { value: KeywordPurpose; label: string; description: string }[] = [

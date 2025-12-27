@@ -28,6 +28,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { InfoTooltip } from './InfoTooltip';
 import { InlineEditableCell } from './InlineEditableCell';
 import { InlineCampaignTypeSelect } from './InlineCampaignTypeSelect';
@@ -61,6 +66,7 @@ import {
 } from '@/types/advertising';
 import { calculateMarketScore, getDefaultMarketData } from '@/lib/market-score';
 import { createKeywordDefaults } from '@/lib/keyword-helpers';
+import { getAutoStatusFromScore } from '@/lib/keyword-builder';
 import { 
   sortKeywords, 
   getKeywordMarketScore, 
@@ -74,6 +80,7 @@ import {
   applyQuickFilter,
   type QuickFilter,
 } from '@/lib/keyword-filters';
+import { useKeywordUIPersistence } from '@/hooks/useKeywordUIPersistence';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 
@@ -115,30 +122,42 @@ export const KeywordsSection = ({
   onSearchTermChange,
 }: KeywordsSectionProps) => {
   const { toast } = useToast();
-  const [filters, setFilters] = useState<AdvancedFiltersState>({
-    competition: 'all',
-    campaignType: 'all',
-    minVolume: '',
-    maxVolume: '',
-    maxCompetition: '',
-    relevance: 'all',
-    intent: 'all',
-    state: 'all',
-    purpose: 'all',
-    status: 'all',
-  });
-  const [quickFilter, setQuickFilter] = useState<QuickFilter>('all');
-  // Default sort: marketScore DESC
-  const [sortField, setSortField] = useState<SortField>('marketScore');
-  const [sortOrder, setSortOrder] = useState<SortOrder>('desc');
+  
+  // Use persistence hook for UI state
+  const {
+    state: persistedState,
+    isHydrated,
+    updateFilters,
+    updateQuickFilter,
+    updateSort,
+    updateViewMode,
+  } = useKeywordUIPersistence(marketplaceId);
+  
+  // Local state synced with persistence
+  const [filters, setFilters] = useState<AdvancedFiltersState>(persistedState.filters);
+  const [quickFilter, setQuickFilter] = useState<QuickFilter>(persistedState.quickFilter);
+  const [sortField, setSortField] = useState<SortField>(persistedState.sortField);
+  const [sortOrder, setSortOrder] = useState<SortOrder>(persistedState.sortOrder);
+  const [viewMode, setViewMode] = useState<ViewMode>(persistedState.viewMode);
+  
   const [currentPage, setCurrentPage] = useState(1);
   const [isBulkImportOpen, setIsBulkImportOpen] = useState(false);
   const [quickAddKeyword, setQuickAddKeyword] = useState('');
-  const [viewMode, setViewMode] = useState<ViewMode>('table');
   const [historyKeyword, setHistoryKeyword] = useState<Keyword | null>(null);
   const [isWizardOpen, setIsWizardOpen] = useState(false);
   const [wizardInitialKeyword, setWizardInitialKeyword] = useState('');
   const [validationKeyword, setValidationKeyword] = useState<Keyword | null>(null);
+  
+  // Sync persisted state when hydrated
+  useEffect(() => {
+    if (isHydrated) {
+      setFilters(persistedState.filters);
+      setQuickFilter(persistedState.quickFilter);
+      setSortField(persistedState.sortField);
+      setSortOrder(persistedState.sortOrder);
+      setViewMode(persistedState.viewMode);
+    }
+  }, [isHydrated, persistedState]);
 
   // Memoize callback to avoid infinite loops
   const stableOnSelectedIdsChange = useCallback(onSelectedIdsChange, [onSelectedIdsChange]);
@@ -179,19 +198,27 @@ export const KeywordsSection = ({
   };
 
   const handleSort = (field: SortField) => {
+    let newOrder: SortOrder;
     if (sortField === field) {
-      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+      newOrder = sortOrder === 'asc' ? 'desc' : 'asc';
     } else {
-      setSortField(field);
-      // Default order based on field
-      setSortOrder(field === 'marketScore' || field === 'searchVolume' ? 'desc' : 'asc');
+      newOrder = field === 'marketScore' || field === 'searchVolume' ? 'desc' : 'asc';
     }
+    setSortField(field);
+    setSortOrder(newOrder);
+    updateSort(field, newOrder);
   };
 
   const handleSortOptionChange = (value: string) => {
     const [field, order] = value.split('-') as [SortField, SortOrder];
     setSortField(field);
     setSortOrder(order);
+    updateSort(field, order);
+  };
+  
+  const handleViewModeChange = (mode: ViewMode) => {
+    setViewMode(mode);
+    updateViewMode(mode);
   };
 
   const toggleSelectAll = () => {
@@ -252,7 +279,7 @@ export const KeywordsSection = ({
     toast({ title: 'Keyword guardada', description: `Market Score: ${updates.marketScore}/100` });
   };
 
-  // Handle update with history tracking
+  // Handle update with history tracking + auto status update
   const handleUpdateWithHistory = (id: string, updates: Partial<Keyword>) => {
     const keyword = keywords.find(k => k.id === id);
     if (!keyword) return;
@@ -274,22 +301,49 @@ export const KeywordsSection = ({
       }
     });
     
+    // Auto-update status if not manually set and market data changed
+    let finalUpdates = { ...updates };
+    const marketDataFields = ['searchVolume', 'competitors', 'price', 'royalties'];
+    const isMarketDataUpdate = marketDataFields.some(f => updates[f as keyof typeof updates] !== undefined);
+    
+    if (isMarketDataUpdate && !keyword.statusManuallySet) {
+      // Recalculate market score with new data
+      const newSearchVolume = updates.searchVolume ?? keyword.searchVolume;
+      const newCompetitors = updates.competitors ?? keyword.competitors;
+      const newPrice = updates.price ?? keyword.price;
+      const newRoyalties = updates.royalties ?? keyword.royalties;
+      const marketData = keyword.marketData ?? getDefaultMarketData();
+      
+      const newMarketScore = calculateMarketScore({
+        searchVolume: newSearchVolume,
+        competitors: newCompetitors,
+        price: newPrice,
+        royalties: newRoyalties,
+        brandRisk: marketData.brandRisk,
+        trafficSource: marketData.trafficSource,
+      }).total;
+      
+      finalUpdates.marketScore = newMarketScore;
+      finalUpdates.status = getAutoStatusFromScore(newMarketScore);
+    }
+    
     if (historyEntries.length > 0) {
       onUpdate(id, {
-        ...updates,
+        ...finalUpdates,
         history: [...(keyword.history || []), ...historyEntries],
       });
     } else {
-      onUpdate(id, updates);
+      onUpdate(id, finalUpdates);
     }
   };
 
   // Handle quick filter change - resets advanced filters
   const handleQuickFilterChange = (filter: QuickFilter) => {
     setQuickFilter(filter);
+    updateQuickFilter(filter);
     if (filter !== 'all') {
       // Reset advanced filters when using quick filter
-      setFilters({
+      const resetFilters: AdvancedFiltersState = {
         competition: 'all',
         campaignType: 'all',
         minVolume: '',
@@ -300,7 +354,9 @@ export const KeywordsSection = ({
         state: 'all',
         purpose: 'all',
         status: 'all',
-      });
+      };
+      setFilters(resetFilters);
+      updateFilters(resetFilters);
     }
     setCurrentPage(1);
   };
@@ -308,7 +364,9 @@ export const KeywordsSection = ({
   // Handle advanced filter change - resets quick filter
   const handleAdvancedFiltersChange = (newFilters: AdvancedFiltersState) => {
     setFilters(newFilters);
+    updateFilters(newFilters);
     setQuickFilter('all');
+    updateQuickFilter('all');
     setCurrentPage(1);
   };
 
@@ -388,7 +446,7 @@ export const KeywordsSection = ({
               variant={viewMode === 'table' ? 'secondary' : 'ghost'}
               size="sm"
               className="rounded-r-none"
-              onClick={() => setViewMode('table')}
+              onClick={() => handleViewModeChange('table')}
             >
               <LayoutList className="w-4 h-4" />
             </Button>
@@ -396,7 +454,7 @@ export const KeywordsSection = ({
               variant={viewMode === 'cards' ? 'secondary' : 'ghost'}
               size="sm"
               className="rounded-l-none"
-              onClick={() => setViewMode('cards')}
+              onClick={() => handleViewModeChange('cards')}
             >
               <LayoutGrid className="w-4 h-4" />
             </Button>
@@ -630,15 +688,19 @@ export const KeywordsSection = ({
                         </TableCell>
                         <TableCell onClick={(e) => e.stopPropagation()}>
                           <div className="flex items-center gap-1">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => setValidationKeyword(keyword)}
-                              className="text-muted-foreground hover:text-primary"
-                              title="Abrir ficha"
-                            >
-                              <PanelRightOpen className="w-4 h-4" />
-                            </Button>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => setValidationKeyword(keyword)}
+                                  className="text-muted-foreground hover:text-primary"
+                                >
+                                  <PanelRightOpen className="w-4 h-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>Abrir ficha de keyword</TooltipContent>
+                            </Tooltip>
                             {keyword.history && keyword.history.length > 0 && (
                               <Button
                                 variant="ghost"
