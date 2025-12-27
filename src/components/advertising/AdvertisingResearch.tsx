@@ -813,23 +813,6 @@ export const AdvertisingResearch = () => {
                 />
               </div>
               
-              {/* Global Search */}
-              <div className="hidden md:block" data-tour="global-search">
-                <GlobalSearch 
-                  searchTerm={globalSearchTerm} 
-                  onSearchChange={setGlobalSearchTerm} 
-                  filter={globalFilter} 
-                  onFilterChange={setGlobalFilter} 
-                  sort={globalSort} 
-                  onSortChange={setGlobalSort} 
-                  resultsCount={{
-                    keywords: filteredKeywords.length,
-                    asins: filteredASINs.length,
-                    categories: filteredCategories.length
-                  }}
-                  compact
-                />
-              </div>
               
               {/* AI Assistant Button - Único punto de entrada, controlado por estado */}
               <Button
