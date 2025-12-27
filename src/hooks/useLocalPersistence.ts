@@ -7,11 +7,11 @@ import type {
   CampaignPlan,
 } from '@/types/advertising';
 
-const STORAGE_KEY = 'ad-research:v1';
+const STORAGE_KEY = 'ad-research:v2';
 const DEBOUNCE_MS = 400;
 
 export interface PersistedStateV1 {
-  version: 1;
+  version: 2;
   selectedMarketplace: string;
   activeTab: 'keywords' | 'asins' | 'categories';
   bookInfo: BookInfo;
@@ -78,7 +78,7 @@ export function loadPersistedState(): PersistedStateV1 | null {
     const parsed = JSON.parse(raw) as PersistedStateV1;
     
     // Validate version
-    if (parsed.version !== 1) {
+    if (parsed.version !== 2) {
       console.warn('[Persistence] Invalid version, ignoring stored data');
       return null;
     }
@@ -95,7 +95,7 @@ export function savePersistedState(state: Omit<PersistedStateV1, 'version' | 'up
   try {
     const toSave: PersistedStateV1 = {
       ...serializeData(state),
-      version: 1,
+      version: 2,
       updatedAt: new Date().toISOString(),
     };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(toSave));
