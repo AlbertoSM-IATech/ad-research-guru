@@ -571,7 +571,7 @@ export const AdvertisingResearch = () => {
   // Reset data handler - clears localStorage and resets all states to initial values
   const handleResetData = useCallback(() => {
     // 1. Clear localStorage
-    localStorage.removeItem('ad-research:v1');
+    localStorage.removeItem('ad-research:v2');
     
     // 2. Reset all states to initial values
     setSelectedMarketplace('us');
@@ -603,6 +603,41 @@ export const AdvertisingResearch = () => {
       toast.success('Datos reseteados');
     });
   }, []);
+
+  // Regenerate demo data handler - generates fresh demo data with competitors
+  const handleRegenerateDemo = useCallback(() => {
+    // Generate fresh demo keywords (150)
+    const exampleKeywords = generateDemoKeywords(selectedMarketplace, 150).map(k => ({
+      ...k,
+      id: generateId(),
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    }));
+    setKeywordsByMarket(prev => ({ ...prev, [selectedMarketplace]: exampleKeywords }));
+
+    // Generate fresh demo ASINs (40)
+    const exampleASINs = generateDemoASINs(selectedMarketplace, 40).map(a => ({
+      ...a,
+      id: generateId(),
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    }));
+    setAsinsByMarket(prev => ({ ...prev, [selectedMarketplace]: exampleASINs }));
+
+    // Generate fresh demo categories (15)
+    const exampleCategories = generateDemoCategories(selectedMarketplace, 15).map(c => ({
+      ...c,
+      id: generateId(),
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    }));
+    setCategoriesByMarket(prev => ({ ...prev, [selectedMarketplace]: exampleCategories }));
+
+    // Show confirmation toast
+    import('sonner').then(({ toast }) => {
+      toast.success('Datos demo regenerados con datos de competidores');
+    });
+  }, [selectedMarketplace]);
 
   // Export backup handler - downloads current state as JSON
   const handleExportBackup = useCallback(() => {
@@ -845,6 +880,7 @@ export const AdvertisingResearch = () => {
                 onResetData={handleResetData}
                 onExportBackup={handleExportBackup}
                 onImportBackup={() => setShowBackupImportModal(true)}
+                onRegenerateDemo={handleRegenerateDemo}
               />
             </div>
           </div>
