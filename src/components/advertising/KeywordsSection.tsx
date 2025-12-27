@@ -146,14 +146,31 @@ export const KeywordsSection = ({
     setQuickAddKeyword('');
   };
   
-  // Handle wizard completion
-  const handleWizardComplete = (keyword: Omit<Keyword, 'id' | 'createdAt' | 'updatedAt'>) => {
-    onAdd(keyword);
+  // Handle wizard completion - open detail panel after creation
+  const handleWizardComplete = (keywordData: Omit<Keyword, 'id' | 'createdAt' | 'updatedAt'>) => {
+    // Add the keyword
+    onAdd(keywordData);
     setWizardInitialKeyword('');
+    
+    // Show toast
     toast({ 
       title: 'Keyword creada', 
-      description: `Market Score: ${keyword.marketScore}/100` 
+      description: `Market Score: ${keywordData.marketScore}/100` 
     });
+    
+    // Find and open the newly created keyword (will be the latest)
+    // We need to do this on next tick after the keyword is added
+    setTimeout(() => {
+      const newKeyword = keywords.find(k => k.keyword.toLowerCase() === keywordData.keyword.toLowerCase());
+      if (newKeyword) {
+        setValidationKeyword(newKeyword);
+      }
+    }, 100);
+  };
+  
+  // Handle opening existing keyword from wizard duplicate detection
+  const handleOpenExistingKeyword = (keyword: Keyword) => {
+    setValidationKeyword(keyword);
   };
   
   // Open wizard for new keyword (no pre-filled keyword)
@@ -404,13 +421,9 @@ export const KeywordsSection = ({
               toast({ title: 'Variantes separadas' });
             }}
           />
-          <Button variant="outline" size="sm" onClick={handleOpenNewKeywordWizard} className="gap-2">
-            <Plus className="w-4 h-4" />
-            Añadir keyword
-          </Button>
           <Button data-tour="bulk-import" variant="outline" size="sm" onClick={() => setIsBulkImportOpen(true)} className="gap-2">
             <Upload className="w-4 h-4" />
-            Añadir en lote
+            Importar lote
           </Button>
           {selectedIds.size > 0 && (
             <Button variant="destructive" size="sm" onClick={handleDeleteSelected} className="gap-2">
@@ -437,18 +450,21 @@ export const KeywordsSection = ({
         counts={quickFilterCounts}
       />
 
-      {/* Quick Add */}
-      <div className="flex gap-2 p-4 bg-muted/30 rounded-lg">
+      {/* Quick Add - unified with wizard */}
+      <div className="flex gap-2 p-4 bg-primary/5 border border-primary/20 rounded-lg">
         <Input
-          placeholder="Añadir keyword rápida..."
+          placeholder="Escribe una keyword y pulsa Enter..."
           value={quickAddKeyword}
           onChange={(e) => setQuickAddKeyword(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && handleQuickAdd()}
           className="flex-1"
         />
-        <Button onClick={handleQuickAdd} disabled={!quickAddKeyword.trim()} className="gap-2">
+        <Button 
+          onClick={quickAddKeyword.trim() ? handleQuickAdd : handleOpenNewKeywordWizard} 
+          className="gap-2 bg-primary hover:bg-primary/90"
+        >
           <Plus className="w-4 h-4" />
-          Añadir
+          {quickAddKeyword.trim() ? 'Añadir' : 'Nueva keyword'}
         </Button>
       </div>
 
@@ -705,6 +721,7 @@ export const KeywordsSection = ({
         bookInfo={bookInfo}
         existingKeywords={keywords}
         initialKeyword={wizardInitialKeyword}
+        onOpenExistingKeyword={handleOpenExistingKeyword}
       />
     </div>
   );

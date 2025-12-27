@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import { 
   Dialog, 
   DialogContent, 
@@ -22,6 +22,11 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
+import {
   AlertCircle,
   ArrowLeft,
   ArrowRight,
@@ -30,16 +35,23 @@ import {
   FileText,
   BarChart3,
   Lightbulb,
+  ClipboardCheck,
+  Info,
 } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import type { Keyword, BookInfo, IntentType } from '@/types/advertising';
-import { INTENT_TYPES, classifyIntent } from '@/types/advertising';
+import { INTENT_TYPES, classifyIntent, MARKETPLACES } from '@/types/advertising';
 import {
   KEYWORD_PURPOSE_OPTIONS,
+  KEYWORD_STATUS_OPTIONS,
   BRAND_RISK_OPTIONS,
   TRAFFIC_SOURCE_OPTIONS,
   calculateMarketScore,
   getMarketScoreInfo,
+  type KeywordPurpose,
+  type KeywordStatus,
+  type BrandRisk,
+  type TrafficSource,
 } from '@/lib/market-score';
 import {
   type WizardStep1Data,
@@ -53,6 +65,33 @@ import {
 } from '@/lib/keyword-builder';
 import { cn } from '@/lib/utils';
 
+// ============ TOOLTIPS ============
+const FIELD_TOOLTIPS = {
+  searchVolume: 'Búsquedas mensuales estimadas en Amazon. Afecta demanda y potencial de Ads.',
+  competitors: 'Resultados en Amazon para esta keyword. Menos suele ser mejor.',
+  price: 'Precio promedio de los libros que rankean. Referencia de mercado, no tu precio.',
+  royalties: 'Regalías estimadas por venta. A mayor regalía, más margen para invertir en Ads.',
+  brandRisk: 'Riesgo de marca registrada o términos protegidos. Alto = posibles problemas para posicionar o publicar.',
+  trafficSource: 'Si el nicho depende de Amazon (mejor) o de marca personal/rrss (competencia más dura).',
+  purpose: 'Para qué usarás la keyword: decidir libros, campañas de Ads, o ambas.',
+  intent: 'Qué busca el comprador. Compra = listo para comprar. Investigación = busca info. Problema = busca solución. Competencia = busca autor/título específico.',
+  status: 'Estado de validación: Pendiente = por revisar, Válida = confirmada, Descartada = no usar.',
+};
+
+// ============ EDITORIAL CHECKLIST ============
+const EDITORIAL_CHECKS = [
+  { id: 'keywordClear', label: 'La keyword se entiende por sí sola' },
+  { id: 'amazonSuggestion', label: 'Aparece como sugerencia en Amazon' },
+  { id: 'booksSellingWell', label: 'Veo al menos 3 libros vendiendo bien' },
+  { id: 'indieAuthors', label: 'Hay autores independientes vendiendo' },
+  { id: 'topReflectsIntent', label: 'El top refleja realmente la intención de esta keyword' },
+  { id: 'canProduce', label: 'Puedo producir este tipo de libro' },
+  { id: 'canDoBetter', label: 'Puedo hacerlo mejor o más útil' },
+  { id: 'canDifferentiate', label: 'Puedo diferenciarlo claramente' },
+  { id: 'hasVariants', label: 'Hay variantes cercanas con potencial' },
+  { id: 'hasInterest', label: 'Tengo interés en el tema (opcional)' },
+];
+
 interface NewKeywordWizardProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -61,15 +100,41 @@ interface NewKeywordWizardProps {
   bookInfo?: BookInfo;
   existingKeywords: Keyword[];
   initialKeyword?: string;
+  onOpenExistingKeyword?: (keyword: Keyword) => void;
 }
 
-type WizardStep = 1 | 2 | 3;
+type WizardStep = 1 | 2 | 3 | 4;
 
 const STEPS = [
   { number: 1, title: 'Básico', icon: FileText },
   { number: 2, title: 'Mercado', icon: BarChart3 },
   { number: 3, title: 'Editorial', icon: Lightbulb },
+  { number: 4, title: 'Resumen', icon: ClipboardCheck },
 ] as const;
+
+// Tooltip component wrapper
+function FieldTooltip({ content }: { content: string }) {
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Info className="w-4 h-4 text-muted-foreground hover:text-foreground cursor-help inline-block ml-1" />
+      </TooltipTrigger>
+      <TooltipContent side="top" className="max-w-xs text-sm">
+        {content}
+      </TooltipContent>
+    </Tooltip>
+  );
+}
+
+// Default states factory
+function getInitialStep1(keyword: string, marketplaceId: string): WizardStep1Data {
+  return {
+    keyword,
+    marketplaceId,
+    purpose: 'editorial',
+    intent: undefined,
+  };
+}
 
 export function NewKeywordWizard({
   open,
@@ -79,52 +144,57 @@ export function NewKeywordWizard({
   bookInfo,
   existingKeywords,
   initialKeyword = '',
+  onOpenExistingKeyword,
 }: NewKeywordWizardProps) {
+  // ============ WIZARD STATE ============
   const [currentStep, setCurrentStep] = useState<WizardStep>(1);
-  
-  // Step 1 data
-  const [step1, setStep1] = useState<WizardStep1Data>({
-    keyword: initialKeyword,
-    marketplaceId,
-    purpose: 'editorial',
-    intent: undefined,
-  });
-  
-  // Step 2 data
+  const [step1, setStep1] = useState<WizardStep1Data>(getInitialStep1(initialKeyword, marketplaceId));
   const [step2, setStep2] = useState<WizardStep2Data>(getDefaultStep2Data());
-  
-  // Step 3 data
   const [step3, setStep3] = useState<WizardStep3Data>(getDefaultStep3Data());
+  const [editorialChecks, setEditorialChecks] = useState<Record<string, boolean>>({});
+  const [status, setStatus] = useState<KeywordStatus>('pending');
   
-  // Reset state when dialog opens
-  const handleOpenChange = (isOpen: boolean) => {
-    if (isOpen) {
+  // ============ RESET FUNCTION ============
+  const resetWizard = useCallback(() => {
+    setCurrentStep(1);
+    setStep1(getInitialStep1('', marketplaceId));
+    setStep2(getDefaultStep2Data());
+    setStep3(getDefaultStep3Data());
+    setEditorialChecks({});
+    setStatus('pending');
+  }, [marketplaceId]);
+  
+  // Reset when dialog opens with new initial keyword
+  useEffect(() => {
+    if (open) {
       setCurrentStep(1);
-      setStep1({
-        keyword: initialKeyword,
-        marketplaceId,
-        purpose: 'editorial',
-        intent: undefined,
-      });
+      setStep1(getInitialStep1(initialKeyword, marketplaceId));
       setStep2(getDefaultStep2Data());
       setStep3(getDefaultStep3Data());
+      setEditorialChecks({});
+      setStatus('pending');
+    }
+  }, [open, initialKeyword, marketplaceId]);
+  
+  // Handle dialog close - always reset
+  const handleOpenChange = (isOpen: boolean) => {
+    if (!isOpen) {
+      resetWizard();
     }
     onOpenChange(isOpen);
   };
   
-  // Check for duplicate
+  // ============ DERIVED STATE ============
   const duplicateKeyword = useMemo(() => {
     if (!step1.keyword.trim()) return undefined;
     return findDuplicateKeyword(step1.keyword, marketplaceId, existingKeywords);
   }, [step1.keyword, marketplaceId, existingKeywords]);
   
-  // Auto-detect intent
   const detectedIntent = useMemo(() => {
     if (!step1.keyword.trim()) return undefined;
     return classifyIntent(step1.keyword);
   }, [step1.keyword]);
   
-  // Calculate preview score
   const previewScore = useMemo(() => {
     return calculateMarketScore({
       searchVolume: step2.searchVolume,
@@ -138,12 +208,16 @@ export function NewKeywordWizard({
   
   const scoreInfo = getMarketScoreInfo(previewScore.total);
   const isDataComplete = isMarketDataComplete(step2);
-  
   const canProceedStep1 = step1.keyword.trim().length > 0;
-  const canProceedStep2 = true; // Always can proceed, just marks as incomplete
   
+  const selectedMarketplace = MARKETPLACES.find(m => m.id === marketplaceId);
+  
+  // Count editorial checks
+  const editorialScore = Object.values(editorialChecks).filter(Boolean).length;
+  
+  // ============ NAVIGATION ============
   const handleNext = () => {
-    if (currentStep < 3) {
+    if (currentStep < 4) {
       setCurrentStep((prev) => (prev + 1) as WizardStep);
     }
   };
@@ -161,20 +235,33 @@ export function NewKeywordWizard({
         intent: step1.intent ?? detectedIntent,
       },
       step2,
-      step3,
+      step3: {
+        ...step3,
+        notes: step3.notes,
+      },
       bookInfo,
     });
-    onComplete(keyword);
+    
+    // Add status override
+    const finalKeyword = {
+      ...keyword,
+      status: status,
+    };
+    
+    onComplete(finalKeyword);
+    resetWizard();
     onOpenChange(false);
   };
   
   const handleOpenExisting = () => {
-    if (duplicateKeyword) {
+    if (duplicateKeyword && onOpenExistingKeyword) {
+      onOpenExistingKeyword(duplicateKeyword);
+      resetWizard();
       onOpenChange(false);
-      // Could emit an event to open the detail panel, for now just close
     }
   };
   
+  // ============ RENDER ============
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
@@ -228,12 +315,14 @@ export function NewKeywordWizard({
         </div>
         
         {/* Step Content */}
-        <div className="min-h-[300px]">
-          {/* Step 1: Basic */}
+        <div className="min-h-[350px]">
+          {/* ============ STEP 1: BÁSICO ============ */}
           {currentStep === 1 && (
             <div className="space-y-6">
               <div className="space-y-2">
-                <Label htmlFor="keyword">Keyword *</Label>
+                <Label htmlFor="keyword">
+                  Keyword *
+                </Label>
                 <Input
                   id="keyword"
                   value={step1.keyword}
@@ -244,23 +333,28 @@ export function NewKeywordWizard({
               </div>
               
               {duplicateKeyword && (
-                <Alert variant="destructive">
-                  <AlertTriangle className="h-4 w-4" />
-                  <AlertDescription className="flex items-center justify-between">
+                <Alert className="border-amber-500/50 bg-amber-500/10">
+                  <AlertTriangle className="h-4 w-4 text-amber-600" />
+                  <AlertDescription className="flex items-center justify-between text-amber-700 dark:text-amber-400">
                     <span>Esta keyword ya existe en este marketplace.</span>
-                    <Button variant="outline" size="sm" onClick={handleOpenExisting}>
-                      Abrir ficha existente
-                    </Button>
+                    {onOpenExistingKeyword && (
+                      <Button variant="outline" size="sm" onClick={handleOpenExisting}>
+                        Abrir ficha existente
+                      </Button>
+                    )}
                   </AlertDescription>
                 </Alert>
               )}
               
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label>Propósito</Label>
+                  <Label>
+                    Propósito
+                    <FieldTooltip content={FIELD_TOOLTIPS.purpose} />
+                  </Label>
                   <Select
                     value={step1.purpose}
-                    onValueChange={(value) => setStep1({ ...step1, purpose: value as any })}
+                    onValueChange={(value) => setStep1({ ...step1, purpose: value as KeywordPurpose })}
                   >
                     <SelectTrigger>
                       <SelectValue />
@@ -279,7 +373,36 @@ export function NewKeywordWizard({
                 </div>
                 
                 <div className="space-y-2">
-                  <Label>Intención</Label>
+                  <Label>
+                    Estado
+                    <FieldTooltip content={FIELD_TOOLTIPS.status} />
+                  </Label>
+                  <Select
+                    value={status}
+                    onValueChange={(value) => setStatus(value as KeywordStatus)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="bg-popover border-border">
+                      {KEYWORD_STATUS_OPTIONS.map((opt) => (
+                        <SelectItem key={opt.value} value={opt.value}>
+                          <Badge variant="outline" className={opt.color}>
+                            {opt.label}
+                          </Badge>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>
+                    Intención
+                    <FieldTooltip content={FIELD_TOOLTIPS.intent} />
+                  </Label>
                   <Select
                     value={step1.intent ?? detectedIntent ?? ''}
                     onValueChange={(value) => setStep1({ ...step1, intent: value as IntentType })}
@@ -290,7 +413,10 @@ export function NewKeywordWizard({
                     <SelectContent className="bg-popover border-border">
                       {INTENT_TYPES.map((intent) => (
                         <SelectItem key={intent.value} value={intent.value}>
-                          {intent.label}
+                          <div className="flex flex-col">
+                            <span>{intent.label}</span>
+                            <span className="text-xs text-muted-foreground">{intent.description}</span>
+                          </div>
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -301,21 +427,27 @@ export function NewKeywordWizard({
                     </p>
                   )}
                 </div>
-              </div>
-              
-              <div className="space-y-2">
-                <Label>Marketplace</Label>
-                <Input value={marketplaceId} disabled className="bg-muted" />
+                
+                <div className="space-y-2">
+                  <Label>Marketplace</Label>
+                  <div className="flex items-center gap-2 px-3 py-2 bg-muted rounded-md border">
+                    <span className="text-lg">{selectedMarketplace?.flag}</span>
+                    <span className="text-sm">{selectedMarketplace?.name}</span>
+                  </div>
+                </div>
               </div>
             </div>
           )}
           
-          {/* Step 2: Market Data */}
+          {/* ============ STEP 2: DATOS DE MERCADO ============ */}
           {currentStep === 2 && (
             <div className="space-y-6">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="searchVolume">Volumen de búsqueda *</Label>
+                  <Label htmlFor="searchVolume">
+                    Volumen de búsqueda *
+                    <FieldTooltip content={FIELD_TOOLTIPS.searchVolume} />
+                  </Label>
                   <Input
                     id="searchVolume"
                     type="number"
@@ -325,12 +457,15 @@ export function NewKeywordWizard({
                     placeholder="0"
                   />
                   <p className="text-xs text-muted-foreground">
-                    {step2.searchVolume < 50 ? '0pts' : step2.searchVolume <= 100 ? '10pts' : step2.searchVolume <= 600 ? '20pts' : '30pts'} / 30
+                    {previewScore.volume.label}
                   </p>
                 </div>
                 
                 <div className="space-y-2">
-                  <Label htmlFor="competitors">Competidores (resultados Amazon) *</Label>
+                  <Label htmlFor="competitors">
+                    Competidores (resultados Amazon) *
+                    <FieldTooltip content={FIELD_TOOLTIPS.competitors} />
+                  </Label>
                   <Input
                     id="competitors"
                     type="number"
@@ -340,12 +475,15 @@ export function NewKeywordWizard({
                     placeholder="0"
                   />
                   <p className="text-xs text-muted-foreground">
-                    {step2.competitors < 1000 ? '25pts' : step2.competitors <= 4000 ? '18pts' : step2.competitors <= 10000 ? '8pts' : '0pts'} / 25
+                    {previewScore.competitors.label}
                   </p>
                 </div>
                 
                 <div className="space-y-2">
-                  <Label htmlFor="price">Precio ($)</Label>
+                  <Label htmlFor="price">
+                    Precio medio de la competencia ($)
+                    <FieldTooltip content={FIELD_TOOLTIPS.price} />
+                  </Label>
                   <Input
                     id="price"
                     type="number"
@@ -356,12 +494,15 @@ export function NewKeywordWizard({
                     placeholder="9.99"
                   />
                   <p className="text-xs text-muted-foreground">
-                    {step2.price < 9.99 ? '0pts' : step2.price < 15 ? '8pts' : step2.price < 20 ? '12pts' : '15pts'} / 15
+                    {previewScore.price.label}
                   </p>
                 </div>
                 
                 <div className="space-y-2">
-                  <Label htmlFor="royalties">Regalías ($)</Label>
+                  <Label htmlFor="royalties">
+                    Regalías medias aprox. ($)
+                    <FieldTooltip content={FIELD_TOOLTIPS.royalties} />
+                  </Label>
                   <Input
                     id="royalties"
                     type="number"
@@ -372,17 +513,20 @@ export function NewKeywordWizard({
                     placeholder="2.00"
                   />
                   <p className="text-xs text-muted-foreground">
-                    {step2.royalties < 2 ? '0pts' : step2.royalties < 4 ? '8pts' : step2.royalties < 7 ? '14pts' : '20pts'} / 20
+                    {previewScore.royalties.label}
                   </p>
                 </div>
               </div>
               
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label>Brand Risk</Label>
+                  <Label>
+                    Brand Risk
+                    <FieldTooltip content={FIELD_TOOLTIPS.brandRisk} />
+                  </Label>
                   <Select
                     value={step2.brandRisk}
-                    onValueChange={(value) => setStep2({ ...step2, brandRisk: value as any })}
+                    onValueChange={(value) => setStep2({ ...step2, brandRisk: value as BrandRisk })}
                   >
                     <SelectTrigger>
                       <SelectValue />
@@ -400,10 +544,13 @@ export function NewKeywordWizard({
                 </div>
                 
                 <div className="space-y-2">
-                  <Label>Fuente de tráfico</Label>
+                  <Label>
+                    Fuente de tráfico
+                    <FieldTooltip content={FIELD_TOOLTIPS.trafficSource} />
+                  </Label>
                   <Select
                     value={step2.trafficSource}
-                    onValueChange={(value) => setStep2({ ...step2, trafficSource: value as any })}
+                    onValueChange={(value) => setStep2({ ...step2, trafficSource: value as TrafficSource })}
                   >
                     <SelectTrigger>
                       <SelectValue />
@@ -426,10 +573,19 @@ export function NewKeywordWizard({
                 <div className="flex items-center justify-between mb-3">
                   <span className="font-medium">Market Score Preview</span>
                   <div className="flex items-center gap-2">
-                    <span className={cn('text-2xl font-bold', scoreInfo.color)}>
+                    <span className={cn(
+                      'text-2xl font-bold',
+                      previewScore.total >= 70 ? 'text-green-600 dark:text-green-400' :
+                      previewScore.total >= 40 ? 'text-yellow-600 dark:text-yellow-400' :
+                      'text-red-600 dark:text-red-400'
+                    )}>
                       {previewScore.total}
                     </span>
-                    <Badge className={scoreInfo.bgColor}>
+                    <Badge className={cn(
+                      previewScore.total >= 70 ? 'bg-green-500/20 text-green-700 dark:text-green-300' :
+                      previewScore.total >= 40 ? 'bg-yellow-500/20 text-yellow-700 dark:text-yellow-300' :
+                      'bg-red-500/20 text-red-700 dark:text-red-300'
+                    )}>
                       {scoreInfo.label}
                     </Badge>
                   </div>
@@ -438,10 +594,15 @@ export function NewKeywordWizard({
                   value={previewScore.total} 
                   className="h-2"
                 />
+                {previewScore.penalties.points < 0 && (
+                  <p className="text-xs text-amber-600 dark:text-amber-400 mt-2">
+                    ⚠ {previewScore.penalties.label}
+                  </p>
+                )}
                 {!isDataComplete && (
-                  <Alert className="mt-3">
-                    <AlertCircle className="h-4 w-4" />
-                    <AlertDescription>
+                  <Alert className="mt-3 border-amber-500/30 bg-amber-500/10">
+                    <AlertCircle className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                    <AlertDescription className="text-amber-700 dark:text-amber-300">
                       Sin datos de volumen o competidores, la keyword quedará como "Incompleta".
                     </AlertDescription>
                   </Alert>
@@ -450,68 +611,46 @@ export function NewKeywordWizard({
             </div>
           )}
           
-          {/* Step 3: Editorial (Optional) */}
+          {/* ============ STEP 3: EDITORIAL (Optional) ============ */}
           {currentStep === 3 && (
             <div className="space-y-6">
-              <Alert>
-                <Lightbulb className="h-4 w-4" />
-                <AlertDescription>
-                  Esta sección es opcional y NO afecta al Market Score. Sirve para decisiones editoriales.
+              <Alert className="border-blue-500/30 bg-blue-500/10">
+                <Lightbulb className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                <AlertDescription className="text-blue-700 dark:text-blue-300">
+                  {step1.purpose === 'ads' 
+                    ? 'Esta sección es opcional para keywords de Ads.'
+                    : 'Esta sección es para decisiones editoriales y NO afecta al Market Score.'
+                  }
                 </AlertDescription>
               </Alert>
               
-              <div className="space-y-4">
-                <div className="flex items-center space-x-3">
-                  <Checkbox
-                    id="canCreate"
-                    checked={step3.canCreate === true}
-                    onCheckedChange={(checked) =>
-                      setStep3({ ...step3, canCreate: checked === 'indeterminate' ? null : checked })
-                    }
-                  />
-                  <Label htmlFor="canCreate" className="cursor-pointer">
-                    ¿Puedo crear este libro?
-                  </Label>
-                </div>
-                
-                <div className="flex items-center space-x-3">
-                  <Checkbox
-                    id="canDoBetter"
-                    checked={step3.canDoBetter === true}
-                    onCheckedChange={(checked) =>
-                      setStep3({ ...step3, canDoBetter: checked === 'indeterminate' ? null : checked })
-                    }
-                  />
-                  <Label htmlFor="canDoBetter" className="cursor-pointer">
-                    ¿Puedo hacerlo mejor que la competencia?
-                  </Label>
-                </div>
-                
-                <div className="flex items-center space-x-3">
-                  <Checkbox
-                    id="canDifferentiate"
-                    checked={step3.canDifferentiate === true}
-                    onCheckedChange={(checked) =>
-                      setStep3({ ...step3, canDifferentiate: checked === 'indeterminate' ? null : checked })
-                    }
-                  />
-                  <Label htmlFor="canDifferentiate" className="cursor-pointer">
-                    ¿Puedo diferenciarlo?
-                  </Label>
-                </div>
-                
-                <div className="flex items-center space-x-3">
-                  <Checkbox
-                    id="fitsStrategy"
-                    checked={step3.fitsStrategy === true}
-                    onCheckedChange={(checked) =>
-                      setStep3({ ...step3, fitsStrategy: checked === 'indeterminate' ? null : checked })
-                    }
-                  />
-                  <Label htmlFor="fitsStrategy" className="cursor-pointer">
-                    ¿Encaja con mi estrategia editorial?
-                  </Label>
-                </div>
+              <div className="space-y-3">
+                {EDITORIAL_CHECKS.map((check) => (
+                  <div key={check.id} className="flex items-center space-x-3">
+                    <Checkbox
+                      id={check.id}
+                      checked={editorialChecks[check.id] === true}
+                      onCheckedChange={(checked) =>
+                        setEditorialChecks({ ...editorialChecks, [check.id]: checked === true })
+                      }
+                    />
+                    <Label htmlFor={check.id} className="cursor-pointer text-sm">
+                      {check.label}
+                    </Label>
+                  </div>
+                ))}
+              </div>
+              
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <span>Strategic Fit:</span>
+                <Badge variant="outline" className={cn(
+                  editorialScore >= 7 ? 'bg-green-500/20 text-green-700 dark:text-green-300' :
+                  editorialScore >= 4 ? 'bg-yellow-500/20 text-yellow-700 dark:text-yellow-300' :
+                  'bg-muted text-muted-foreground'
+                )}>
+                  {editorialScore}/10
+                </Badge>
+                <span className="text-xs">(solo orientativo)</span>
               </div>
               
               <div className="space-y-2">
@@ -524,26 +663,102 @@ export function NewKeywordWizard({
                   rows={3}
                 />
               </div>
-              
-              {/* Summary */}
-              <div className="p-4 rounded-lg border border-border bg-muted/30">
-                <h4 className="font-medium mb-3">Resumen</h4>
-                <div className="grid grid-cols-2 gap-y-2 text-sm">
+            </div>
+          )}
+          
+          {/* ============ STEP 4: RESUMEN ============ */}
+          {currentStep === 4 && (
+            <div className="space-y-6">
+              <div className="p-4 rounded-lg border border-border bg-muted/30 space-y-4">
+                <h4 className="font-medium text-lg">Resumen de la keyword</h4>
+                
+                {/* Basic info */}
+                <div className="grid grid-cols-2 gap-y-3 text-sm">
                   <span className="text-muted-foreground">Keyword:</span>
                   <span className="font-medium">{step1.keyword}</span>
                   
-                  <span className="text-muted-foreground">Market Score:</span>
-                  <span className={cn('font-bold', scoreInfo.color)}>{previewScore.total}/100</span>
-                  
-                  <span className="text-muted-foreground">Estado:</span>
-                  <Badge variant={isDataComplete ? 'default' : 'secondary'}>
-                    {isDataComplete ? 'Válida' : 'Incompleta'}
-                  </Badge>
+                  <span className="text-muted-foreground">Marketplace:</span>
+                  <span className="flex items-center gap-2">
+                    <span>{selectedMarketplace?.flag}</span>
+                    <span>{selectedMarketplace?.name}</span>
+                  </span>
                   
                   <span className="text-muted-foreground">Propósito:</span>
                   <span>{KEYWORD_PURPOSE_OPTIONS.find(o => o.value === step1.purpose)?.label}</span>
+                  
+                  <span className="text-muted-foreground">Estado:</span>
+                  <Badge variant="outline" className={KEYWORD_STATUS_OPTIONS.find(o => o.value === status)?.color}>
+                    {KEYWORD_STATUS_OPTIONS.find(o => o.value === status)?.label}
+                  </Badge>
                 </div>
+                
+                <div className="h-px bg-border" />
+                
+                {/* Market data */}
+                <div className="grid grid-cols-2 gap-y-3 text-sm">
+                  <span className="text-muted-foreground">Volumen búsqueda:</span>
+                  <span>{step2.searchVolume.toLocaleString()}</span>
+                  
+                  <span className="text-muted-foreground">Competidores:</span>
+                  <span>{step2.competitors.toLocaleString()}</span>
+                  
+                  <span className="text-muted-foreground">Precio medio:</span>
+                  <span>${step2.price.toFixed(2)}</span>
+                  
+                  <span className="text-muted-foreground">Regalías:</span>
+                  <span>${step2.royalties.toFixed(2)}</span>
+                </div>
+                
+                <div className="h-px bg-border" />
+                
+                {/* Score */}
+                <div className="flex items-center justify-between">
+                  <div>
+                    <span className="text-sm text-muted-foreground">Market Score:</span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span className={cn(
+                      'text-3xl font-bold',
+                      previewScore.total >= 70 ? 'text-green-600 dark:text-green-400' :
+                      previewScore.total >= 40 ? 'text-yellow-600 dark:text-yellow-400' :
+                      'text-red-600 dark:text-red-400'
+                    )}>
+                      {previewScore.total}
+                    </span>
+                    <div className="flex flex-col gap-1">
+                      <Badge className={cn(
+                        previewScore.total >= 70 ? 'bg-green-500/20 text-green-700 dark:text-green-300' :
+                        previewScore.total >= 40 ? 'bg-yellow-500/20 text-yellow-700 dark:text-yellow-300' :
+                        'bg-red-500/20 text-red-700 dark:text-red-300'
+                      )}>
+                        {scoreInfo.label}
+                      </Badge>
+                      {!isDataComplete && (
+                        <Badge variant="outline" className="text-amber-600 dark:text-amber-400 border-amber-500/50">
+                          Incompleta
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+                </div>
+                
+                {editorialScore > 0 && (
+                  <>
+                    <div className="h-px bg-border" />
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-muted-foreground">Strategic Fit (editorial):</span>
+                      <Badge variant="outline">{editorialScore}/10</Badge>
+                    </div>
+                  </>
+                )}
               </div>
+              
+              {step3.notes && (
+                <div className="p-3 rounded-lg bg-muted/50 text-sm">
+                  <span className="text-muted-foreground">Notas: </span>
+                  <span>{step3.notes}</span>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -559,20 +774,20 @@ export function NewKeywordWizard({
           </div>
           
           <div className="flex gap-2">
-            <Button variant="ghost" onClick={() => onOpenChange(false)}>
+            <Button variant="ghost" onClick={() => handleOpenChange(false)}>
               Cancelar
             </Button>
             
-            {currentStep < 3 ? (
+            {currentStep < 4 ? (
               <Button 
                 onClick={handleNext} 
                 disabled={currentStep === 1 && !canProceedStep1}
               >
-                Siguiente
+                {currentStep === 3 && step1.purpose === 'ads' ? 'Saltar' : 'Siguiente'}
                 <ArrowRight className="w-4 h-4 ml-2" />
               </Button>
             ) : (
-              <Button onClick={handleComplete}>
+              <Button onClick={handleComplete} className="bg-primary">
                 <Check className="w-4 h-4 mr-2" />
                 Crear Keyword
               </Button>
