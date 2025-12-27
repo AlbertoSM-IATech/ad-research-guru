@@ -78,7 +78,7 @@ import { cn } from '@/lib/utils';
 
 interface KeywordsSectionProps {
   keywords: Keyword[];
-  onAdd: (keyword: Omit<Keyword, 'id' | 'createdAt' | 'updatedAt'>) => void;
+  onAdd: (keyword: Omit<Keyword, 'id' | 'createdAt' | 'updatedAt'> | Keyword) => void;
   onAddBulk: (keywords: Array<Omit<Keyword, 'id' | 'createdAt' | 'updatedAt'>>) => void;
   onUpdate: (id: string, keyword: Partial<Keyword>) => void;
   onDelete: (id: string) => void;
@@ -146,26 +146,20 @@ export const KeywordsSection = ({
     setQuickAddKeyword('');
   };
   
-  // Handle wizard completion - open detail panel after creation
-  const handleWizardComplete = (keywordData: Omit<Keyword, 'id' | 'createdAt' | 'updatedAt'>) => {
-    // Add the keyword
-    onAdd(keywordData);
+  // Handle wizard completion - open detail panel immediately (no setTimeout hack)
+  const handleWizardComplete = (keyword: Keyword) => {
+    // Add the keyword (it already has id, createdAt, updatedAt from wizard)
+    onAdd(keyword);
     setWizardInitialKeyword('');
     
     // Show toast
     toast({ 
       title: 'Keyword creada', 
-      description: `Market Score: ${keywordData.marketScore}/100` 
+      description: `Market Score: ${keyword.marketScore}/100` 
     });
     
-    // Find and open the newly created keyword (will be the latest)
-    // We need to do this on next tick after the keyword is added
-    setTimeout(() => {
-      const newKeyword = keywords.find(k => k.keyword.toLowerCase() === keywordData.keyword.toLowerCase());
-      if (newKeyword) {
-        setValidationKeyword(newKeyword);
-      }
-    }, 100);
+    // Open detail panel immediately - no need to search, we have the complete keyword
+    setValidationKeyword(keyword);
   };
   
   // Handle opening existing keyword from wizard duplicate detection
