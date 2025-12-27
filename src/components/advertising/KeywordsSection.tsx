@@ -780,6 +780,7 @@ export const KeywordsSection = ({
         isOpen={!!validationKeyword}
         onClose={() => setValidationKeyword(null)}
         onSave={handleKeywordDetailSave}
+        marketplaceId={marketplaceId}
       />
       
       {/* New Keyword Wizard */}

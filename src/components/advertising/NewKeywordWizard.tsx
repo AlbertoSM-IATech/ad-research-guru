@@ -63,6 +63,7 @@ import {
   findDuplicateKeyword,
   isMarketDataComplete,
 } from '@/lib/keyword-builder';
+import { getMarketScoreConfig } from '@/lib/market-score-config';
 import { cn } from '@/lib/utils';
 
 // ============ TOOLTIPS ============
@@ -244,8 +245,11 @@ export function NewKeywordWizard({
       royalties: step2.royalties,
       brandRisk: step2.brandRisk,
       trafficSource: step2.trafficSource,
-    });
-  }, [step2]);
+    }, marketplaceId);
+  }, [step2, marketplaceId]);
+  
+  // Get current market config for BONUS UX subtitle
+  const marketConfig = useMemo(() => getMarketScoreConfig(marketplaceId), [marketplaceId]);
   
   const scoreInfo = getMarketScoreInfo(previewScore.total);
   const isDataComplete = isMarketDataComplete(step2);
@@ -498,6 +502,13 @@ export function NewKeywordWizard({
           {currentStep === 2 && (
             <div className="space-y-6">
               <h3 className="text-lg font-medium">{getStep2Title(step1.purpose)}</h3>
+              <p className="text-xs text-muted-foreground -mt-4">
+                Criterios actuales ({selectedMarketplace?.name || marketplaceId.toUpperCase()}): 
+                ideal volumen {marketConfig.ideal.searchVolume.toLocaleString()}, 
+                ideal competidores {marketConfig.ideal.competitors.toLocaleString()}, 
+                precio {marketConfig.ideal.price}$, 
+                regalías {marketConfig.ideal.royalties}$
+              </p>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="searchVolume">

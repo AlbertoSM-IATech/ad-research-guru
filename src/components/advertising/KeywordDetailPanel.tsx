@@ -51,13 +51,15 @@ interface KeywordDetailPanelProps {
   isOpen: boolean;
   onClose: () => void;
   onSave: (keywordId: string, updates: Partial<Keyword>) => void;
+  marketplaceId?: string;
 }
 
 export const KeywordDetailPanel = ({ 
   keyword, 
   isOpen, 
   onClose, 
-  onSave 
+  onSave,
+  marketplaceId = 'us',
 }: KeywordDetailPanelProps) => {
   // Market Data state
   const [searchVolume, setSearchVolume] = useState(0);
@@ -116,7 +118,7 @@ export const KeywordDetailPanel = ({
     trafficSource,
   }), [searchVolume, competitors, price, royalties, brandRisk, trafficSource]);
 
-  const scoreBreakdown = useMemo(() => calculateMarketScore(marketData), [marketData]);
+  const scoreBreakdown = useMemo(() => calculateMarketScore(marketData, marketplaceId), [marketData, marketplaceId]);
   const scoreInfo = useMemo(() => getMarketScoreInfo(scoreBreakdown.total), [scoreBreakdown.total]);
 
   // Calculate Editorial Score
