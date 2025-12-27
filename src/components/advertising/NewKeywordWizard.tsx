@@ -92,10 +92,23 @@ const EDITORIAL_CHECKS = [
   { id: 'hasInterest', label: 'Tengo interés en el tema (opcional)' },
 ];
 
+// Generate unique ID
+function generateKeywordId(): string {
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+    return crypto.randomUUID();
+  }
+  return `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+}
+
+// Normalize keyword text
+function normalizeKeyword(keyword: string): string {
+  return keyword.trim().replace(/\s+/g, ' ');
+}
+
 interface NewKeywordWizardProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onComplete: (keyword: Omit<Keyword, 'id' | 'createdAt' | 'updatedAt'>) => void;
+  onComplete: (keyword: Keyword) => void; // Now returns complete Keyword with id
   marketplaceId: string;
   bookInfo?: BookInfo;
   existingKeywords: Keyword[];
@@ -186,9 +199,13 @@ export function NewKeywordWizard({
   
   // ============ DERIVED STATE ============
   const duplicateKeyword = useMemo(() => {
-    if (!step1.keyword.trim()) return undefined;
-    return findDuplicateKeyword(step1.keyword, marketplaceId, existingKeywords);
+    const normalized = normalizeKeyword(step1.keyword);
+    if (!normalized) return undefined;
+    return findDuplicateKeyword(normalized, marketplaceId, existingKeywords);
   }, [step1.keyword, marketplaceId, existingKeywords]);
+  
+  // Block advancing if duplicate exists
+  const hasDuplicate = !!duplicateKeyword;
   
   const detectedIntent = useMemo(() => {
     if (!step1.keyword.trim()) return undefined;
@@ -208,7 +225,7 @@ export function NewKeywordWizard({
   
   const scoreInfo = getMarketScoreInfo(previewScore.total);
   const isDataComplete = isMarketDataComplete(step2);
-  const canProceedStep1 = step1.keyword.trim().length > 0;
+  const canProceedStep1 = step1.keyword.trim().length > 0 && !hasDuplicate;
   
   const selectedMarketplace = MARKETPLACES.find(m => m.id === marketplaceId);
   
@@ -229,11 +246,18 @@ export function NewKeywordWizard({
   };
   
   const handleComplete = () => {
-    const keyword = buildNewKeywordFromWizard({
-      step1: {
-        ...step1,
-        intent: step1.intent ?? detectedIntent,
-      },
+    // Don't allow completion if duplicate exists
+    if (hasDuplicate) return;
+    
+    // Normalize keyword before building
+    const normalizedStep1 = {
+      ...step1,
+      keyword: normalizeKeyword(step1.keyword),
+      intent: step1.intent ?? detectedIntent,
+    };
+    
+    const keywordData = buildNewKeywordFromWizard({
+      step1: normalizedStep1,
       step2,
       step3: {
         ...step3,
@@ -242,13 +266,17 @@ export function NewKeywordWizard({
       bookInfo,
     });
     
-    // Add status override
-    const finalKeyword = {
-      ...keyword,
+    // Generate ID and build complete keyword with timestamps
+    const now = new Date();
+    const completeKeyword: Keyword = {
+      ...keywordData,
+      id: generateKeywordId(),
       status: status,
+      createdAt: now,
+      updatedAt: now,
     };
     
-    onComplete(finalKeyword);
+    onComplete(completeKeyword);
     resetWizard();
     onOpenChange(false);
   };
@@ -326,19 +354,22 @@ export function NewKeywordWizard({
                 <Input
                   id="keyword"
                   value={step1.keyword}
-                  onChange={(e) => setStep1({ ...step1, keyword: e.target.value })}
+                  onChange={(e) => setStep1({ ...step1, keyword: normalizeKeyword(e.target.value) })}
                   placeholder="Introduce la keyword..."
                   autoFocus
+                  className={hasDuplicate ? 'border-destructive' : ''}
                 />
               </div>
               
               {duplicateKeyword && (
-                <Alert className="border-amber-500/50 bg-amber-500/10">
-                  <AlertTriangle className="h-4 w-4 text-amber-600" />
-                  <AlertDescription className="flex items-center justify-between text-amber-700 dark:text-amber-400">
-                    <span>Esta keyword ya existe en este marketplace.</span>
+                <Alert className="border-destructive/50 bg-destructive/10">
+                  <AlertTriangle className="h-4 w-4 text-destructive" />
+                  <AlertDescription className="flex items-center justify-between">
+                    <span className="text-destructive dark:text-destructive">
+                      Esta keyword ya existe en este marketplace. No puedes crearla de nuevo.
+                    </span>
                     {onOpenExistingKeyword && (
-                      <Button variant="outline" size="sm" onClick={handleOpenExisting}>
+                      <Button variant="outline" size="sm" onClick={handleOpenExisting} className="ml-2 shrink-0">
                         Abrir ficha existente
                       </Button>
                     )}
@@ -787,7 +818,11 @@ export function NewKeywordWizard({
                 <ArrowRight className="w-4 h-4 ml-2" />
               </Button>
             ) : (
-              <Button onClick={handleComplete} className="bg-primary">
+              <Button 
+                onClick={handleComplete} 
+                className="bg-primary"
+                disabled={hasDuplicate}
+              >
                 <Check className="w-4 h-4 mr-2" />
                 Crear Keyword
               </Button>
