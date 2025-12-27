@@ -588,9 +588,10 @@ export const KeywordsSection = ({
                       <ArrowUpDown className="w-3 h-3" />
                     </div>
                   </TableHead>
-                  <TableHead className="w-[120px]">
+                  <TableHead className="cursor-pointer hover:text-foreground w-[120px]" onClick={() => handleSort('competitors')}>
                     <div className="flex items-center gap-1">
                       Competidores
+                      <ArrowUpDown className="w-3 h-3" />
                       <InfoTooltip content="Número de resultados en Amazon" />
                     </div>
                   </TableHead>
