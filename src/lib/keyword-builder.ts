@@ -30,13 +30,15 @@ export interface WizardStep2Data {
   royalties: number;
   brandRisk: BrandRisk;
   trafficSource: TrafficSource;
+  // Market Structure (15 pts block)
+  hasProfitableBooks?: boolean;
+  hasBooksOver200Reviews?: boolean;
+  hasBooksUnder100Reviews?: boolean;
 }
 
+// Editorial checks aligned with wizard (10 checks)
 export interface WizardStep3Data {
-  canCreate: boolean | null;
-  canDoBetter: boolean | null;
-  canDifferentiate: boolean | null;
-  fitsStrategy: boolean | null;
+  editorialChecks: Record<string, boolean>;
   notes: string;
 }
 
@@ -93,25 +95,34 @@ export function buildNewKeywordFromWizard(payload: WizardPayload): Omit<Keyword,
     trafficSource: step2.trafficSource,
   };
   
-  // Calculate Market Score
-  const breakdown = calculateMarketScore(marketData);
+  // Build Market Structure
+  const marketStructure = {
+    hasProfitableBooks: step2.hasProfitableBooks ?? false,
+    hasBooksOver200Reviews: step2.hasBooksOver200Reviews ?? false,
+    hasBooksUnder100Reviews: step2.hasBooksUnder100Reviews ?? false,
+  };
+  
+  // Calculate Market Score with structure
+  const breakdown = calculateMarketScore(marketData, step1.marketplaceId, marketStructure);
   const marketScore = breakdown.total;
   
-  // Build EditorialData if step3 provided
+  // Build EditorialData if step3 provided (from 10 editorial checks)
   let editorialData: EditorialData | undefined;
   let editorialScore: number | undefined;
   
   if (step3) {
+    const checks = step3.editorialChecks || {};
     editorialData = {
       checklist: {
-        canCreate: step3.canCreate,
-        canDoBetter: step3.canDoBetter,
-        canDifferentiate: step3.canDifferentiate,
-        fitsStrategy: step3.fitsStrategy,
+        canCreate: checks.canProduce ?? null,
+        canDoBetter: checks.canDoBetter ?? null,
+        canDifferentiate: checks.canDifferentiate ?? null,
+        fitsStrategy: checks.hasInterest ?? null,
       },
       notes: step3.notes,
     };
-    editorialScore = calculateEditorialScore(editorialData);
+    // Calculate editorial score from all 10 checks
+    editorialScore = Object.values(checks).filter(Boolean).length;
   }
   
   // Determine status based on market score
@@ -142,6 +153,7 @@ export function buildNewKeywordFromWizard(payload: WizardPayload): Omit<Keyword,
     royalties: step2.royalties,
     marketScore,
     marketData,
+    marketStructure,
     
     // Editorial Data
     editorialData,
@@ -184,10 +196,7 @@ export function getDefaultStep2Data(): WizardStep2Data {
  */
 export function getDefaultStep3Data(): WizardStep3Data {
   return {
-    canCreate: null,
-    canDoBetter: null,
-    canDifferentiate: null,
-    fitsStrategy: null,
+    editorialChecks: {},
     notes: '',
   };
 }

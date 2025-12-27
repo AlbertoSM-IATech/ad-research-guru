@@ -605,28 +605,37 @@ export const KeywordsSection = ({
                   <TableHead className="cursor-pointer hover:text-foreground w-[100px]" onClick={() => handleSort('state')}>
                     <div className="flex items-center gap-1">Estado <ArrowUpDown className="w-3 h-3" /></div>
                   </TableHead>
-                  <TableHead className="w-[40px]">
+                  <TableHead className="w-[60px] text-center">
                     <Tooltip>
                       <TooltipTrigger asChild>
-                        <span className="cursor-help">📚</span>
+                        <div className="flex flex-col items-center gap-0.5 cursor-help">
+                          <span>📚</span>
+                          <span className="text-[10px] leading-tight text-muted-foreground">Rent.</span>
+                        </div>
                       </TooltipTrigger>
-                      <TooltipContent>Libros rentables (≥3)</TooltipContent>
+                      <TooltipContent>Libros rentables (≥3) - Click para editar</TooltipContent>
                     </Tooltip>
                   </TableHead>
-                  <TableHead className="w-[40px]">
+                  <TableHead className="w-[60px] text-center">
                     <Tooltip>
                       <TooltipTrigger asChild>
-                        <span className="cursor-help">⭐</span>
+                        <div className="flex flex-col items-center gap-0.5 cursor-help">
+                          <span>⭐</span>
+                          <span className="text-[10px] leading-tight text-muted-foreground">+200</span>
+                        </div>
                       </TooltipTrigger>
-                      <TooltipContent>Libros +200 reviews</TooltipContent>
+                      <TooltipContent>Libros +200 reviews - Click para editar</TooltipContent>
                     </Tooltip>
                   </TableHead>
-                  <TableHead className="w-[40px]">
+                  <TableHead className="w-[60px] text-center">
                     <Tooltip>
                       <TooltipTrigger asChild>
-                        <span className="cursor-help">🌱</span>
+                        <div className="flex flex-col items-center gap-0.5 cursor-help">
+                          <span>🌱</span>
+                          <span className="text-[10px] leading-tight text-muted-foreground">-100</span>
+                        </div>
                       </TooltipTrigger>
-                      <TooltipContent>Libros -100 reviews</TooltipContent>
+                      <TooltipContent>Libros -100 reviews - Click para editar</TooltipContent>
                     </Tooltip>
                   </TableHead>
                   <TableHead className="w-[150px]">
@@ -641,7 +650,7 @@ export const KeywordsSection = ({
               <TableBody>
                 {paginatedKeywords.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={11} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={12} className="text-center py-8 text-muted-foreground">
                       {keywords.length === 0
                         ? 'No hay keywords. Añade tu primera keyword o importa en lote.'
                         : 'No se encontraron keywords con los filtros aplicados.'}
@@ -705,14 +714,38 @@ export const KeywordsSection = ({
                             onChange={(value) => handleUpdateWithHistory(keyword.id, { state: value as KeywordState })}
                           />
                         </TableCell>
-                        <TableCell className="text-center">
-                          {keyword.marketStructure?.hasProfitableBooks ? '✅' : '—'}
+                        <TableCell className="text-center" onClick={(e) => e.stopPropagation()}>
+                          <Checkbox
+                            checked={keyword.marketStructure?.hasProfitableBooks ?? false}
+                            onCheckedChange={(checked) => handleUpdateWithHistory(keyword.id, {
+                              marketStructure: {
+                                ...keyword.marketStructure,
+                                hasProfitableBooks: checked === true,
+                              }
+                            })}
+                          />
                         </TableCell>
-                        <TableCell className="text-center">
-                          {keyword.marketStructure?.hasBooksOver200Reviews ? '✅' : '—'}
+                        <TableCell className="text-center" onClick={(e) => e.stopPropagation()}>
+                          <Checkbox
+                            checked={keyword.marketStructure?.hasBooksOver200Reviews ?? false}
+                            onCheckedChange={(checked) => handleUpdateWithHistory(keyword.id, {
+                              marketStructure: {
+                                ...keyword.marketStructure,
+                                hasBooksOver200Reviews: checked === true,
+                              }
+                            })}
+                          />
                         </TableCell>
-                        <TableCell className="text-center">
-                          {keyword.marketStructure?.hasBooksUnder100Reviews ? '✅' : '—'}
+                        <TableCell className="text-center" onClick={(e) => e.stopPropagation()}>
+                          <Checkbox
+                            checked={keyword.marketStructure?.hasBooksUnder100Reviews ?? false}
+                            onCheckedChange={(checked) => handleUpdateWithHistory(keyword.id, {
+                              marketStructure: {
+                                ...keyword.marketStructure,
+                                hasBooksUnder100Reviews: checked === true,
+                              }
+                            })}
+                          />
                         </TableCell>
                         <TableCell onClick={(e) => e.stopPropagation()}>
                           <InlineCampaignTypeSelect

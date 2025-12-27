@@ -207,7 +207,12 @@ export function NewKeywordWizard({
     if (open) {
       setCurrentStep(1);
       setStep1(getInitialStep1(initialKeyword, marketplaceId));
-      setStep2(getDefaultStep2Data());
+      setStep2({
+        ...getDefaultStep2Data(),
+        hasProfitableBooks: false,
+        hasBooksOver200Reviews: false,
+        hasBooksUnder100Reviews: false,
+      });
       setStep3(getDefaultStep3Data());
       setEditorialChecks({});
       setStatus('pending');
@@ -238,6 +243,11 @@ export function NewKeywordWizard({
   }, [step1.keyword]);
   
   const previewScore = useMemo(() => {
+    const marketStructure = {
+      hasProfitableBooks: step2.hasProfitableBooks ?? false,
+      hasBooksOver200Reviews: step2.hasBooksOver200Reviews ?? false,
+      hasBooksUnder100Reviews: step2.hasBooksUnder100Reviews ?? false,
+    };
     return calculateMarketScore({
       searchVolume: step2.searchVolume,
       competitors: step2.competitors,
@@ -245,7 +255,7 @@ export function NewKeywordWizard({
       royalties: step2.royalties,
       brandRisk: step2.brandRisk,
       trafficSource: step2.trafficSource,
-    }, marketplaceId);
+    }, marketplaceId, marketStructure);
   }, [step2, marketplaceId]);
   
   // Get current market config for BONUS UX subtitle
@@ -288,7 +298,7 @@ export function NewKeywordWizard({
       step1: normalizedStep1,
       step2,
       step3: {
-        ...step3,
+        editorialChecks,
         notes: step3.notes,
       },
       bookInfo,
@@ -632,6 +642,61 @@ export function NewKeywordWizard({
                       ))}
                     </SelectContent>
                   </Select>
+                </div>
+              </div>
+              
+              {/* Estructura del Mercado (15 pts) - Added to Step 2 */}
+              <div className="space-y-3 p-4 rounded-lg border border-border bg-muted/30">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-sm font-medium flex items-center gap-2">
+                    Estructura del Mercado
+                    <FieldTooltip content="Señales de estructura del mercado. Aporta hasta 15 puntos al Market Score." />
+                  </h4>
+                  <span className="text-xs text-muted-foreground">Máx +15 pts</span>
+                </div>
+                
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Checkbox
+                        id="hasProfitableBooks"
+                        checked={step2.hasProfitableBooks === true}
+                        onCheckedChange={(checked) => setStep2({ ...step2, hasProfitableBooks: checked === true })}
+                      />
+                      <Label htmlFor="hasProfitableBooks" className="text-sm cursor-pointer">
+                        📚 Libros rentables (≥3)
+                      </Label>
+                    </div>
+                    <span className="text-xs text-green-600 dark:text-green-400">+6 pts</span>
+                  </div>
+                  
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Checkbox
+                        id="hasBooksOver200"
+                        checked={step2.hasBooksOver200Reviews === true}
+                        onCheckedChange={(checked) => setStep2({ ...step2, hasBooksOver200Reviews: checked === true })}
+                      />
+                      <Label htmlFor="hasBooksOver200" className="text-sm cursor-pointer">
+                        ⭐ Libros con +200 reviews
+                      </Label>
+                    </div>
+                    <span className="text-xs text-yellow-600 dark:text-yellow-400">+5 pts</span>
+                  </div>
+                  
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Checkbox
+                        id="hasBooksUnder100"
+                        checked={step2.hasBooksUnder100Reviews === true}
+                        onCheckedChange={(checked) => setStep2({ ...step2, hasBooksUnder100Reviews: checked === true })}
+                      />
+                      <Label htmlFor="hasBooksUnder100" className="text-sm cursor-pointer">
+                        🌱 Libros con -100 reviews
+                      </Label>
+                    </div>
+                    <span className="text-xs text-blue-600 dark:text-blue-400">+4 pts</span>
+                  </div>
                 </div>
               </div>
               
