@@ -69,14 +69,38 @@ import { cn } from '@/lib/utils';
 const FIELD_TOOLTIPS = {
   searchVolume: 'Búsquedas mensuales estimadas en Amazon. Afecta demanda y potencial de Ads.',
   competitors: 'Resultados en Amazon para esta keyword. Menos suele ser mejor.',
-  price: 'Precio promedio de los libros que rankean. Referencia de mercado, no tu precio.',
+  price: 'Precio medio observado en los top resultados. Se usa para estimar margen y viabilidad. <9.99 penaliza.',
   royalties: 'Regalías estimadas por venta. A mayor regalía, más margen para invertir en Ads.',
-  brandRisk: 'Riesgo de marca registrada o términos protegidos. Alto = posibles problemas para posicionar o publicar.',
-  trafficSource: 'Si el nicho depende de Amazon (mejor) o de marca personal/rrss (competencia más dura).',
+  brandRisk: 'Riesgo de marca registrada/propiedad intelectual. Penaliza el score si es alto.',
+  trafficSource: 'Si el tráfico depende de marca personal/rrss, suele implicar competencia dura; puede penalizar.',
   purpose: 'Para qué usarás la keyword: decidir libros, campañas de Ads, o ambas.',
-  intent: 'Qué busca el comprador. Compra = listo para comprar. Investigación = busca info. Problema = busca solución. Competencia = busca autor/título específico.',
+  intent: 'Sirve para clasificar la keyword (estrategia). No afecta al Market Score. Ej: compra vs informativa.',
   status: 'Estado de validación: Pendiente = por revisar, Válida = confirmada, Descartada = no usar.',
 };
+
+// Tooltips específicos por propósito
+const PURPOSE_TOOLTIPS: Record<string, string> = {
+  editorial: 'Para decidir si merece crear uno o varios libros y entender el nicho.',
+  ads: 'Para gestionar keywords como base de Ads (presupuesto, test, descarte).',
+  both: 'Para usar la keyword tanto para decisión editorial como para Ads.',
+};
+
+// Títulos de paso adaptados por propósito
+function getStep2Title(purpose: string): string {
+  switch (purpose) {
+    case 'ads': return 'Datos de mercado (para Ads y viabilidad)';
+    case 'editorial': return 'Datos de mercado (validación del nicho)';
+    default: return 'Datos de mercado (base común)';
+  }
+}
+
+function getStep3Title(purpose: string): string {
+  switch (purpose) {
+    case 'ads': return 'Contexto (opcional)';
+    case 'editorial': return 'Contexto editorial (recomendado)';
+    default: return 'Contexto editorial + Ads (separado del score)';
+  }
+}
 
 // ============ EDITORIAL CHECKLIST ============
 const EDITORIAL_CHECKS = [
@@ -381,7 +405,7 @@ export function NewKeywordWizard({
                 <div className="space-y-2">
                   <Label>
                     Propósito
-                    <FieldTooltip content={FIELD_TOOLTIPS.purpose} />
+                    <FieldTooltip content={PURPOSE_TOOLTIPS[step1.purpose] || FIELD_TOOLTIPS.purpose} />
                   </Label>
                   <Select
                     value={step1.purpose}
@@ -473,6 +497,7 @@ export function NewKeywordWizard({
           {/* ============ STEP 2: DATOS DE MERCADO ============ */}
           {currentStep === 2 && (
             <div className="space-y-6">
+              <h3 className="text-lg font-medium">{getStep2Title(step1.purpose)}</h3>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="searchVolume">
@@ -645,13 +670,24 @@ export function NewKeywordWizard({
           {/* ============ STEP 3: EDITORIAL (Optional) ============ */}
           {currentStep === 3 && (
             <div className="space-y-6">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-medium">{getStep3Title(step1.purpose)}</h3>
+                {step1.purpose === 'ads' && (
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => setCurrentStep(4)}
+                    className="text-xs"
+                  >
+                    Crear sin contexto →
+                  </Button>
+                )}
+              </div>
+              
               <Alert className="border-blue-500/30 bg-blue-500/10">
                 <Lightbulb className="h-4 w-4 text-blue-600 dark:text-blue-400" />
                 <AlertDescription className="text-blue-700 dark:text-blue-300">
-                  {step1.purpose === 'ads' 
-                    ? 'Esta sección es opcional para keywords de Ads.'
-                    : 'Esta sección es para decisiones editoriales y NO afecta al Market Score.'
-                  }
+                  Esto NO afecta al Market Score. Sirve para decisión editorial/estrategia.
                 </AlertDescription>
               </Alert>
               
@@ -700,8 +736,12 @@ export function NewKeywordWizard({
           {/* ============ STEP 4: RESUMEN ============ */}
           {currentStep === 4 && (
             <div className="space-y-6">
+              {/* Bloque A: Viabilidad de mercado (Market Score) - siempre visible */}
               <div className="p-4 rounded-lg border border-border bg-muted/30 space-y-4">
-                <h4 className="font-medium text-lg">Resumen de la keyword</h4>
+                <h4 className="font-medium text-lg flex items-center gap-2">
+                  <BarChart3 className="w-5 h-5 text-primary" />
+                  Viabilidad de mercado (Market Score)
+                </h4>
                 
                 {/* Basic info */}
                 <div className="grid grid-cols-2 gap-y-3 text-sm">
@@ -773,23 +813,54 @@ export function NewKeywordWizard({
                   </div>
                 </div>
                 
-                {editorialScore > 0 && (
-                  <>
-                    <div className="h-px bg-border" />
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-muted-foreground">Strategic Fit (editorial):</span>
-                      <Badge variant="outline">{editorialScore}/10</Badge>
-                    </div>
-                  </>
+                {previewScore.penalties.points < 0 && (
+                  <p className="text-xs text-amber-600 dark:text-amber-400">
+                    ⚠ {previewScore.penalties.label}
+                  </p>
                 )}
               </div>
               
-              {step3.notes && (
-                <div className="p-3 rounded-lg bg-muted/50 text-sm">
-                  <span className="text-muted-foreground">Notas: </span>
-                  <span>{step3.notes}</span>
+              {/* Bloque B: Contexto editorial (opcional) - solo si hay datos */}
+              {(editorialScore > 0 || step3.notes) ? (
+                <div className="p-4 rounded-lg border border-border bg-muted/30 space-y-4">
+                  <h4 className="font-medium text-lg flex items-center gap-2">
+                    <Lightbulb className="w-5 h-5 text-blue-500" />
+                    Contexto editorial (opcional)
+                  </h4>
+                  
+                  {editorialScore > 0 && (
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-muted-foreground">Strategic Fit:</span>
+                      <Badge variant="outline" className={cn(
+                        editorialScore >= 7 ? 'bg-green-500/20 text-green-700 dark:text-green-300' :
+                        editorialScore >= 4 ? 'bg-yellow-500/20 text-yellow-700 dark:text-yellow-300' :
+                        'bg-muted text-muted-foreground'
+                      )}>
+                        {editorialScore}/10
+                      </Badge>
+                    </div>
+                  )}
+                  
+                  {editorialScore > 0 && (
+                    <div className="text-xs text-muted-foreground">
+                      <span className="font-medium">Checks marcados:</span>{' '}
+                      {EDITORIAL_CHECKS.filter(c => editorialChecks[c.id]).map(c => c.label).join(', ') || 'Ninguno'}
+                    </div>
+                  )}
+                  
+                  {step3.notes && (
+                    <div className="text-sm">
+                      <span className="text-muted-foreground">Notas: </span>
+                      <span>{step3.notes}</span>
+                    </div>
+                  )}
                 </div>
-              )}
+              ) : step1.purpose === 'ads' ? (
+                <div className="p-3 rounded-lg bg-muted/50 text-sm text-muted-foreground flex items-center gap-2">
+                  <Check className="w-4 h-4 text-green-500" />
+                  Contexto editorial no completado (correcto para Ads).
+                </div>
+              ) : null}
             </div>
           )}
         </div>
@@ -810,13 +881,22 @@ export function NewKeywordWizard({
             </Button>
             
             {currentStep < 4 ? (
-              <Button 
-                onClick={handleNext} 
-                disabled={currentStep === 1 && !canProceedStep1}
-              >
-                {currentStep === 3 && step1.purpose === 'ads' ? 'Saltar' : 'Siguiente'}
-                <ArrowRight className="w-4 h-4 ml-2" />
-              </Button>
+              <div className="flex flex-col items-end gap-1">
+                <Button 
+                  onClick={handleNext} 
+                  disabled={currentStep === 1 && !canProceedStep1}
+                >
+                  {currentStep === 3 && step1.purpose === 'ads' && editorialScore === 0 
+                    ? 'Saltar' 
+                    : 'Siguiente'}
+                  <ArrowRight className="w-4 h-4 ml-2" />
+                </Button>
+                {currentStep === 2 && step1.purpose === 'ads' && (
+                  <span className="text-xs text-muted-foreground">
+                    El paso "Contexto" es opcional para Ads.
+                  </span>
+                )}
+              </div>
             ) : (
               <Button 
                 onClick={handleComplete} 
