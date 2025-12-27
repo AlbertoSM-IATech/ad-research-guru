@@ -44,6 +44,7 @@ interface HeaderOverflowMenuProps {
   onExportBackup: () => void;
   onImportBackup: () => void;
   onRegenerateDemo: () => void;
+  onOpenMarketConfig: () => void;
 }
 
 export const HeaderOverflowMenu = ({
@@ -57,6 +58,7 @@ export const HeaderOverflowMenu = ({
   onExportBackup,
   onImportBackup,
   onRegenerateDemo,
+  onOpenMarketConfig,
 }: HeaderOverflowMenuProps) => {
   const [showResetDialog, setShowResetDialog] = useState(false);
 
@@ -112,9 +114,9 @@ export const HeaderOverflowMenu = ({
           
           {/* Sección: Sistema */}
           <DropdownMenuLabel className="text-xs text-muted-foreground">Sistema</DropdownMenuLabel>
-          <DropdownMenuItem className="gap-2 cursor-pointer">
+          <DropdownMenuItem onClick={onOpenMarketConfig} className="gap-2 cursor-pointer">
             <Settings className="h-4 w-4" />
-            Ajustes del módulo
+            Criterios por mercado
           </DropdownMenuItem>
           <DropdownMenuItem onClick={onExportBackup} className="gap-2 cursor-pointer">
             <HardDriveDownload className="h-4 w-4" />

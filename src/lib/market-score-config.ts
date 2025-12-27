@@ -1,5 +1,12 @@
 // Market Score V2 Config - Marketplace-specific scoring configuration
 
+export interface IdealTargets {
+  searchVolume: number;
+  competitors: number;
+  price: number;
+  royalties: number;
+}
+
 export interface MarketScoreThresholds {
   volume: {
     veryLow: number;  // Below this = 0 points
@@ -8,10 +15,10 @@ export interface MarketScoreThresholds {
     // Above = 30 points
   };
   competitors: {
-    low: number;      // Below this = 25 points
-    medium: number;   // Below this = 18 points
-    high: number;     // Below this = 8 points
-    // Above = 0 points
+    low: number;      // Below this = 25 points (excellent)
+    medium: number;   // Below this = 18 points (good)
+    high: number;     // Below this = 8 points (moderate)
+    // Above = 0 points (saturated)
   };
   price: {
     low: number;      // Below this = 0 points
@@ -35,46 +42,87 @@ export interface MarketScoreThresholds {
 export interface MarketScoreConfig {
   id: string;
   label: string;
+  ideal: IdealTargets;
   thresholds: MarketScoreThresholds;
+}
+
+// Default ideal targets
+const DEFAULT_IDEAL: IdealTargets = {
+  searchVolume: 600,
+  competitors: 3000,
+  price: 12,
+  royalties: 4,
+};
+
+// US ideal targets
+const US_IDEAL: IdealTargets = {
+  searchVolume: 800,
+  competitors: 4000,
+  price: 14.99,
+  royalties: 5,
+};
+
+// ES ideal targets (smaller market)
+const ES_IDEAL: IdealTargets = {
+  searchVolume: 300,
+  competitors: 2000,
+  price: 9.99,
+  royalties: 3,
+};
+
+// Generate thresholds dynamically from ideal targets
+function generateThresholdsFromIdeal(ideal: IdealTargets): MarketScoreThresholds {
+  return {
+    volume: {
+      veryLow: Math.round(ideal.searchVolume * 0.1),
+      low: Math.round(ideal.searchVolume * 0.25),
+      medium: Math.round(ideal.searchVolume * 0.6),
+    },
+    competitors: {
+      low: Math.round(ideal.competitors * 0.5),    // Excellent: < 50% of ideal
+      medium: Math.round(ideal.competitors * 1.0), // Good: < 100% of ideal
+      high: Math.round(ideal.competitors * 2.0),   // Moderate: < 200% of ideal
+    },
+    price: {
+      low: 7.99,
+      medium: Math.max(9.99, ideal.price * 0.7),
+      high: ideal.price * 0.9,
+    },
+    royalties: {
+      low: ideal.royalties * 0.4,
+      medium: ideal.royalties * 0.7,
+      high: ideal.royalties * 0.9,
+    },
+    penalties: {
+      brandRiskHigh: 8,
+      brandRiskMedium: 4,
+      nonAmazonTraffic: 5,
+    },
+  };
 }
 
 // Default configuration (used as fallback)
 const DEFAULT_CONFIG: MarketScoreConfig = {
   id: 'default',
   label: 'Default',
-  thresholds: {
-    volume: { veryLow: 50, low: 100, medium: 600 },
-    competitors: { low: 1000, medium: 4000, high: 10000 },
-    price: { low: 9.99, medium: 15, high: 20 },
-    royalties: { low: 2, medium: 4, high: 7 },
-    penalties: { brandRiskHigh: 6, brandRiskMedium: 3, nonAmazonTraffic: 4 },
-  },
+  ideal: DEFAULT_IDEAL,
+  thresholds: generateThresholdsFromIdeal(DEFAULT_IDEAL),
 };
 
 // US Configuration - Higher volume thresholds, more competitive
 const US_CONFIG: MarketScoreConfig = {
   id: 'us',
   label: 'Estados Unidos',
-  thresholds: {
-    volume: { veryLow: 100, low: 250, medium: 1000 },
-    competitors: { low: 2000, medium: 8000, high: 20000 },
-    price: { low: 9.99, medium: 14.99, high: 19.99 },
-    royalties: { low: 2.5, medium: 5, high: 8 },
-    penalties: { brandRiskHigh: 8, brandRiskMedium: 4, nonAmazonTraffic: 5 },
-  },
+  ideal: US_IDEAL,
+  thresholds: generateThresholdsFromIdeal(US_IDEAL),
 };
 
 // ES Configuration - Lower volume thresholds (smaller market)
 const ES_CONFIG: MarketScoreConfig = {
   id: 'es',
   label: 'España',
-  thresholds: {
-    volume: { veryLow: 30, low: 80, medium: 400 },
-    competitors: { low: 500, medium: 2000, high: 5000 },
-    price: { low: 7.99, medium: 12, high: 16 },
-    royalties: { low: 1.5, medium: 3, high: 5 },
-    penalties: { brandRiskHigh: 5, brandRiskMedium: 2, nonAmazonTraffic: 3 },
-  },
+  ideal: ES_IDEAL,
+  thresholds: generateThresholdsFromIdeal(ES_IDEAL),
 };
 
 // Config registry
@@ -84,13 +132,77 @@ export const MARKET_SCORE_CONFIG_BY_MARKETPLACE: Record<string, MarketScoreConfi
   es: ES_CONFIG,
 };
 
+// LocalStorage key for user overrides
+const USER_CONFIG_STORAGE_KEY = 'ad-research:market-score-config:v1';
+
+// User overrides type
+export type UserMarketScoreOverrides = Record<string, Partial<IdealTargets>>;
+
+/**
+ * Load user overrides from localStorage
+ */
+export function loadUserConfigOverrides(): UserMarketScoreOverrides {
+  if (typeof window === 'undefined') return {};
+  try {
+    const stored = localStorage.getItem(USER_CONFIG_STORAGE_KEY);
+    if (!stored) return {};
+    return JSON.parse(stored) as UserMarketScoreOverrides;
+  } catch {
+    return {};
+  }
+}
+
+/**
+ * Save user overrides to localStorage
+ */
+export function saveUserConfigOverrides(overrides: UserMarketScoreOverrides): void {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(USER_CONFIG_STORAGE_KEY, JSON.stringify(overrides));
+  } catch (e) {
+    console.warn('[MarketScoreConfig] Failed to save user overrides:', e);
+  }
+}
+
 /**
  * Get the market score configuration for a marketplace
- * Falls back to default if marketplace not configured
+ * Merges base config with user overrides if present
  */
 export function getMarketScoreConfig(marketplaceId?: string): MarketScoreConfig {
-  if (!marketplaceId) return DEFAULT_CONFIG;
-  return MARKET_SCORE_CONFIG_BY_MARKETPLACE[marketplaceId] || DEFAULT_CONFIG;
+  const baseConfig = marketplaceId 
+    ? (MARKET_SCORE_CONFIG_BY_MARKETPLACE[marketplaceId] || DEFAULT_CONFIG)
+    : DEFAULT_CONFIG;
+  
+  // Load user overrides
+  const userOverrides = loadUserConfigOverrides();
+  const userIdeal = userOverrides[marketplaceId || 'default'];
+  
+  if (!userIdeal) {
+    return baseConfig;
+  }
+  
+  // Merge user ideal with base ideal
+  const mergedIdeal: IdealTargets = {
+    searchVolume: userIdeal.searchVolume ?? baseConfig.ideal.searchVolume,
+    competitors: userIdeal.competitors ?? baseConfig.ideal.competitors,
+    price: userIdeal.price ?? baseConfig.ideal.price,
+    royalties: userIdeal.royalties ?? baseConfig.ideal.royalties,
+  };
+  
+  return {
+    ...baseConfig,
+    ideal: mergedIdeal,
+    thresholds: generateThresholdsFromIdeal(mergedIdeal),
+  };
+}
+
+/**
+ * Get the default (non-overridden) config for a marketplace
+ */
+export function getDefaultMarketScoreConfig(marketplaceId?: string): MarketScoreConfig {
+  return marketplaceId 
+    ? (MARKET_SCORE_CONFIG_BY_MARKETPLACE[marketplaceId] || DEFAULT_CONFIG)
+    : DEFAULT_CONFIG;
 }
 
 /**
