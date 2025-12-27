@@ -10,7 +10,8 @@ import {
   FlaskConical,
   Trash2,
   HardDriveDownload,
-  HardDriveUpload
+  HardDriveUpload,
+  RefreshCw
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -42,6 +43,7 @@ interface HeaderOverflowMenuProps {
   onResetData: () => void;
   onExportBackup: () => void;
   onImportBackup: () => void;
+  onRegenerateDemo: () => void;
 }
 
 export const HeaderOverflowMenu = ({
@@ -54,6 +56,7 @@ export const HeaderOverflowMenu = ({
   onResetData,
   onExportBackup,
   onImportBackup,
+  onRegenerateDemo,
 }: HeaderOverflowMenuProps) => {
   const [showResetDialog, setShowResetDialog] = useState(false);
 
@@ -133,6 +136,10 @@ export const HeaderOverflowMenu = ({
           
           {/* Sección: Experimental */}
           <DropdownMenuLabel className="text-xs text-muted-foreground">Experimental</DropdownMenuLabel>
+          <DropdownMenuItem onClick={onRegenerateDemo} className="gap-2 cursor-pointer">
+            <RefreshCw className="h-4 w-4" />
+            Regenerar datos demo
+          </DropdownMenuItem>
           <DropdownMenuItem onClick={onToggleDemo} className="gap-2 cursor-pointer">
             <FlaskConical className="h-4 w-4" />
             {isDemoMode ? 'Desactivar modo demo' : 'Activar modo demo'}
