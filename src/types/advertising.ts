@@ -79,6 +79,7 @@ export interface Keyword {
   
   // ============ STATUS & PURPOSE ============
   status: KeywordStatus; // pending | valid | discarded
+  statusManuallySet?: boolean; // If true, status was manually set and won't auto-update
   purpose: KeywordPurpose; // editorial | ads | both
   
   // ============ LEGACY FIELDS (for backward compatibility) ============

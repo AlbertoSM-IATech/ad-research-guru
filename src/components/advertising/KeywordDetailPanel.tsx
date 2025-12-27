@@ -27,8 +27,9 @@ import {
 } from '@/components/ui/tooltip';
 import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
-import { Info, Save, RotateCcw } from 'lucide-react';
+import { Info, Save, RotateCcw, Sparkles } from 'lucide-react';
 import type { Keyword } from '@/types/advertising';
+import { getAutoStatusFromScore } from '@/lib/keyword-builder';
 import {
   type MarketData,
   type EditorialData,
@@ -75,6 +76,7 @@ export const KeywordDetailPanel = ({
   
   // Status
   const [status, setStatus] = useState<KeywordStatus>('pending');
+  const [statusManuallySet, setStatusManuallySet] = useState(false);
   const [notes, setNotes] = useState('');
 
   // Load keyword data when opening
@@ -99,6 +101,7 @@ export const KeywordDetailPanel = ({
       
       // Status & notes
       setStatus(keyword.status || 'pending');
+      setStatusManuallySet(keyword.statusManuallySet || false);
       setNotes(keyword.notes || '');
     }
   }, [keyword, isOpen]);
@@ -124,9 +127,15 @@ export const KeywordDetailPanel = ({
 
   const editorialScore = useMemo(() => calculateEditorialScore(editorialData), [editorialData]);
 
+  // Auto-update status based on score if not manually set
+  const autoStatus = useMemo(() => getAutoStatusFromScore(scoreBreakdown.total), [scoreBreakdown.total]);
+
   // Save handler
   const handleSave = () => {
     if (!keyword) return;
+    
+    // Determine final status: if manually set, keep it; otherwise use auto
+    const finalStatus = statusManuallySet ? status : autoStatus;
     
     const updates: Partial<Keyword> = {
       searchVolume,
@@ -137,12 +146,25 @@ export const KeywordDetailPanel = ({
       marketData,
       editorialData,
       editorialScore,
-      status,
+      status: finalStatus,
+      statusManuallySet,
       notes,
     };
     
     onSave(keyword.id, updates);
     onClose();
+  };
+
+  // Handle manual status change
+  const handleStatusChange = (newStatus: KeywordStatus) => {
+    setStatus(newStatus);
+    setStatusManuallySet(true);
+  };
+
+  // Reset status to auto mode
+  const handleResetToAutoStatus = () => {
+    setStatusManuallySet(false);
+    setStatus(autoStatus);
   };
 
   // Reset handler
@@ -164,6 +186,7 @@ export const KeywordDetailPanel = ({
     setEditorialNotes(ed.notes);
     
     setStatus(keyword.status || 'pending');
+    setStatusManuallySet(keyword.statusManuallySet || false);
     setNotes(keyword.notes || '');
   };
 
@@ -455,8 +478,16 @@ export const KeywordDetailPanel = ({
             </h3>
 
             <div className="space-y-2">
-              <Label>Estado</Label>
-              <Select value={status} onValueChange={(v) => setStatus(v as KeywordStatus)}>
+              <div className="flex items-center justify-between">
+                <Label>Estado</Label>
+                {statusManuallySet && (
+                  <Button variant="ghost" size="sm" onClick={handleResetToAutoStatus} className="h-6 text-xs gap-1">
+                    <Sparkles className="w-3 h-3" />
+                    Auto ({autoStatus === 'valid' ? 'Válida' : autoStatus === 'pending' ? 'Pendiente' : 'Descartada'})
+                  </Button>
+                )}
+              </div>
+              <Select value={status} onValueChange={handleStatusChange}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
@@ -468,6 +499,11 @@ export const KeywordDetailPanel = ({
                   ))}
                 </SelectContent>
               </Select>
+              {!statusManuallySet && (
+                <p className="text-xs text-muted-foreground">
+                  Estado automático según Market Score
+                </p>
+              )}
             </div>
 
             <div className="space-y-2">

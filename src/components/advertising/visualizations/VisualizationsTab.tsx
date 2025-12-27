@@ -63,6 +63,7 @@ import { WordCloud } from './WordCloud';
 import { CampaignTypeDistribution } from './CampaignTypeDistribution';
 import { TemporalEvolution } from './TemporalEvolution';
 import { ASINComparison } from './ASINComparison';
+import { MarketScoreHistogram } from './MarketScoreHistogram';
 
 import type { Keyword, TargetASIN, AdvertisingCategory } from '@/types/advertising';
 
@@ -164,6 +165,15 @@ const DEFAULT_CHARTS: ChartConfig[] = [
     description: 'Métricas por ASIN objetivo',
     tooltip: 'Compara tus ASIN objetivo según tipos de campaña asignados y datos asociados.',
     icon: <Package className="w-5 h-5" />,
+    visible: true,
+    size: 'normal',
+  },
+  {
+    id: 'market-score-histogram',
+    title: 'Distribución Market Score',
+    description: 'Histograma de scores 0-100',
+    tooltip: 'Muestra cuántas keywords hay en cada rango de Market Score. Verde (≥70), Amarillo (40-69), Rojo (<40).',
+    icon: <BarChart3 className="w-5 h-5" />,
     visible: true,
     size: 'normal',
   },
@@ -288,6 +298,8 @@ export const VisualizationsTab = ({
         return <TemporalEvolution keywords={keywords} />;
       case 'asin-comparison':
         return <ASINComparison asins={asins} keywords={keywords} />;
+      case 'market-score-histogram':
+        return <MarketScoreHistogram keywords={keywords} />;
       default:
         return null;
     }

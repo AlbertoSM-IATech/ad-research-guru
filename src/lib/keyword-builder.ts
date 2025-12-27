@@ -48,6 +48,18 @@ export interface WizardPayload {
 }
 
 /**
+ * Get automatic status based on market score
+ * - score >= 70 → 'valid'
+ * - score 40-69 → 'pending'
+ * - score < 40 → 'discarded'
+ */
+export function getAutoStatusFromScore(marketScore: number): KeywordStatus {
+  if (marketScore >= 70) return 'valid';
+  if (marketScore >= 40) return 'pending';
+  return 'discarded';
+}
+
+/**
  * Check if market data is complete enough for a valid keyword
  */
 export function isMarketDataComplete(data: WizardStep2Data): boolean {
@@ -102,10 +114,9 @@ export function buildNewKeywordFromWizard(payload: WizardPayload): Omit<Keyword,
     editorialScore = calculateEditorialScore(editorialData);
   }
   
-  // Determine status based on completeness
-  const isComplete = isMarketDataComplete(step2);
-  const status: KeywordStatus = isComplete ? 'valid' : 'pending';
-  const state: KeywordState = isComplete ? 'pending' : 'pending';
+  // Determine status based on market score
+  const status = getAutoStatusFromScore(marketScore);
+  const state: KeywordState = isMarketDataComplete(step2) ? 'pending' : 'pending';
   
   // Calculate relevance from score or bookInfo
   const relevance = bookInfo 
