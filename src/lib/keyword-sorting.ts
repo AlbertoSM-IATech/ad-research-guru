@@ -5,6 +5,7 @@ import { calculateMarketScore, getDefaultMarketData } from './market-score';
 export type SortField = 
   | 'keyword' 
   | 'searchVolume' 
+  | 'competitors'
   | 'competitionLevel' 
   | 'relevance' 
   | 'state' 
@@ -24,8 +25,10 @@ export const SORT_OPTIONS: SortOption[] = [
   { field: 'keyword', order: 'desc', label: 'Keyword (Z-A)' },
   { field: 'searchVolume', order: 'desc', label: 'Volumen (mayor primero)' },
   { field: 'searchVolume', order: 'asc', label: 'Volumen (menor primero)' },
-  { field: 'competitionLevel', order: 'asc', label: 'Competencia (menor primero)' },
-  { field: 'competitionLevel', order: 'desc', label: 'Competencia (mayor primero)' },
+  { field: 'competitors', order: 'asc', label: 'Competidores (menor primero)' },
+  { field: 'competitors', order: 'desc', label: 'Competidores (mayor primero)' },
+  { field: 'competitionLevel', order: 'asc', label: 'Nivel competencia (menor primero)' },
+  { field: 'competitionLevel', order: 'desc', label: 'Nivel competencia (mayor primero)' },
   { field: 'state', order: 'asc', label: 'Estado' },
 ];
 
@@ -78,6 +81,10 @@ export function sortKeywords(
         
       case 'searchVolume':
         comparison = (a.searchVolume || 0) - (b.searchVolume || 0);
+        break;
+        
+      case 'competitors':
+        comparison = (a.competitors || 0) - (b.competitors || 0);
         break;
         
       case 'competitionLevel': {
