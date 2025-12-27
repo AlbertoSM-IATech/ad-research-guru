@@ -315,11 +315,14 @@ export const KeywordsSection = ({
       const newRoyalties = updates.royalties ?? keyword.royalties;
       const marketData = keyword.marketData ?? getDefaultMarketData();
       
-      // Merge market structure
+      // Merge market structure (6 checks)
       const newMarketStructure = {
-        hasProfitableBooks: updates.marketStructure?.hasProfitableBooks ?? keyword.marketStructure?.hasProfitableBooks ?? false,
-        hasBooksOver200Reviews: updates.marketStructure?.hasBooksOver200Reviews ?? keyword.marketStructure?.hasBooksOver200Reviews ?? false,
-        hasBooksUnder100Reviews: updates.marketStructure?.hasBooksUnder100Reviews ?? keyword.marketStructure?.hasBooksUnder100Reviews ?? false,
+        understandable: updates.marketStructure?.understandable ?? keyword.marketStructure?.understandable ?? false,
+        amazonSuggested: updates.marketStructure?.amazonSuggested ?? keyword.marketStructure?.amazonSuggested ?? false,
+        profitableBooks: updates.marketStructure?.profitableBooks ?? keyword.marketStructure?.profitableBooks ?? false,
+        indieAuthors: updates.marketStructure?.indieAuthors ?? keyword.marketStructure?.indieAuthors ?? false,
+        intentMatch: updates.marketStructure?.intentMatch ?? keyword.marketStructure?.intentMatch ?? false,
+        variants: updates.marketStructure?.variants ?? keyword.marketStructure?.variants ?? false,
       };
       
       const newMarketScore = calculateMarketScore({
@@ -613,37 +616,37 @@ export const KeywordsSection = ({
                   <TableHead className="cursor-pointer hover:text-foreground w-[100px]" onClick={() => handleSort('state')}>
                     <div className="flex items-center gap-1">Estado <ArrowUpDown className="w-3 h-3" /></div>
                   </TableHead>
-                  <TableHead className="w-[60px] text-center">
+                  <TableHead className="w-[50px] text-center">
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <div className="flex flex-col items-center gap-0.5 cursor-help">
-                          <span>📚</span>
-                          <span className="text-[10px] leading-tight text-muted-foreground">Rent.</span>
+                          <span className="text-[10px]">✓</span>
+                          <span className="text-[9px] leading-tight text-muted-foreground">Clara</span>
                         </div>
                       </TooltipTrigger>
-                      <TooltipContent>Libros rentables (≥3) - Click para editar</TooltipContent>
+                      <TooltipContent>Keyword se entiende por sí sola (+2)</TooltipContent>
                     </Tooltip>
                   </TableHead>
-                  <TableHead className="w-[60px] text-center">
+                  <TableHead className="w-[50px] text-center">
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <div className="flex flex-col items-center gap-0.5 cursor-help">
-                          <span>⭐</span>
-                          <span className="text-[10px] leading-tight text-muted-foreground">+200</span>
+                          <span className="text-[10px]">📚</span>
+                          <span className="text-[9px] leading-tight text-muted-foreground">Libros</span>
                         </div>
                       </TooltipTrigger>
-                      <TooltipContent>Libros +200 reviews - Click para editar</TooltipContent>
+                      <TooltipContent>≥3 libros vendiendo (+2)</TooltipContent>
                     </Tooltip>
                   </TableHead>
-                  <TableHead className="w-[60px] text-center">
+                  <TableHead className="w-[50px] text-center">
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <div className="flex flex-col items-center gap-0.5 cursor-help">
-                          <span>🌱</span>
-                          <span className="text-[10px] leading-tight text-muted-foreground">-100</span>
+                          <span className="text-[10px]">🎯</span>
+                          <span className="text-[9px] leading-tight text-muted-foreground">Intent</span>
                         </div>
                       </TooltipTrigger>
-                      <TooltipContent>Libros -100 reviews - Click para editar</TooltipContent>
+                      <TooltipContent>Top refleja intención (+2)</TooltipContent>
                     </Tooltip>
                   </TableHead>
                   <TableHead className="w-[150px]">
@@ -724,33 +727,33 @@ export const KeywordsSection = ({
                         </TableCell>
                         <TableCell className="text-center" onClick={(e) => e.stopPropagation()}>
                           <Checkbox
-                            checked={keyword.marketStructure?.hasProfitableBooks ?? false}
+                            checked={keyword.marketStructure?.understandable ?? false}
                             onCheckedChange={(checked) => handleUpdateWithHistory(keyword.id, {
                               marketStructure: {
                                 ...keyword.marketStructure,
-                                hasProfitableBooks: checked === true,
+                                understandable: checked === true,
                               }
                             })}
                           />
                         </TableCell>
                         <TableCell className="text-center" onClick={(e) => e.stopPropagation()}>
                           <Checkbox
-                            checked={keyword.marketStructure?.hasBooksOver200Reviews ?? false}
+                            checked={keyword.marketStructure?.profitableBooks ?? false}
                             onCheckedChange={(checked) => handleUpdateWithHistory(keyword.id, {
                               marketStructure: {
                                 ...keyword.marketStructure,
-                                hasBooksOver200Reviews: checked === true,
+                                profitableBooks: checked === true,
                               }
                             })}
                           />
                         </TableCell>
                         <TableCell className="text-center" onClick={(e) => e.stopPropagation()}>
                           <Checkbox
-                            checked={keyword.marketStructure?.hasBooksUnder100Reviews ?? false}
+                            checked={keyword.marketStructure?.intentMatch ?? false}
                             onCheckedChange={(checked) => handleUpdateWithHistory(keyword.id, {
                               marketStructure: {
                                 ...keyword.marketStructure,
-                                hasBooksUnder100Reviews: checked === true,
+                                intentMatch: checked === true,
                               }
                             })}
                           />

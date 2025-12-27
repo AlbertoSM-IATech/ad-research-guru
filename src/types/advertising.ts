@@ -58,11 +58,18 @@ import type {
   KeywordPurpose 
 } from '@/lib/market-score';
 
-// Market Structure data for scoring (15 pts block)
+// Market Structure data for scoring (12 pts block - 6 checks x 2pts)
 export interface MarketStructure {
-  hasProfitableBooks?: boolean;    // ≥3 libros rentables → +6 pts
-  hasBooksOver200Reviews?: boolean; // ≥1 libro con +200 reviews → +5 pts
-  hasBooksUnder100Reviews?: boolean; // ≥1 libro con -100 reviews → +4 pts
+  understandable?: boolean;       // La keyword se entiende por sí sola (+2)
+  amazonSuggested?: boolean;      // Aparece como sugerencia en Amazon (+2)
+  profitableBooks?: boolean;      // Veo al menos 3 libros vendiendo bien (+2)
+  indieAuthors?: boolean;         // Hay autores independientes vendiendo (+2)
+  intentMatch?: boolean;          // El top refleja la intención real (+2)
+  variants?: boolean;             // Hay variantes cercanas con potencial (+2)
+  // Legacy fields (kept for backward compatibility)
+  hasProfitableBooks?: boolean;
+  hasBooksOver200Reviews?: boolean;
+  hasBooksUnder100Reviews?: boolean;
 }
 
 export interface Keyword {
