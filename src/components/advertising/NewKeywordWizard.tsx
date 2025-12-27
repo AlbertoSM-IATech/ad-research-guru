@@ -63,7 +63,7 @@ import {
   findDuplicateKeyword,
   isMarketDataComplete,
 } from '@/lib/keyword-builder';
-import { getMarketScoreConfig } from '@/lib/market-score-config';
+import { getMarketScoreConfig, loadUserConfigOverrides, MARKET_SCORE_CONFIG_BY_MARKETPLACE } from '@/lib/market-score-config';
 import { cn } from '@/lib/utils';
 
 // ============ TOOLTIPS ============
@@ -104,16 +104,12 @@ function getStep3Title(purpose: string): string {
 }
 
 // ============ EDITORIAL CHECKLIST ============
+// ONLY editorial checks that do NOT affect Market Score
+// The 6 market structure checks are in Step 2, not here
 const EDITORIAL_CHECKS = [
-  { id: 'keywordClear', label: 'La keyword se entiende por sí sola' },
-  { id: 'amazonSuggestion', label: 'Aparece como sugerencia en Amazon' },
-  { id: 'booksSellingWell', label: 'Veo al menos 3 libros vendiendo bien' },
-  { id: 'indieAuthors', label: 'Hay autores independientes vendiendo' },
-  { id: 'topReflectsIntent', label: 'El top refleja realmente la intención de esta keyword' },
   { id: 'canProduce', label: 'Puedo producir este tipo de libro' },
   { id: 'canDoBetter', label: 'Puedo hacerlo mejor o más útil' },
   { id: 'canDifferentiate', label: 'Puedo diferenciarlo claramente' },
-  { id: 'hasVariants', label: 'Hay variantes cercanas con potencial' },
   { id: 'hasInterest', label: 'Tengo interés en el tema (opcional)' },
 ];
 
@@ -259,13 +255,26 @@ export function NewKeywordWizard({
   // Get current market config for BONUS UX subtitle
   const marketConfig = useMemo(() => getMarketScoreConfig(marketplaceId), [marketplaceId]);
   
+  // Check if marketplace has user config or base config
+  const marketplaceConfigStatus = useMemo(() => {
+    const userOverrides = loadUserConfigOverrides();
+    const hasUserConfig = !!userOverrides[marketplaceId];
+    const hasBaseConfig = !!MARKET_SCORE_CONFIG_BY_MARKETPLACE[marketplaceId];
+    return {
+      isConfigured: hasUserConfig,
+      hasBaseConfig,
+      needsConfig: !hasUserConfig && !hasBaseConfig,
+      usingDefaults: !hasUserConfig,
+    };
+  }, [marketplaceId]);
+  
   const scoreInfo = getMarketScoreInfo(previewScore.total);
   const isDataComplete = isMarketDataComplete(step2);
   const canProceedStep1 = step1.keyword.trim().length > 0 && !hasDuplicate;
   
   const selectedMarketplace = MARKETPLACES.find(m => m.id === marketplaceId);
   
-  // Count editorial checks
+  // Count editorial checks (now 4 checks)
   const editorialScore = Object.values(editorialChecks).filter(Boolean).length;
   
   // ============ NAVIGATION ============
@@ -503,6 +512,26 @@ export function NewKeywordWizard({
                   </div>
                 </div>
               </div>
+              
+              {/* Warning banner if marketplace not configured */}
+              {marketplaceConfigStatus.usingDefaults && (
+                <Alert className="border-amber-500/50 bg-amber-500/10">
+                  <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                  <AlertDescription className="text-amber-700 dark:text-amber-300 text-sm">
+                    <strong>⚠️ Antes de validar keywords en este mercado</strong>, define tus <strong>VALORES IDEALES</strong> en Configuración. 
+                    Sin eso, el scoring no estará adaptado a tu mercado y los resultados serán poco fiables.
+                    {marketplaceConfigStatus.hasBaseConfig ? (
+                      <span className="block text-xs mt-1 text-amber-600 dark:text-amber-400">
+                        Actualmente usando defaults base para {selectedMarketplace?.name}.
+                      </span>
+                    ) : (
+                      <span className="block text-xs mt-1 text-amber-600 dark:text-amber-400">
+                        Este mercado no tiene configuración base. Usando valores de España como referencia.
+                      </span>
+                    )}
+                  </AlertDescription>
+                </Alert>
+              )}
             </div>
           )}
           
@@ -517,6 +546,21 @@ export function NewKeywordWizard({
                 precio {marketConfig.idealPrice}$, 
                 regalías {marketConfig.idealRoyalties}$
               </p>
+              
+              {/* Warning banner if marketplace not configured - Step 2 */}
+              {marketplaceConfigStatus.usingDefaults && (
+                <Alert className="border-amber-500/50 bg-amber-500/10">
+                  <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                  <AlertDescription className="text-amber-700 dark:text-amber-300 text-sm">
+                    <strong>⚠️ Configura primero tus valores ideales</strong> para obtener un scoring adaptado a este mercado.
+                    {!marketplaceConfigStatus.isConfigured && (
+                      <span className="block text-xs mt-1 text-amber-600 dark:text-amber-400">
+                        Los valores mostrados arriba son valores por defecto. El Market Score no estará personalizado hasta que configures el mercado.
+                      </span>
+                    )}
+                  </AlertDescription>
+                </Alert>
+              )}
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="searchVolume">
@@ -825,15 +869,15 @@ export function NewKeywordWizard({
               </div>
               
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <span>Strategic Fit:</span>
+                <span>Editorial Fit:</span>
                 <Badge variant="outline" className={cn(
-                  editorialScore >= 7 ? 'bg-green-500/20 text-green-700 dark:text-green-300' :
-                  editorialScore >= 4 ? 'bg-yellow-500/20 text-yellow-700 dark:text-yellow-300' :
+                  editorialScore >= 3 ? 'bg-green-500/20 text-green-700 dark:text-green-300' :
+                  editorialScore >= 2 ? 'bg-yellow-500/20 text-yellow-700 dark:text-yellow-300' :
                   'bg-muted text-muted-foreground'
                 )}>
-                  {editorialScore}/10
+                  {editorialScore}/4
                 </Badge>
-                <span className="text-xs">(solo orientativo)</span>
+                <span className="text-xs">(solo orientativo, no afecta al Market Score)</span>
               </div>
               
               <div className="space-y-2">
