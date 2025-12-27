@@ -62,7 +62,6 @@ import {
   getDefaultStep3Data,
   findDuplicateKeyword,
   isMarketDataComplete,
-  getAutoStatusFromScore,
 } from '@/lib/keyword-builder';
 import { cn } from '@/lib/utils';
 
@@ -191,7 +190,6 @@ export function NewKeywordWizard({
   const [step3, setStep3] = useState<WizardStep3Data>(getDefaultStep3Data());
   const [editorialChecks, setEditorialChecks] = useState<Record<string, boolean>>({});
   const [status, setStatus] = useState<KeywordStatus>('pending');
-  const [statusManuallySet, setStatusManuallySet] = useState(false);
   
   // ============ RESET FUNCTION ============
   const resetWizard = useCallback(() => {
@@ -201,7 +199,6 @@ export function NewKeywordWizard({
     setStep3(getDefaultStep3Data());
     setEditorialChecks({});
     setStatus('pending');
-    setStatusManuallySet(false);
   }, [marketplaceId]);
   
   // Reset when dialog opens with new initial keyword
@@ -213,7 +210,6 @@ export function NewKeywordWizard({
       setStep3(getDefaultStep3Data());
       setEditorialChecks({});
       setStatus('pending');
-      setStatusManuallySet(false);
     }
   }, [open, initialKeyword, marketplaceId]);
   
@@ -296,16 +292,10 @@ export function NewKeywordWizard({
     
     // Generate ID and build complete keyword with timestamps
     const now = new Date();
-    
-    // Determine final status: if manually set use user's choice, else use auto from score
-    const autoStatus = getAutoStatusFromScore(previewScore.total);
-    const finalStatus = statusManuallySet ? status : autoStatus;
-    
     const completeKeyword: Keyword = {
       ...keywordData,
       id: generateKeywordId(),
-      status: finalStatus,
-      statusManuallySet,
+      status: status,
       createdAt: now,
       updatedAt: now,
     };
@@ -438,21 +428,13 @@ export function NewKeywordWizard({
                 </div>
                 
                 <div className="space-y-2">
-                  <Label className="flex items-center gap-2">
+                  <Label>
                     Estado
                     <FieldTooltip content={FIELD_TOOLTIPS.status} />
-                    {!statusManuallySet && (
-                      <Badge variant="outline" className="text-xs font-normal text-muted-foreground">
-                        Auto
-                      </Badge>
-                    )}
                   </Label>
                   <Select
-                    value={statusManuallySet ? status : getAutoStatusFromScore(previewScore.total)}
-                    onValueChange={(value) => {
-                      setStatus(value as KeywordStatus);
-                      setStatusManuallySet(true);
-                    }}
+                    value={status}
+                    onValueChange={(value) => setStatus(value as KeywordStatus)}
                   >
                     <SelectTrigger>
                       <SelectValue />
@@ -467,20 +449,6 @@ export function NewKeywordWizard({
                       ))}
                     </SelectContent>
                   </Select>
-                  {statusManuallySet && (
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => {
-                        setStatusManuallySet(false);
-                        setStatus(getAutoStatusFromScore(previewScore.total));
-                      }}
-                      className="text-xs text-muted-foreground h-auto p-1"
-                    >
-                      ↻ Restaurar auto
-                    </Button>
-                  )}
                 </div>
               </div>
               
