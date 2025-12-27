@@ -305,14 +305,22 @@ export const KeywordsSection = ({
     let finalUpdates = { ...updates };
     const marketDataFields = ['searchVolume', 'competitors', 'price', 'royalties'];
     const isMarketDataUpdate = marketDataFields.some(f => updates[f as keyof typeof updates] !== undefined);
+    const isMarketStructureUpdate = updates.marketStructure !== undefined;
     
-    if (isMarketDataUpdate && !keyword.statusManuallySet) {
+    if ((isMarketDataUpdate || isMarketStructureUpdate) && !keyword.statusManuallySet) {
       // Recalculate market score with new data
       const newSearchVolume = updates.searchVolume ?? keyword.searchVolume;
       const newCompetitors = updates.competitors ?? keyword.competitors;
       const newPrice = updates.price ?? keyword.price;
       const newRoyalties = updates.royalties ?? keyword.royalties;
       const marketData = keyword.marketData ?? getDefaultMarketData();
+      
+      // Merge market structure
+      const newMarketStructure = {
+        hasProfitableBooks: updates.marketStructure?.hasProfitableBooks ?? keyword.marketStructure?.hasProfitableBooks ?? false,
+        hasBooksOver200Reviews: updates.marketStructure?.hasBooksOver200Reviews ?? keyword.marketStructure?.hasBooksOver200Reviews ?? false,
+        hasBooksUnder100Reviews: updates.marketStructure?.hasBooksUnder100Reviews ?? keyword.marketStructure?.hasBooksUnder100Reviews ?? false,
+      };
       
       const newMarketScore = calculateMarketScore({
         searchVolume: newSearchVolume,
@@ -321,7 +329,7 @@ export const KeywordsSection = ({
         royalties: newRoyalties,
         brandRisk: marketData.brandRisk,
         trafficSource: marketData.trafficSource,
-      }).total;
+      }, marketplaceId, newMarketStructure).total;
       
       finalUpdates.marketScore = newMarketScore;
       finalUpdates.status = getAutoStatusFromScore(newMarketScore);
