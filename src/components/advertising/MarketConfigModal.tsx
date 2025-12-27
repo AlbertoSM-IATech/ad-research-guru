@@ -30,6 +30,7 @@ import {
   saveUserConfigOverrides,
   getDefaultMarketScoreConfig,
   getMarketScoreConfig,
+  MARKET_SCORE_CONFIG_BY_MARKETPLACE,
 } from '@/lib/market-score-config';
 import { MARKETPLACES } from '@/types/advertising';
 
@@ -40,7 +41,8 @@ interface MarketConfigModalProps {
   onConfigChange?: () => void;
 }
 
-const SUPPORTED_MARKETPLACES = ['us', 'es', 'uk', 'de', 'fr', 'it'];
+// Use ALL marketplaces from the app, not a subset
+const ALL_MARKETPLACE_IDS = MARKETPLACES.map(m => m.id);
 
 const FIELD_TOOLTIPS = {
   searchVolume: 'Volumen de búsqueda ideal mensual. Se usará para calibrar qué es "bueno" vs "excelente".',
@@ -109,7 +111,15 @@ export const MarketConfigModal = ({
     }
   };
 
+  // Check if this marketplace has user overrides (configured)
+  const userOverrides = loadUserConfigOverrides();
+  const isConfigured = (mpId: string) => !!userOverrides[mpId];
+  
+  // Check if marketplace has a base config (not just using default)
+  const hasBaseConfig = (mpId: string) => !!MARKET_SCORE_CONFIG_BY_MARKETPLACE[mpId];
+
   const marketplaceInfo = MARKETPLACES.find(m => m.id === selectedMarketplace);
+  const currentMarketIsConfigured = isConfigured(selectedMarketplace);
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
@@ -125,7 +135,7 @@ export const MarketConfigModal = ({
         </DialogHeader>
 
         <div className="space-y-4 py-4">
-          {/* Marketplace selector */}
+          {/* Marketplace selector - ALL marketplaces */}
           <div className="space-y-2">
             <Label>Mercado</Label>
             <Select value={selectedMarketplace} onValueChange={setSelectedMarketplace}>
@@ -133,17 +143,39 @@ export const MarketConfigModal = ({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {SUPPORTED_MARKETPLACES.map((mpId) => {
+                {ALL_MARKETPLACE_IDS.map((mpId) => {
                   const mp = MARKETPLACES.find(m => m.id === mpId);
+                  const configured = isConfigured(mpId);
+                  const hasBase = hasBaseConfig(mpId);
                   return (
                     <SelectItem key={mpId} value={mpId}>
-                      {mp?.flag} {mp?.name || mpId}
+                      <div className="flex items-center gap-2">
+                        <span>{mp?.flag} {mp?.name || mpId}</span>
+                        {configured ? (
+                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-green-500/20 text-green-700 dark:text-green-400">Configurado</span>
+                        ) : hasBase ? (
+                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-700 dark:text-blue-400">Defaults</span>
+                        ) : (
+                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-700 dark:text-amber-400">Sin config</span>
+                        )}
+                      </div>
                     </SelectItem>
                   );
                 })}
               </SelectContent>
             </Select>
           </div>
+          
+          {/* Warning if using defaults for this marketplace */}
+          {!currentMarketIsConfigured && !hasBaseConfig(selectedMarketplace) && (
+            <Alert className="border-amber-500/50 bg-amber-500/10">
+              <Info className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+              <AlertDescription className="text-xs text-amber-700 dark:text-amber-300">
+                Este mercado no tiene configuración personalizada. Se usarán valores por defecto (España). 
+                <strong> Configura tus valores ideales para obtener un scoring adaptado.</strong>
+              </AlertDescription>
+            </Alert>
+          )}
 
           {/* Ideal Volume */}
           <div className="space-y-2">
