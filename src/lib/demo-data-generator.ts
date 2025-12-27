@@ -109,6 +109,29 @@ function randomVolume(): number {
   return Math.floor(Math.random() * 1000 + 500);
 }
 
+function randomCompetitors(): number {
+  // Generate realistic competitor counts (number of products)
+  const ranges = [
+    { min: 50, max: 500, weight: 15 },      // Very low competition
+    { min: 500, max: 1500, weight: 25 },    // Low competition
+    { min: 1500, max: 4000, weight: 30 },   // Medium competition
+    { min: 4000, max: 10000, weight: 20 },  // High competition
+    { min: 10000, max: 50000, weight: 10 }, // Very high competition
+  ];
+  
+  const totalWeight = ranges.reduce((sum, r) => sum + r.weight, 0);
+  let random = Math.random() * totalWeight;
+  
+  for (const range of ranges) {
+    random -= range.weight;
+    if (random <= 0) {
+      return Math.floor(Math.random() * (range.max - range.min) + range.min);
+    }
+  }
+  
+  return Math.floor(Math.random() * 2000 + 1000);
+}
+
 function generateKeyword(marketplaceId: string, usedKeywords: Set<string>): Omit<Keyword, 'id' | 'createdAt' | 'updatedAt'> | null {
   const themes = Object.values(keywordThemes).flat();
   let keyword = '';
@@ -149,6 +172,7 @@ function generateKeyword(marketplaceId: string, usedKeywords: Set<string>): Omit
   return createKeywordDefaults({
     keyword,
     searchVolume: randomVolume(),
+    competitors: randomCompetitors(),
     competitionLevel: randomFrom(competitionLevels),
     campaignTypes: randomFrom(campaignTypeOptions),
     notes,
@@ -168,16 +192,16 @@ export function generateDemoKeywords(
   
   // Add some guaranteed high-value keywords first
   const guaranteedKeywords = [
-    { keyword: 'meditación para principiantes', searchVolume: 4200, competitionLevel: 'medium' as CompetitionLevel, relevance: 'very-high' as RelevanceLevel, intent: 'purchase' as IntentType, state: 'tested-works' as KeywordState },
-    { keyword: 'mindfulness guía completa', searchVolume: 3800, competitionLevel: 'low' as CompetitionLevel, relevance: 'very-high' as RelevanceLevel, intent: 'purchase' as IntentType, state: 'tested-works' as KeywordState },
-    { keyword: 'reducir ansiedad naturalmente', searchVolume: 5100, competitionLevel: 'high' as CompetitionLevel, relevance: 'high' as RelevanceLevel, intent: 'problem' as IntentType, state: 'pending' as KeywordState },
-    { keyword: 'técnicas de relajación rápida', searchVolume: 2900, competitionLevel: 'low' as CompetitionLevel, relevance: 'high' as RelevanceLevel, intent: 'research' as IntentType, state: 'low-competition' as KeywordState },
-    { keyword: 'calmar la mente', searchVolume: 3200, competitionLevel: 'medium' as CompetitionLevel, relevance: 'very-high' as RelevanceLevel, intent: 'problem' as IntentType, state: 'pending' as KeywordState },
-    { keyword: 'meditación guiada español', searchVolume: 6500, competitionLevel: 'medium' as CompetitionLevel, relevance: 'very-high' as RelevanceLevel, intent: 'purchase' as IntentType, state: 'tested-works' as KeywordState },
-    { keyword: 'libro mindfulness amazon', searchVolume: 2100, competitionLevel: 'high' as CompetitionLevel, relevance: 'high' as RelevanceLevel, intent: 'purchase' as IntentType, state: 'pending' as KeywordState },
-    { keyword: 'ejercicios respiración ansiedad', searchVolume: 1800, competitionLevel: 'low' as CompetitionLevel, relevance: 'high' as RelevanceLevel, intent: 'problem' as IntentType, state: 'low-competition' as KeywordState },
-    { keyword: 'dormir mejor sin pastillas', searchVolume: 4800, competitionLevel: 'high' as CompetitionLevel, relevance: 'high' as RelevanceLevel, intent: 'problem' as IntentType, state: 'pending' as KeywordState },
-    { keyword: 'bienestar emocional libro', searchVolume: 1500, competitionLevel: 'low' as CompetitionLevel, relevance: 'very-high' as RelevanceLevel, intent: 'purchase' as IntentType, state: 'tested-works' as KeywordState },
+    { keyword: 'meditación para principiantes', searchVolume: 4200, competitors: 2800, competitionLevel: 'medium' as CompetitionLevel, relevance: 'very-high' as RelevanceLevel, intent: 'purchase' as IntentType, state: 'tested-works' as KeywordState },
+    { keyword: 'mindfulness guía completa', searchVolume: 3800, competitors: 450, competitionLevel: 'low' as CompetitionLevel, relevance: 'very-high' as RelevanceLevel, intent: 'purchase' as IntentType, state: 'tested-works' as KeywordState },
+    { keyword: 'reducir ansiedad naturalmente', searchVolume: 5100, competitors: 8500, competitionLevel: 'high' as CompetitionLevel, relevance: 'high' as RelevanceLevel, intent: 'problem' as IntentType, state: 'pending' as KeywordState },
+    { keyword: 'técnicas de relajación rápida', searchVolume: 2900, competitors: 320, competitionLevel: 'low' as CompetitionLevel, relevance: 'high' as RelevanceLevel, intent: 'research' as IntentType, state: 'low-competition' as KeywordState },
+    { keyword: 'calmar la mente', searchVolume: 3200, competitors: 2100, competitionLevel: 'medium' as CompetitionLevel, relevance: 'very-high' as RelevanceLevel, intent: 'problem' as IntentType, state: 'pending' as KeywordState },
+    { keyword: 'meditación guiada español', searchVolume: 6500, competitors: 3500, competitionLevel: 'medium' as CompetitionLevel, relevance: 'very-high' as RelevanceLevel, intent: 'purchase' as IntentType, state: 'tested-works' as KeywordState },
+    { keyword: 'libro mindfulness amazon', searchVolume: 2100, competitors: 12000, competitionLevel: 'high' as CompetitionLevel, relevance: 'high' as RelevanceLevel, intent: 'purchase' as IntentType, state: 'pending' as KeywordState },
+    { keyword: 'ejercicios respiración ansiedad', searchVolume: 1800, competitors: 280, competitionLevel: 'low' as CompetitionLevel, relevance: 'high' as RelevanceLevel, intent: 'problem' as IntentType, state: 'low-competition' as KeywordState },
+    { keyword: 'dormir mejor sin pastillas', searchVolume: 4800, competitors: 9200, competitionLevel: 'high' as CompetitionLevel, relevance: 'high' as RelevanceLevel, intent: 'problem' as IntentType, state: 'pending' as KeywordState },
+    { keyword: 'bienestar emocional libro', searchVolume: 1500, competitors: 180, competitionLevel: 'low' as CompetitionLevel, relevance: 'very-high' as RelevanceLevel, intent: 'purchase' as IntentType, state: 'tested-works' as KeywordState },
   ];
   
   guaranteedKeywords.forEach(gk => {
