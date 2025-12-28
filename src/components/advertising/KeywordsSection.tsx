@@ -445,12 +445,90 @@ export const KeywordsSection = ({
   return (
     <div data-tour="keywords-section" className="space-y-6 animate-fade-in">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div className="flex items-center gap-2">
-          <h3 className="font-heading font-semibold text-xl">Palabras Clave</h3>
-          <InfoTooltip content="Gestiona las palabras clave. Edita directamente haciendo clic en cualquier celda." />
+      <div className="flex items-center gap-2">
+        <h3 className="font-heading font-semibold text-xl">Palabras Clave</h3>
+        <InfoTooltip content="Gestiona las palabras clave. Edita directamente haciendo clic en cualquier celda." />
+      </div>
+
+      {/* Bulk Actions Toolbar */}
+      <BulkActionsToolbar
+        selectedCount={selectedIds.size}
+        onChangeCampaignType={handleBulkChangeCampaignType}
+        onChangeState={handleBulkChangeState}
+        onChangeRelevance={handleBulkChangeRelevance}
+        onDelete={handleDeleteSelected}
+      />
+
+      {/* Quick Filters */}
+      <QuickFiltersBar
+        activeFilter={quickFilter}
+        onFilterChange={handleQuickFilterChange}
+        counts={quickFilterCounts}
+      />
+
+      {/* Quick Add, Search & Filters - 3 columns layout */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 items-start">
+        {/* Column 1: Quick Add */}
+        <div className="flex gap-2">
+          <Input
+            placeholder="Escribe una keyword..."
+            value={quickAddKeyword}
+            onChange={(e) => setQuickAddKeyword(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && handleQuickAdd()}
+            className="flex-1"
+          />
+          <Button 
+            onClick={quickAddKeyword.trim() ? handleQuickAdd : handleOpenNewKeywordWizard} 
+            size="sm"
+            className="gap-1 bg-primary hover:bg-primary/90 whitespace-nowrap"
+          >
+            <Plus className="w-4 h-4" />
+            {quickAddKeyword.trim() ? 'Añadir' : 'Nueva'}
+          </Button>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
+
+        {/* Column 2: Search */}
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Input
+            placeholder="Buscar keywords..."
+            value={searchTerm}
+            onChange={(e) => {
+              onSearchTermChange(e.target.value);
+              setCurrentPage(1);
+            }}
+            className="pl-10"
+          />
+        </div>
+
+        {/* Column 3: Sort + Filters */}
+        <div className="flex gap-2">
+          <Select
+            value={`${sortField}-${sortOrder}`}
+            onValueChange={handleSortOptionChange}
+          >
+            <SelectTrigger className="flex-1">
+              <SelectValue placeholder="Ordenar..." />
+            </SelectTrigger>
+            <SelectContent className="bg-popover border-border z-50">
+              {SORT_OPTIONS.map((opt) => (
+                <SelectItem key={`${opt.field}-${opt.order}`} value={`${opt.field}-${opt.order}`}>
+                  {opt.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <AdvancedFilters filters={filters} onFiltersChange={handleAdvancedFiltersChange} />
+        </div>
+      </div>
+
+      {/* Toolbar + Results count - above table */}
+      <div className="flex items-center justify-between">
+        <div className="text-sm text-muted-foreground">
+          {filteredKeywords.length} de {keywords.length} keywords
+          {selectedIds.size > 0 && ` • ${selectedIds.size} seleccionadas`}
+        </div>
+        <div className="flex items-center gap-2">
           {/* View Toggle */}
           <div className="flex items-center rounded-md border border-border">
             <Button
@@ -474,7 +552,6 @@ export const KeywordsSection = ({
           <VariantDetector
             keywords={keywords}
             onGroupVariants={(groupId, keywordIds) => {
-              // Mark keywords as variants by updating their notes
               keywordIds.forEach(id => {
                 const kw = keywords.find(k => k.id === id);
                 if (kw) {
@@ -500,81 +577,6 @@ export const KeywordsSection = ({
             </Button>
           )}
         </div>
-      </div>
-
-      {/* Bulk Actions Toolbar */}
-      <BulkActionsToolbar
-        selectedCount={selectedIds.size}
-        onChangeCampaignType={handleBulkChangeCampaignType}
-        onChangeState={handleBulkChangeState}
-        onChangeRelevance={handleBulkChangeRelevance}
-        onDelete={handleDeleteSelected}
-      />
-
-      {/* Quick Filters */}
-      <QuickFiltersBar
-        activeFilter={quickFilter}
-        onFilterChange={handleQuickFilterChange}
-        counts={quickFilterCounts}
-      />
-
-      {/* Quick Add - unified with wizard */}
-      <div className="flex gap-2 p-4 bg-primary/5 border border-primary/20 rounded-lg">
-        <Input
-          placeholder="Escribe una keyword y pulsa Enter..."
-          value={quickAddKeyword}
-          onChange={(e) => setQuickAddKeyword(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && handleQuickAdd()}
-          className="flex-1"
-        />
-        <Button 
-          onClick={quickAddKeyword.trim() ? handleQuickAdd : handleOpenNewKeywordWizard} 
-          className="gap-2 bg-primary hover:bg-primary/90"
-        >
-          <Plus className="w-4 h-4" />
-          {quickAddKeyword.trim() ? 'Añadir' : 'Nueva keyword'}
-        </Button>
-      </div>
-
-      {/* Search and Filters */}
-      <div className="space-y-4">
-        <div className="flex gap-3">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input
-              placeholder="Buscar keywords..."
-              value={searchTerm}
-              onChange={(e) => {
-                onSearchTermChange(e.target.value);
-                setCurrentPage(1);
-              }}
-              className="pl-10"
-            />
-          </div>
-          {/* Sort selector */}
-          <Select
-            value={`${sortField}-${sortOrder}`}
-            onValueChange={handleSortOptionChange}
-          >
-            <SelectTrigger className="w-[220px]">
-              <SelectValue placeholder="Ordenar por..." />
-            </SelectTrigger>
-            <SelectContent className="bg-popover border-border z-50">
-              {SORT_OPTIONS.map((opt) => (
-                <SelectItem key={`${opt.field}-${opt.order}`} value={`${opt.field}-${opt.order}`}>
-                  {opt.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <AdvancedFilters filters={filters} onFiltersChange={handleAdvancedFiltersChange} />
-      </div>
-
-      {/* Results count */}
-      <div className="text-sm text-muted-foreground">
-        Mostrando {filteredKeywords.length} de {keywords.length} keywords
-        {selectedIds.size > 0 && ` • ${selectedIds.size} seleccionadas`}
       </div>
 
       {/* Content - Table or Cards */}
