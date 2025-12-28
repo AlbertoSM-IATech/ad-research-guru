@@ -41,7 +41,7 @@ import { InlineSelectBadge } from './InlineSelectBadge';
 import { BulkKeywordImport } from './BulkKeywordImport';
 import { BulkCopyTools } from './BulkCopyTools';
 import { BulkActionsToolbar } from './BulkActionsToolbar';
-import { AdvancedFilters, type AdvancedFiltersState } from './AdvancedFilters';
+import { AdvancedFilters, AdvancedFiltersContent, type AdvancedFiltersState } from './AdvancedFilters';
 import { QuickFiltersBar } from './QuickFiltersBar';
 import { KeywordCardView } from './KeywordCardView';
 import { KeywordHistoryModal } from './KeywordHistoryModal';
@@ -147,6 +147,7 @@ export const KeywordsSection = ({
   const [isWizardOpen, setIsWizardOpen] = useState(false);
   const [wizardInitialKeyword, setWizardInitialKeyword] = useState('');
   const [validationKeyword, setValidationKeyword] = useState<Keyword | null>(null);
+  const [advancedFiltersExpanded, setAdvancedFiltersExpanded] = useState(false);
   
   // Sync persisted state when hydrated
   useEffect(() => {
@@ -459,15 +460,29 @@ export const KeywordsSection = ({
         onDelete={handleDeleteSelected}
       />
 
-      {/* Quick Filters */}
-      <QuickFiltersBar
-        activeFilter={quickFilter}
-        onFilterChange={handleQuickFilterChange}
-        counts={quickFilterCounts}
-      />
+      {/* Quick Filters + Advanced Filters trigger */}
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <QuickFiltersBar
+          activeFilter={quickFilter}
+          onFilterChange={handleQuickFilterChange}
+          counts={quickFilterCounts}
+        />
+        <AdvancedFilters 
+          filters={filters} 
+          onFiltersChange={handleAdvancedFiltersChange}
+          renderTriggerOnly
+          isExpanded={advancedFiltersExpanded}
+          onToggleExpanded={() => setAdvancedFiltersExpanded(!advancedFiltersExpanded)}
+        />
+      </div>
 
-      {/* Quick Add, Search & Filters - 3 columns layout */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 items-start">
+      {/* Advanced Filters Content - Full width when expanded */}
+      {advancedFiltersExpanded && (
+        <AdvancedFiltersContent filters={filters} onFiltersChange={handleAdvancedFiltersChange} />
+      )}
+
+      {/* Quick Add, Search & Sort - 3 columns layout */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 items-center">
         {/* Column 1: Quick Add */}
         <div className="flex gap-2">
           <Input
@@ -501,25 +516,22 @@ export const KeywordsSection = ({
           />
         </div>
 
-        {/* Column 3: Sort + Filters */}
-        <div className="flex gap-2">
-          <Select
-            value={`${sortField}-${sortOrder}`}
-            onValueChange={handleSortOptionChange}
-          >
-            <SelectTrigger className="flex-1">
-              <SelectValue placeholder="Ordenar..." />
-            </SelectTrigger>
-            <SelectContent className="bg-popover border-border z-50">
-              {SORT_OPTIONS.map((opt) => (
-                <SelectItem key={`${opt.field}-${opt.order}`} value={`${opt.field}-${opt.order}`}>
-                  {opt.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <AdvancedFilters filters={filters} onFiltersChange={handleAdvancedFiltersChange} />
-        </div>
+        {/* Column 3: Sort */}
+        <Select
+          value={`${sortField}-${sortOrder}`}
+          onValueChange={handleSortOptionChange}
+        >
+          <SelectTrigger>
+            <SelectValue placeholder="Ordenar..." />
+          </SelectTrigger>
+          <SelectContent className="bg-popover border-border z-50">
+            {SORT_OPTIONS.map((opt) => (
+              <SelectItem key={`${opt.field}-${opt.order}`} value={`${opt.field}-${opt.order}`}>
+                {opt.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       {/* Toolbar + Results count - above table */}
