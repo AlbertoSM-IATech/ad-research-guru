@@ -1,33 +1,45 @@
 // Market Score V2 - Sistema unificado de puntuación de mercado
 // Scoring continuo proporcional (no por rangos rígidos)
+// 
+// DISTRIBUCIÓN DE PUNTOS (100 total):
+// - Volumen (Demanda): 26 pts
+// - Competidores (Competencia): 34 pts
+// - Precio (Rentabilidad): 8 pts
+// - Regalías (Rentabilidad): 8 pts
+// - Estructura del Mercado: 12 pts (6 checks × 2pts)
+// - Señales de Catálogo: 12 pts
+// 
+// PENALIZACIONES (se aplican después):
+// - trafficSource: amazon=0, brand=-20, rrss=-7, other=-10
 
 import { getMarketScoreConfig, type MarketScoringConfig } from './market-score-config';
 
-// ============ BRAND RISK & TRAFFIC SOURCE ============
+// ============ TYPES ============
 
-export type BrandRisk = 'low' | 'medium' | 'high';
 export type TrafficSource = 'amazon' | 'rrss' | 'brand' | 'other';
 export type KeywordStatus = 'pending' | 'valid' | 'discarded';
 export type KeywordPurpose = 'editorial' | 'ads' | 'both';
 
 // ============ MARKET DATA (stored in Keyword) ============
+// NO incluye brandRisk - el riesgo se mide solo con trafficSource
 
 export interface MarketData {
   searchVolume: number;
   competitors: number; // Número de resultados Amazon
   price: number;
   royalties: number;
-  brandRisk: BrandRisk;
   trafficSource: TrafficSource;
 }
 
 // ============ EDITORIAL DATA (separate from Market Score) ============
+// 5 checks - NO afectan al Market Score
 
 export interface EditorialChecklist {
-  canCreate: boolean | null; // ¿Puedo crear este libro?
-  canDoBetter: boolean | null; // ¿Puedo hacerlo mejor?
-  canDifferentiate: boolean | null; // ¿Puedo diferenciarlo?
-  fitsStrategy: boolean | null; // ¿Encaja con mi estrategia editorial?
+  makesSenseAsBook: boolean | null;   // Tiene sentido como libro
+  canCreateThisBook: boolean | null;  // Puedo crear este libro
+  canDoItBetter: boolean | null;      // Puedo hacerlo mejor
+  canDifferentiate: boolean | null;   // Puedo diferenciarlo
+  personalInterest: boolean | null;   // Tengo interés personal
 }
 
 export interface EditorialData {
@@ -36,18 +48,24 @@ export interface EditorialData {
 }
 
 // ============ MARKET STRUCTURE (12 pts block - 6 checks x 2pts) ============
+// Señales estructurales del mercado - AFECTAN al Market Score
 
 export interface MarketStructure {
-  understandable?: boolean;       // La keyword se entiende por sí sola (+2)
-  amazonSuggested?: boolean;      // Aparece como sugerencia en Amazon (+2)
-  profitableBooks?: boolean;      // Veo al menos 3 libros vendiendo bien (+2)
-  indieAuthors?: boolean;         // Hay autores independientes vendiendo (+2)
-  intentMatch?: boolean;          // El top refleja la intención real (+2)
-  variants?: boolean;             // Hay variantes cercanas con potencial (+2)
-  // Legacy fields (deprecated but kept for backward compat)
-  hasProfitableBooks?: boolean;
-  hasBooksOver200Reviews?: boolean;
-  hasBooksUnder100Reviews?: boolean;
+  selfContained?: boolean;        // Se entiende por sí sola (+2)
+  amazonSuggestion?: boolean;     // Sugerencia Amazon (+2)
+  booksSellingWell?: boolean;     // ≥3 libros vendiendo (+2)
+  indieAuthorsSelling?: boolean;  // Autores indie vendiendo (+2)
+  topMatchesIntent?: boolean;     // El top refleja la intención (+2)
+  variantsPotential?: boolean;    // Variantes con potencial (+2)
+}
+
+// ============ CATALOG SIGNALS (12 pts block) ============
+// Señales de catálogo - AFECTAN al Market Score
+
+export interface CatalogSignals {
+  hasBooksOver200Reviews?: boolean;  // Libros +200 reviews (+4)
+  hasProfitableBooks?: boolean;      // ≥3 libros rentables (+5)
+  hasBooksUnder100Reviews?: boolean; // Libros −100 reviews (+3)
 }
 
 // ============ SCORE BREAKDOWN ============
@@ -58,6 +76,7 @@ export interface MarketScoreBreakdown {
   price: { points: number; max: number; label: string; ratio: number };
   royalties: { points: number; max: number; label: string; ratio: number };
   marketStructure: { points: number; max: number; label: string; checks: number };
+  catalogSignals: { points: number; max: number; label: string; checks: number };
   penalties: { points: number; label: string };
   total: number;
 }
@@ -69,15 +88,15 @@ export const getDefaultMarketData = (): MarketData => ({
   competitors: 0,
   price: 9.99,
   royalties: 2.00,
-  brandRisk: 'low',
   trafficSource: 'amazon',
 });
 
 export const getDefaultEditorialChecklist = (): EditorialChecklist => ({
-  canCreate: null,
-  canDoBetter: null,
+  makesSenseAsBook: null,
+  canCreateThisBook: null,
+  canDoItBetter: null,
   canDifferentiate: null,
-  fitsStrategy: null,
+  personalInterest: null,
 });
 
 export const getDefaultEditorialData = (): EditorialData => ({
@@ -86,12 +105,18 @@ export const getDefaultEditorialData = (): EditorialData => ({
 });
 
 export const getDefaultMarketStructure = (): MarketStructure => ({
-  understandable: false,
-  amazonSuggested: false,
-  profitableBooks: false,
-  indieAuthors: false,
-  intentMatch: false,
-  variants: false,
+  selfContained: false,
+  amazonSuggestion: false,
+  booksSellingWell: false,
+  indieAuthorsSelling: false,
+  topMatchesIntent: false,
+  variantsPotential: false,
+});
+
+export const getDefaultCatalogSignals = (): CatalogSignals => ({
+  hasBooksOver200Reviews: false,
+  hasProfitableBooks: false,
+  hasBooksUnder100Reviews: false,
 });
 
 // ============ INTERPOLATION HELPERS ============
@@ -167,69 +192,65 @@ function interpolateRoyalties(royalties: number, config: MarketScoringConfig): n
   return 1;
 }
 
+// ============ MARKET SCORE WEIGHTS (total = 100) ============
+const SCORE_WEIGHTS = {
+  volume: 26,           // Demanda
+  competitors: 34,      // Competencia
+  price: 8,             // Rentabilidad
+  royalties: 8,         // Rentabilidad
+  marketStructure: 12,  // Estructura del mercado
+  catalogSignals: 12,   // Señales de catálogo
+};
+
 // ============ MARKET SCORE CALCULATION ============
-// Pesos (total 100):
-// - Volumen: 29.33 pts
-// - Competidores: 39.11 pts
-// - Precio: 9.78 pts
-// - Regalías: 9.78 pts
-// - Estructura del mercado: 12 pts
-// - Penalizaciones: hasta -20 pts
 
 export function calculateMarketScore(
   data: MarketData, 
   marketplaceId?: string,
-  marketStructure?: MarketStructure
+  marketStructure?: MarketStructure,
+  catalogSignals?: CatalogSignals
 ): MarketScoreBreakdown {
   const config = getMarketScoreConfig(marketplaceId);
-  const { weights, penalties } = config;
+  const { penalties } = config;
   
   let total = 0;
   
-  // 1) VOLUMEN (proporcional creciente)
+  // 1) VOLUMEN (26 pts - proporcional creciente)
   const volumeRatio = interpolateVolume(data.searchVolume, config);
-  const volumePoints = Math.round(volumeRatio * weights.volume * 100) / 100;
+  const volumePoints = Math.round(volumeRatio * SCORE_WEIGHTS.volume * 100) / 100;
   const volumeLabel = `${data.searchVolume.toLocaleString()} → ${Math.round(volumeRatio * 100)}%`;
   total += volumePoints;
   
-  // 2) COMPETIDORES (proporcional decreciente)
+  // 2) COMPETIDORES (34 pts - proporcional decreciente)
   const competitorsRatio = interpolateCompetitors(data.competitors, config);
-  const competitorsPoints = Math.round(competitorsRatio * weights.competitors * 100) / 100;
+  const competitorsPoints = Math.round(competitorsRatio * SCORE_WEIGHTS.competitors * 100) / 100;
   const competitorsLabel = `${data.competitors.toLocaleString()} → ${Math.round(competitorsRatio * 100)}%`;
   total += competitorsPoints;
   
-  // 3) PRECIO (crítico: <9.99 penaliza)
+  // 3) PRECIO (8 pts - crítico: <9.99 penaliza)
   const priceRatio = interpolatePrice(data.price, config);
-  const pricePoints = Math.round(priceRatio * weights.price * 100) / 100;
+  const pricePoints = Math.round(priceRatio * SCORE_WEIGHTS.price * 100) / 100;
   const priceLabel = `$${data.price.toFixed(2)} → ${Math.round(priceRatio * 100)}%`;
   total += pricePoints;
   
-  // 4) REGALÍAS (proporcional creciente)
+  // 4) REGALÍAS (8 pts - proporcional creciente)
   const royaltiesRatio = interpolateRoyalties(data.royalties, config);
-  const royaltiesPoints = Math.round(royaltiesRatio * weights.royalties * 100) / 100;
+  const royaltiesPoints = Math.round(royaltiesRatio * SCORE_WEIGHTS.royalties * 100) / 100;
   const royaltiesLabel = `$${data.royalties.toFixed(2)} → ${Math.round(royaltiesRatio * 100)}%`;
   total += royaltiesPoints;
   
-  // 5) ESTRUCTURA DEL MERCADO (12 puntos máx - 6 checks x 2pts)
+  // 5) ESTRUCTURA DEL MERCADO (12 pts - 6 checks x 2pts)
   let structurePoints = 0;
   let structureChecks = 0;
   const structureLabels: string[] = [];
   
   if (marketStructure) {
-    // New 6-check system (2 pts each)
-    if (marketStructure.understandable) { structurePoints += 2; structureChecks++; }
-    if (marketStructure.amazonSuggested) { structurePoints += 2; structureChecks++; }
-    if (marketStructure.profitableBooks) { structurePoints += 2; structureChecks++; }
-    if (marketStructure.indieAuthors) { structurePoints += 2; structureChecks++; }
-    if (marketStructure.intentMatch) { structurePoints += 2; structureChecks++; }
-    if (marketStructure.variants) { structurePoints += 2; structureChecks++; }
-    
-    // Legacy support (if new fields not set, check legacy)
-    if (structureChecks === 0) {
-      if (marketStructure.hasProfitableBooks) { structurePoints += 4; structureChecks++; }
-      if (marketStructure.hasBooksOver200Reviews) { structurePoints += 4; structureChecks++; }
-      if (marketStructure.hasBooksUnder100Reviews) { structurePoints += 4; structureChecks++; }
-    }
+    if (marketStructure.selfContained) { structurePoints += 2; structureChecks++; }
+    if (marketStructure.amazonSuggestion) { structurePoints += 2; structureChecks++; }
+    if (marketStructure.booksSellingWell) { structurePoints += 2; structureChecks++; }
+    if (marketStructure.indieAuthorsSelling) { structurePoints += 2; structureChecks++; }
+    if (marketStructure.topMatchesIntent) { structurePoints += 2; structureChecks++; }
+    if (marketStructure.variantsPotential) { structurePoints += 2; structureChecks++; }
     
     if (structureChecks > 0) {
       structureLabels.push(`${structureChecks} señales confirmadas`);
@@ -238,20 +259,36 @@ export function calculateMarketScore(
   
   total += structurePoints;
   
-  // 6) PENALIZACIONES (se restan al final)
+  // 6) SEÑALES DE CATÁLOGO (12 pts)
+  let catalogPoints = 0;
+  let catalogChecks = 0;
+  const catalogLabels: string[] = [];
+  
+  if (catalogSignals) {
+    if (catalogSignals.hasBooksOver200Reviews) { 
+      catalogPoints += 4; 
+      catalogChecks++; 
+      catalogLabels.push('+200 reviews');
+    }
+    if (catalogSignals.hasProfitableBooks) { 
+      catalogPoints += 5; 
+      catalogChecks++; 
+      catalogLabels.push('≥3 rentables');
+    }
+    if (catalogSignals.hasBooksUnder100Reviews) { 
+      catalogPoints += 3; 
+      catalogChecks++; 
+      catalogLabels.push('-100 reviews');
+    }
+  }
+  
+  total += catalogPoints;
+  
+  // 7) PENALIZACIONES (solo trafficSource - se restan al final)
   let penaltyPoints = 0;
   const penaltyLabels: string[] = [];
   
-  // Brand Risk
-  if (data.brandRisk === 'high') {
-    penaltyPoints += penalties.brandRisk.high;
-    penaltyLabels.push(`Brand risk alto: ${penalties.brandRisk.high}`);
-  } else if (data.brandRisk === 'medium') {
-    penaltyPoints += penalties.brandRisk.medium;
-    penaltyLabels.push(`Brand risk medio: ${penalties.brandRisk.medium}`);
-  }
-  
-  // Traffic Source
+  // Traffic Source penalties (NO brandRisk)
   if (data.trafficSource === 'brand') {
     penaltyPoints += penalties.trafficSource.brand;
     penaltyLabels.push(`Tráfico marca: ${penalties.trafficSource.brand}`);
@@ -272,15 +309,21 @@ export function calculateMarketScore(
   total = Math.max(0, Math.min(100, Math.round(total)));
   
   return {
-    volume: { points: volumePoints, max: weights.volume, label: volumeLabel, ratio: volumeRatio },
-    competitors: { points: competitorsPoints, max: weights.competitors, label: competitorsLabel, ratio: competitorsRatio },
-    price: { points: pricePoints, max: weights.price, label: priceLabel, ratio: priceRatio },
-    royalties: { points: royaltiesPoints, max: weights.royalties, label: royaltiesLabel, ratio: royaltiesRatio },
+    volume: { points: volumePoints, max: SCORE_WEIGHTS.volume, label: volumeLabel, ratio: volumeRatio },
+    competitors: { points: competitorsPoints, max: SCORE_WEIGHTS.competitors, label: competitorsLabel, ratio: competitorsRatio },
+    price: { points: pricePoints, max: SCORE_WEIGHTS.price, label: priceLabel, ratio: priceRatio },
+    royalties: { points: royaltiesPoints, max: SCORE_WEIGHTS.royalties, label: royaltiesLabel, ratio: royaltiesRatio },
     marketStructure: { 
       points: structurePoints, 
-      max: weights.structure, 
+      max: SCORE_WEIGHTS.marketStructure, 
       label: structureLabels.length > 0 ? structureLabels.join(', ') : 'Sin datos de estructura',
       checks: structureChecks,
+    },
+    catalogSignals: {
+      points: catalogPoints,
+      max: SCORE_WEIGHTS.catalogSignals,
+      label: catalogLabels.length > 0 ? catalogLabels.join(', ') : 'Sin señales de catálogo',
+      checks: catalogChecks,
     },
     penalties: { 
       points: penaltyPoints, 
@@ -296,16 +339,17 @@ export function getMarketScoreTotal(data: MarketData, marketplaceId?: string): n
 }
 
 // ============ EDITORIAL SCORE ============
-// NO afecta Market Score - es informativo
+// NO afecta Market Score - es informativo (5 checks)
 
 export function calculateEditorialScore(data: EditorialData): number {
   const { checklist } = data;
   let score = 0;
   
-  if (checklist.canCreate === true) score += 1;
-  if (checklist.canDoBetter === true) score += 1;
+  if (checklist.makesSenseAsBook === true) score += 1;
+  if (checklist.canCreateThisBook === true) score += 1;
+  if (checklist.canDoItBetter === true) score += 1;
   if (checklist.canDifferentiate === true) score += 1;
-  if (checklist.fitsStrategy === true) score += 1;
+  if (checklist.personalInterest === true) score += 1;
   
   return score;
 }
@@ -350,12 +394,6 @@ export function getMarketScoreBgColor(score: number): string {
 
 // ============ UI OPTIONS ============
 
-export const BRAND_RISK_OPTIONS: { value: BrandRisk; label: string; color: string }[] = [
-  { value: 'low', label: 'Bajo', color: 'bg-green-500/20 text-green-600 dark:text-green-400' },
-  { value: 'medium', label: 'Medio', color: 'bg-yellow-500/20 text-yellow-600 dark:text-yellow-400' },
-  { value: 'high', label: 'Alto', color: 'bg-red-500/20 text-red-600 dark:text-red-400' },
-];
-
 export const TRAFFIC_SOURCE_OPTIONS: { value: TrafficSource; label: string; color: string; penalty: number }[] = [
   { value: 'amazon', label: 'Amazon', color: 'bg-green-500/20 text-green-600 dark:text-green-400', penalty: 0 },
   { value: 'rrss', label: 'RRSS', color: 'bg-yellow-500/20 text-yellow-600 dark:text-yellow-400', penalty: -7 },
@@ -370,18 +408,37 @@ export const KEYWORD_STATUS_OPTIONS: { value: KeywordStatus; label: string; colo
 ];
 
 export const KEYWORD_PURPOSE_OPTIONS: { value: KeywordPurpose; label: string; description: string }[] = [
-  { value: 'editorial', label: 'Editorial', description: 'Para decisión de crear libros' },
-  { value: 'ads', label: 'Ads', description: 'Para optimización y publicidad' },
+  { value: 'editorial', label: 'Editorial', description: 'Para decidir si crear libros' },
+  { value: 'ads', label: 'Ads', description: 'Para gestión de campañas' },
   { value: 'both', label: 'Ambos', description: 'Editorial y publicidad' },
 ];
 
 // ============ MARKET STRUCTURE CHECKS ============
 
 export const MARKET_STRUCTURE_CHECKS = [
-  { id: 'understandable', label: 'La keyword se entiende por sí sola', points: 2 },
-  { id: 'amazonSuggested', label: 'Aparece como sugerencia en Amazon', points: 2 },
-  { id: 'profitableBooks', label: 'Veo al menos 3 libros vendiendo bien', points: 2 },
-  { id: 'indieAuthors', label: 'Hay autores independientes vendiendo', points: 2 },
-  { id: 'intentMatch', label: 'El top refleja la intención real', points: 2 },
-  { id: 'variants', label: 'Hay variantes cercanas con potencial', points: 2 },
+  { id: 'selfContained', label: 'Se entiende por sí sola', tooltip: 'La keyword es clara y no requiere contexto adicional.', points: 2 },
+  { id: 'amazonSuggestion', label: 'Sugerencia Amazon', tooltip: 'Aparece como autocompletado en la barra de búsqueda de Amazon.', points: 2 },
+  { id: 'booksSellingWell', label: '≥3 libros vendiendo', tooltip: 'Hay al menos 3 libros con ventas consistentes en el nicho.', points: 2 },
+  { id: 'indieAuthorsSelling', label: 'Autores indie vendiendo', tooltip: 'Hay autores independientes posicionados, no solo editoriales grandes.', points: 2 },
+  { id: 'topMatchesIntent', label: 'Top refleja intención', tooltip: 'Los resultados top coinciden con la intención real de búsqueda.', points: 2 },
+  { id: 'variantsPotential', label: 'Variantes con potencial', tooltip: 'Existen keywords relacionadas que también pueden funcionar.', points: 2 },
+] as const;
+
+// ============ CATALOG SIGNALS CHECKS ============
+
+export const CATALOG_SIGNALS_CHECKS = [
+  { id: 'hasBooksOver200Reviews', label: 'Libros +200 reviews', tooltip: 'Hay libros con más de 200 reviews, indica mercado maduro.', points: 4 },
+  { id: 'hasProfitableBooks', label: '≥3 libros rentables', tooltip: 'Al menos 3 libros generan ingresos consistentes.', points: 5 },
+  { id: 'hasBooksUnder100Reviews', label: 'Libros −100 reviews', tooltip: 'Hay libros con menos de 100 reviews, indica oportunidad de entrada.', points: 3 },
+] as const;
+
+// ============ EDITORIAL CHECKS ============
+// 5 checks que NO afectan al Market Score
+
+export const EDITORIAL_CHECKS = [
+  { id: 'makesSenseAsBook', label: 'Tiene sentido como libro' },
+  { id: 'canCreateThisBook', label: 'Puedo crear este libro' },
+  { id: 'canDoItBetter', label: 'Puedo hacerlo mejor' },
+  { id: 'canDifferentiate', label: 'Puedo diferenciarlo' },
+  { id: 'personalInterest', label: 'Tengo interés personal' },
 ] as const;

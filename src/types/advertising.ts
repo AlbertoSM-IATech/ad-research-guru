@@ -55,22 +55,13 @@ import type {
   MarketData, 
   EditorialData, 
   KeywordStatus, 
-  KeywordPurpose 
+  KeywordPurpose,
+  MarketStructure,
+  CatalogSignals,
 } from '@/lib/market-score';
 
-// Market Structure data for scoring (12 pts block - 6 checks x 2pts)
-export interface MarketStructure {
-  understandable?: boolean;       // La keyword se entiende por sí sola (+2)
-  amazonSuggested?: boolean;      // Aparece como sugerencia en Amazon (+2)
-  profitableBooks?: boolean;      // Veo al menos 3 libros vendiendo bien (+2)
-  indieAuthors?: boolean;         // Hay autores independientes vendiendo (+2)
-  intentMatch?: boolean;          // El top refleja la intención real (+2)
-  variants?: boolean;             // Hay variantes cercanas con potencial (+2)
-  // Legacy fields (kept for backward compatibility)
-  hasProfitableBooks?: boolean;
-  hasBooksOver200Reviews?: boolean;
-  hasBooksUnder100Reviews?: boolean;
-}
+// Re-export for convenience
+export type { MarketData, EditorialData, KeywordStatus, KeywordPurpose, MarketStructure, CatalogSignals };
 
 export interface Keyword {
   id: string;
@@ -85,24 +76,27 @@ export interface Keyword {
   price: number;
   royalties: number;
   marketScore: number; // 0-100, calculated
-  marketData?: MarketData; // Full market data (optional, for backward compat)
+  marketData?: MarketData; // Full market data
+  
+  // ============ MARKET STRUCTURE (12 pts) ============
+  marketStructure?: MarketStructure;
+  
+  // ============ CATALOG SIGNALS (12 pts) ============
+  catalogSignals?: CatalogSignals;
   
   // ============ EDITORIAL DATA (separate from Market Score) ============
   editorialData?: EditorialData;
-  editorialScore?: number; // 0-4
+  editorialScore?: number; // 0-5
   
   // ============ STATUS & PURPOSE ============
   status: KeywordStatus; // pending | valid | discarded
-  statusManuallySet?: boolean; // If true, status was manually set and won't auto-update
+  statusManuallySet?: boolean;
   purpose: KeywordPurpose; // editorial | ads | both
   
-  // ============ LEGACY FIELDS (for backward compatibility) ============
+  // ============ LEGACY FIELDS ============
   competitionLevel: CompetitionLevel;
   competitionNote?: string;
   relevance?: RelevanceLevel;
-  
-  // ============ MARKET STRUCTURE (15 pts block) ============
-  marketStructure?: MarketStructure;
   
   // ============ OPERATIONAL FIELDS ============
   campaignTypes: CampaignType[];

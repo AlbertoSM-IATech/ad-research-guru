@@ -30,11 +30,10 @@ export function useMarketScore(keyword: Keyword | null): UseMarketScoreResult | 
       competitors: keyword.competitors || 0,
       price: keyword.price || 9.99,
       royalties: keyword.royalties || 2.00,
-      brandRisk: 'low',
       trafficSource: 'amazon',
     };
     
-    const breakdown = calculateMarketScore(marketData);
+    const breakdown = calculateMarketScore(marketData, keyword.marketplaceId, keyword.marketStructure, keyword.catalogSignals);
     const score = breakdown.total;
     const level = getMarketScoreLevel(score);
     const info = getMarketScoreInfo(score);
@@ -74,9 +73,8 @@ export function getKeywordMarketScore(keyword: Keyword): number {
     competitors: keyword.competitors || 0,
     price: keyword.price || 9.99,
     royalties: keyword.royalties || 2.00,
-    brandRisk: 'low',
     trafficSource: 'amazon',
   };
   
-  return calculateMarketScore(marketData).total;
+  return calculateMarketScore(marketData, keyword.marketplaceId, keyword.marketStructure, keyword.catalogSignals).total;
 }
