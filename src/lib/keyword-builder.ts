@@ -1,19 +1,20 @@
 // Wizard builder - single point of entry for creating keywords with complete data
-import type { Keyword, BookInfo, RelevanceLevel, IntentType, KeywordState, MarketStructure } from '@/types/advertising';
+import type { Keyword, BookInfo, RelevanceLevel, IntentType, KeywordState } from '@/types/advertising';
 import type { 
   MarketData, 
   EditorialData, 
   KeywordStatus, 
   KeywordPurpose,
-  BrandRisk,
-  TrafficSource 
+  TrafficSource,
+  MarketStructure,
+  CatalogSignals,
 } from '@/lib/market-score';
 import { 
   calculateMarketScore, 
-  calculateEditorialScore, 
   getDefaultMarketData,
   getDefaultEditorialData,
-  MARKET_STRUCTURE_CHECKS,
+  getDefaultMarketStructure,
+  getDefaultCatalogSignals,
 } from '@/lib/market-score';
 import { calculateRelevance, classifyIntent } from '@/types/advertising';
 
@@ -29,18 +30,21 @@ export interface WizardStep2Data {
   competitors: number;
   price: number;
   royalties: number;
-  brandRisk: BrandRisk;
   trafficSource: TrafficSource;
   // Market Structure (12 pts block - 6 checks x 2pts)
-  understandable?: boolean;
-  amazonSuggested?: boolean;
-  profitableBooks?: boolean;
-  indieAuthors?: boolean;
-  intentMatch?: boolean;
-  variants?: boolean;
+  selfContained?: boolean;
+  amazonSuggestion?: boolean;
+  booksSellingWell?: boolean;
+  indieAuthorsSelling?: boolean;
+  topMatchesIntent?: boolean;
+  variantsPotential?: boolean;
+  // Catalog Signals (12 pts block)
+  hasBooksOver200Reviews?: boolean;
+  hasProfitableBooks?: boolean;
+  hasBooksUnder100Reviews?: boolean;
 }
 
-// Editorial checks aligned with wizard (4 checks - does NOT affect Market Score)
+// Editorial checks aligned with wizard (5 checks - does NOT affect Market Score)
 export interface WizardStep3Data {
   editorialChecks: Record<string, boolean>;
   notes: string;
@@ -89,31 +93,37 @@ function scoreToRelevanceLevel(score: number): RelevanceLevel {
 export function buildNewKeywordFromWizard(payload: WizardPayload): Omit<Keyword, 'id' | 'createdAt' | 'updatedAt'> {
   const { step1, step2, step3, bookInfo } = payload;
   
-  // Build MarketData
+  // Build MarketData (NO brandRisk)
   const marketData: MarketData = {
     searchVolume: step2.searchVolume,
     competitors: step2.competitors,
     price: step2.price,
     royalties: step2.royalties,
-    brandRisk: step2.brandRisk,
     trafficSource: step2.trafficSource,
   };
   
   // Build Market Structure (6 checks x 2pts = 12pts max)
   const marketStructure: MarketStructure = {
-    understandable: step2.understandable ?? false,
-    amazonSuggested: step2.amazonSuggested ?? false,
-    profitableBooks: step2.profitableBooks ?? false,
-    indieAuthors: step2.indieAuthors ?? false,
-    intentMatch: step2.intentMatch ?? false,
-    variants: step2.variants ?? false,
+    selfContained: step2.selfContained ?? false,
+    amazonSuggestion: step2.amazonSuggestion ?? false,
+    booksSellingWell: step2.booksSellingWell ?? false,
+    indieAuthorsSelling: step2.indieAuthorsSelling ?? false,
+    topMatchesIntent: step2.topMatchesIntent ?? false,
+    variantsPotential: step2.variantsPotential ?? false,
   };
   
-  // Calculate Market Score with structure
-  const breakdown = calculateMarketScore(marketData, step1.marketplaceId, marketStructure);
+  // Build Catalog Signals (12 pts max)
+  const catalogSignals: CatalogSignals = {
+    hasBooksOver200Reviews: step2.hasBooksOver200Reviews ?? false,
+    hasProfitableBooks: step2.hasProfitableBooks ?? false,
+    hasBooksUnder100Reviews: step2.hasBooksUnder100Reviews ?? false,
+  };
+  
+  // Calculate Market Score with structure and catalog signals
+  const breakdown = calculateMarketScore(marketData, step1.marketplaceId, marketStructure, catalogSignals);
   const marketScore = breakdown.total;
   
-  // Build EditorialData if step3 provided (4 editorial checks - NOT affecting score)
+  // Build EditorialData if step3 provided (5 editorial checks - NOT affecting score)
   let editorialData: EditorialData | undefined;
   let editorialScore: number | undefined;
   
@@ -121,15 +131,16 @@ export function buildNewKeywordFromWizard(payload: WizardPayload): Omit<Keyword,
     const checks = step3.editorialChecks || {};
     editorialData = {
       checklist: {
-        canCreate: checks.canProduce ?? null,
-        canDoBetter: checks.canDoBetter ?? null,
+        makesSenseAsBook: checks.makesSenseAsBook ?? null,
+        canCreateThisBook: checks.canCreateThisBook ?? null,
+        canDoItBetter: checks.canDoItBetter ?? null,
         canDifferentiate: checks.canDifferentiate ?? null,
-        fitsStrategy: checks.hasInterest ?? null,
+        personalInterest: checks.personalInterest ?? null,
       },
       notes: step3.notes,
     };
-    // Calculate editorial score from 4 checks only
-    const editorialCheckKeys = ['canProduce', 'canDoBetter', 'canDifferentiate', 'hasInterest'];
+    // Calculate editorial score from 5 checks
+    const editorialCheckKeys = ['makesSenseAsBook', 'canCreateThisBook', 'canDoItBetter', 'canDifferentiate', 'personalInterest'];
     editorialScore = editorialCheckKeys.filter(k => checks[k]).length;
   }
   
@@ -162,6 +173,7 @@ export function buildNewKeywordFromWizard(payload: WizardPayload): Omit<Keyword,
     marketScore,
     marketData,
     marketStructure,
+    catalogSignals,
     
     // Editorial Data
     editorialData,
@@ -194,14 +206,16 @@ export function getDefaultStep2Data(): WizardStep2Data {
     competitors: 0,
     price: defaults.price,
     royalties: defaults.royalties,
-    brandRisk: defaults.brandRisk,
     trafficSource: defaults.trafficSource,
-    understandable: false,
-    amazonSuggested: false,
-    profitableBooks: false,
-    indieAuthors: false,
-    intentMatch: false,
-    variants: false,
+    selfContained: false,
+    amazonSuggestion: false,
+    booksSellingWell: false,
+    indieAuthorsSelling: false,
+    topMatchesIntent: false,
+    variantsPotential: false,
+    hasBooksOver200Reviews: false,
+    hasProfitableBooks: false,
+    hasBooksUnder100Reviews: false,
   };
 }
 

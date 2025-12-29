@@ -30,7 +30,6 @@ export const calculateRelevanceScore = (keyword: Keyword): number => {
     competitors: keyword.competitors || 0,
     price: keyword.price || 9.99,
     royalties: keyword.royalties || 2.00,
-    brandRisk: 'low',
     trafficSource: 'amazon',
   };
   return calculateMarketScore(marketData).total;

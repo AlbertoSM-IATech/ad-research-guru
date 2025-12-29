@@ -31,7 +31,6 @@ export function createKeywordDefaults(input: PartialKeywordInput): Omit<Keyword,
     competitors,
     price,
     royalties,
-    brandRisk: defaults.brandRisk,
     trafficSource: defaults.trafficSource,
   });
 

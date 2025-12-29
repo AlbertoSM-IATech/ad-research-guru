@@ -46,7 +46,6 @@ export function getKeywordMarketScore(keyword: Keyword): number {
     competitors: keyword.competitors || 0,
     price: keyword.price || 9.99,
     royalties: keyword.royalties || 2.00,
-    brandRisk: keyword.marketData?.brandRisk || 'low',
     trafficSource: keyword.marketData?.trafficSource || 'amazon',
   };
   
