@@ -45,13 +45,14 @@ import { INTENT_TYPES, classifyIntent, MARKETPLACES } from '@/types/advertising'
 import {
   KEYWORD_PURPOSE_OPTIONS,
   KEYWORD_STATUS_OPTIONS,
-  BRAND_RISK_OPTIONS,
   TRAFFIC_SOURCE_OPTIONS,
+  MARKET_STRUCTURE_CHECKS,
+  CATALOG_SIGNALS_CHECKS,
+  EDITORIAL_CHECKS,
   calculateMarketScore,
   getMarketScoreInfo,
   type KeywordPurpose,
   type KeywordStatus,
-  type BrandRisk,
   type TrafficSource,
 } from '@/lib/market-score';
 import {
@@ -74,8 +75,7 @@ const FIELD_TOOLTIPS = {
   competitors: 'Resultados en Amazon para esta keyword. Menos suele ser mejor.',
   price: 'Precio medio observado en los top resultados. Se usa para estimar margen y viabilidad. <9.99 penaliza.',
   royalties: 'Regalías estimadas por venta. A mayor regalía, más margen para invertir en Ads.',
-  brandRisk: 'Riesgo de marca registrada/propiedad intelectual. Penaliza el score si es alto.',
-  trafficSource: 'Si el tráfico depende de marca personal/rrss, suele implicar competencia dura; puede penalizar.',
+  trafficSource: 'Fuente principal del tráfico. Penaliza si depende de marca personal/rrss.',
   purpose: 'Para qué usarás la keyword: decidir libros, campañas de Ads, o ambas.',
   intent: 'Sirve para clasificar la keyword (estrategia). No afecta al Market Score. Ej: compra vs informativa.',
   status: 'Estado de validación: Pendiente = por revisar, Válida = confirmada, Descartada = no usar.',
@@ -105,16 +105,6 @@ function getStep3Title(purpose: string): string {
   }
 }
 
-// ============ EDITORIAL CHECKLIST ============
-// ONLY editorial checks that do NOT affect Market Score
-// The 6 market structure checks are in Step 2, not here
-const EDITORIAL_CHECKS = [
-  { id: 'canProduce', label: 'Puedo producir este tipo de libro' },
-  { id: 'canDoBetter', label: 'Puedo hacerlo mejor o más útil' },
-  { id: 'canDifferentiate', label: 'Puedo diferenciarlo claramente' },
-  { id: 'hasInterest', label: 'Tengo interés en el tema (opcional)' },
-];
-
 // Generate unique ID
 function generateKeywordId(): string {
   if (typeof crypto !== 'undefined' && crypto.randomUUID) {
@@ -131,7 +121,7 @@ function normalizeKeyword(keyword: string): string {
 interface NewKeywordWizardProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onComplete: (keyword: Keyword) => void; // Now returns complete Keyword with id
+  onComplete: (keyword: Keyword) => void;
   marketplaceId: string;
   bookInfo?: BookInfo;
   existingKeywords: Keyword[];
@@ -190,7 +180,7 @@ export function NewKeywordWizard({
   const [editorialChecks, setEditorialChecks] = useState<Record<string, boolean>>({});
   const [status, setStatus] = useState<KeywordStatus>('pending');
   const [configModalOpen, setConfigModalOpen] = useState(false);
-  const [configVersion, setConfigVersion] = useState(0); // Force re-check when config changes
+  const [configVersion, setConfigVersion] = useState(0);
   
   // ============ RESET FUNCTION ============
   const resetWizard = useCallback(() => {
@@ -239,27 +229,31 @@ export function NewKeywordWizard({
   
   const previewScore = useMemo(() => {
     const marketStructure = {
-      understandable: step2.understandable ?? false,
-      amazonSuggested: step2.amazonSuggested ?? false,
-      profitableBooks: step2.profitableBooks ?? false,
-      indieAuthors: step2.indieAuthors ?? false,
-      intentMatch: step2.intentMatch ?? false,
-      variants: step2.variants ?? false,
+      selfContained: step2.selfContained ?? false,
+      amazonSuggestion: step2.amazonSuggestion ?? false,
+      booksSellingWell: step2.booksSellingWell ?? false,
+      indieAuthorsSelling: step2.indieAuthorsSelling ?? false,
+      topMatchesIntent: step2.topMatchesIntent ?? false,
+      variantsPotential: step2.variantsPotential ?? false,
+    };
+    const catalogSignals = {
+      hasBooksOver200Reviews: step2.hasBooksOver200Reviews ?? false,
+      hasProfitableBooks: step2.hasProfitableBooks ?? false,
+      hasBooksUnder100Reviews: step2.hasBooksUnder100Reviews ?? false,
     };
     return calculateMarketScore({
       searchVolume: step2.searchVolume,
       competitors: step2.competitors,
       price: step2.price,
       royalties: step2.royalties,
-      brandRisk: step2.brandRisk,
       trafficSource: step2.trafficSource,
-    }, marketplaceId, marketStructure);
+    }, marketplaceId, marketStructure, catalogSignals);
   }, [step2, marketplaceId]);
   
   // Get current market config for BONUS UX subtitle
   const marketConfig = useMemo(() => getMarketScoreConfig(marketplaceId), [marketplaceId]);
   
-  // Check if marketplace has user config or base config (re-check when configVersion changes)
+  // Check if marketplace has user config or base config
   const marketplaceConfigStatus = useMemo(() => {
     const userOverrides = loadUserConfigOverrides();
     const hasUserConfig = !!userOverrides[marketplaceId];
@@ -278,7 +272,7 @@ export function NewKeywordWizard({
   
   const selectedMarketplace = MARKETPLACES.find(m => m.id === marketplaceId);
   
-  // Count editorial checks (now 4 checks)
+  // Count editorial checks (5 checks)
   const editorialScore = Object.values(editorialChecks).filter(Boolean).length;
   
   // ============ NAVIGATION ============
@@ -295,10 +289,8 @@ export function NewKeywordWizard({
   };
   
   const handleComplete = () => {
-    // Don't allow completion if duplicate exists
     if (hasDuplicate) return;
     
-    // Normalize keyword before building
     const normalizedStep1 = {
       ...step1,
       keyword: normalizeKeyword(step1.keyword),
@@ -315,7 +307,6 @@ export function NewKeywordWizard({
       bookInfo,
     });
     
-    // Generate ID and build complete keyword with timestamps
     const now = new Date();
     const completeKeyword: Keyword = {
       ...keywordData,
@@ -415,7 +406,7 @@ export function NewKeywordWizard({
                   <AlertTriangle className="h-4 w-4 text-destructive" />
                   <AlertDescription className="flex items-center justify-between">
                     <span className="text-destructive dark:text-destructive">
-                      Esta keyword ya existe en este marketplace. No puedes crearla de nuevo.
+                      Esta keyword ya existe en este marketplace.
                     </span>
                     {onOpenExistingKeyword && (
                       <Button variant="outline" size="sm" onClick={handleOpenExisting} className="ml-2 shrink-0">
@@ -488,109 +479,62 @@ export function NewKeywordWizard({
                     onValueChange={(value) => setStep1({ ...step1, intent: value as IntentType })}
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder="Auto-detectado" />
+                      <SelectValue placeholder="Auto-detectar..." />
                     </SelectTrigger>
                     <SelectContent className="bg-popover border-border">
                       {INTENT_TYPES.map((intent) => (
                         <SelectItem key={intent.value} value={intent.value}>
-                          <div className="flex flex-col">
-                            <span>{intent.label}</span>
-                            <span className="text-xs text-muted-foreground">{intent.description}</span>
-                          </div>
+                          <span>{intent.label}</span>
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                   {detectedIntent && !step1.intent && (
                     <p className="text-xs text-muted-foreground">
-                      Detectado: {INTENT_TYPES.find(i => i.value === detectedIntent)?.label}
+                      Auto-detectada: {INTENT_TYPES.find(i => i.value === detectedIntent)?.label}
                     </p>
                   )}
                 </div>
                 
                 <div className="space-y-2">
                   <Label>Marketplace</Label>
-                  <div className="flex items-center gap-2 px-3 py-2 bg-muted rounded-md border">
-                    <span className="text-lg">{selectedMarketplace?.flag}</span>
+                  <div className="flex items-center gap-2 h-10 px-3 border rounded-md bg-muted/50">
+                    <span>{selectedMarketplace?.flag}</span>
                     <span className="text-sm">{selectedMarketplace?.name}</span>
                   </div>
                 </div>
               </div>
-              
-              {/* Warning banner if marketplace not configured */}
-              {marketplaceConfigStatus.usingDefaults && (
-                <Alert className="border-amber-500/50 bg-amber-500/10">
-                  <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400" />
-                  <AlertDescription className="text-amber-700 dark:text-amber-300 text-sm">
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <strong>⚠️ Antes de validar keywords en este mercado</strong>, define tus <strong>VALORES IDEALES</strong> en Configuración. 
-                        Sin eso, el scoring no estará adaptado a tu mercado y los resultados serán poco fiables.
-                        {marketplaceConfigStatus.hasBaseConfig ? (
-                          <span className="block text-xs mt-1 text-amber-600 dark:text-amber-400">
-                            Actualmente usando defaults base para {selectedMarketplace?.name}.
-                          </span>
-                        ) : (
-                          <span className="block text-xs mt-1 text-amber-600 dark:text-amber-400">
-                            Este mercado no tiene configuración base. Usando valores de España como referencia.
-                          </span>
-                        )}
-                      </div>
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        onClick={() => setConfigModalOpen(true)}
-                        className="shrink-0 gap-1.5 border-amber-500/50 text-amber-700 dark:text-amber-300 hover:bg-amber-500/20"
-                      >
-                        <Settings className="w-3.5 h-3.5" />
-                        Ir a Configuración
-                      </Button>
-                    </div>
-                  </AlertDescription>
-                </Alert>
-              )}
             </div>
           )}
           
           {/* ============ STEP 2: DATOS DE MERCADO ============ */}
           {currentStep === 2 && (
             <div className="space-y-6">
-              <h3 className="text-lg font-medium">{getStep2Title(step1.purpose)}</h3>
-              <p className="text-xs text-muted-foreground -mt-4">
-                Criterios actuales ({selectedMarketplace?.name || marketplaceId.toUpperCase()}): 
-                ideal volumen {marketConfig.idealVolume.toLocaleString()}, 
-                ideal competidores {marketConfig.idealCompetitors.toLocaleString()}, 
-                precio {marketConfig.idealPrice}$, 
-                regalías {marketConfig.idealRoyalties}$
-              </p>
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-medium">{getStep2Title(step1.purpose)}</h3>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setConfigModalOpen(true)}
+                  className="gap-2"
+                >
+                  <Settings className="w-4 h-4" />
+                  Configurar mercado
+                </Button>
+              </div>
               
-              {/* Warning banner if marketplace not configured - Step 2 */}
+              {/* Config warning */}
               {marketplaceConfigStatus.usingDefaults && (
-                <Alert className="border-amber-500/50 bg-amber-500/10">
-                  <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                <Alert className="border-amber-500/30 bg-amber-500/10">
+                  <AlertCircle className="h-4 w-4 text-amber-600 dark:text-amber-400" />
                   <AlertDescription className="text-amber-700 dark:text-amber-300 text-sm">
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <strong>⚠️ Configura primero tus valores ideales</strong> para obtener un scoring adaptado a este mercado.
-                        {!marketplaceConfigStatus.isConfigured && (
-                          <span className="block text-xs mt-1 text-amber-600 dark:text-amber-400">
-                            Los valores mostrados arriba son valores por defecto. El Market Score no estará personalizado hasta que configures el mercado.
-                          </span>
-                        )}
-                      </div>
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        onClick={() => setConfigModalOpen(true)}
-                        className="shrink-0 gap-1.5 border-amber-500/50 text-amber-700 dark:text-amber-300 hover:bg-amber-500/20"
-                      >
-                        <Settings className="w-3.5 h-3.5" />
-                        Configurar
-                      </Button>
-                    </div>
+                    {marketplaceConfigStatus.needsConfig 
+                      ? 'Este marketplace no tiene configuración. El Market Score usa valores por defecto.'
+                      : 'Usando configuración base. Personaliza los valores ideales para tu estrategia.'}
                   </AlertDescription>
                 </Alert>
               )}
+              
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="searchVolume">
@@ -667,54 +611,33 @@ export function NewKeywordWizard({
                 </div>
               </div>
               
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>
-                    Brand Risk
-                    <FieldTooltip content={FIELD_TOOLTIPS.brandRisk} />
-                  </Label>
-                  <Select
-                    value={step2.brandRisk}
-                    onValueChange={(value) => setStep2({ ...step2, brandRisk: value as BrandRisk })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent className="bg-popover border-border">
-                      {BRAND_RISK_OPTIONS.map((opt) => (
-                        <SelectItem key={opt.value} value={opt.value}>
+              <div className="space-y-2">
+                <Label>
+                  Fuente de tráfico
+                  <FieldTooltip content={FIELD_TOOLTIPS.trafficSource} />
+                </Label>
+                <Select
+                  value={step2.trafficSource}
+                  onValueChange={(value) => setStep2({ ...step2, trafficSource: value as TrafficSource })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="bg-popover border-border">
+                    {TRAFFIC_SOURCE_OPTIONS.map((opt) => (
+                      <SelectItem key={opt.value} value={opt.value}>
+                        <div className="flex items-center gap-2">
                           <Badge variant="outline" className={opt.color}>
                             {opt.label}
                           </Badge>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                
-                <div className="space-y-2">
-                  <Label>
-                    Fuente de tráfico
-                    <FieldTooltip content={FIELD_TOOLTIPS.trafficSource} />
-                  </Label>
-                  <Select
-                    value={step2.trafficSource}
-                    onValueChange={(value) => setStep2({ ...step2, trafficSource: value as TrafficSource })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent className="bg-popover border-border">
-                      {TRAFFIC_SOURCE_OPTIONS.map((opt) => (
-                        <SelectItem key={opt.value} value={opt.value}>
-                          <Badge variant="outline" className={opt.color}>
-                            {opt.label}
-                          </Badge>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+                          {opt.penalty !== 0 && (
+                            <span className="text-xs text-muted-foreground">({opt.penalty})</span>
+                          )}
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               
               {/* Estructura del Mercado (12 pts) - 6 checks x 2pts */}
@@ -724,93 +647,58 @@ export function NewKeywordWizard({
                     Estructura del Mercado
                     <FieldTooltip content="Señales de estructura del mercado. Aporta hasta 12 puntos al Market Score (6 checks × 2pts)." />
                   </h4>
-                  <span className="text-xs text-muted-foreground">Máx +12 pts</span>
+                  <span className="text-xs text-muted-foreground">
+                    {previewScore.marketStructure.points}/{previewScore.marketStructure.max} pts
+                  </span>
                 </div>
                 
                 <div className="grid grid-cols-2 gap-2">
-                  <div className="flex items-center justify-between p-2 rounded bg-muted/50">
-                    <div className="flex items-center gap-2">
-                      <Checkbox
-                        id="understandable"
-                        checked={step2.understandable === true}
-                        onCheckedChange={(checked) => setStep2({ ...step2, understandable: checked === true })}
-                      />
-                      <Label htmlFor="understandable" className="text-xs cursor-pointer">
-                        Se entiende por sí sola
-                      </Label>
+                  {MARKET_STRUCTURE_CHECKS.map((check) => (
+                    <div key={check.id} className="flex items-center justify-between p-2 rounded bg-muted/50">
+                      <div className="flex items-center gap-2">
+                        <Checkbox
+                          id={check.id}
+                          checked={step2[check.id as keyof WizardStep2Data] === true}
+                          onCheckedChange={(checked) => setStep2({ ...step2, [check.id]: checked === true })}
+                        />
+                        <Label htmlFor={check.id} className="text-xs cursor-pointer">
+                          {check.label}
+                        </Label>
+                      </div>
+                      <span className="text-[10px] text-green-600 dark:text-green-400">+{check.points}</span>
                     </div>
-                    <span className="text-[10px] text-green-600 dark:text-green-400">+2</span>
-                  </div>
-                  
-                  <div className="flex items-center justify-between p-2 rounded bg-muted/50">
-                    <div className="flex items-center gap-2">
-                      <Checkbox
-                        id="amazonSuggested"
-                        checked={step2.amazonSuggested === true}
-                        onCheckedChange={(checked) => setStep2({ ...step2, amazonSuggested: checked === true })}
-                      />
-                      <Label htmlFor="amazonSuggested" className="text-xs cursor-pointer">
-                        Sugerencia Amazon
-                      </Label>
+                  ))}
+                </div>
+              </div>
+              
+              {/* Señales de Catálogo (12 pts) */}
+              <div className="space-y-3 p-4 rounded-lg border border-border bg-muted/30">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-sm font-medium flex items-center gap-2">
+                    Señales de Catálogo
+                    <FieldTooltip content="Señales sobre el catálogo existente. Aporta hasta 12 puntos al Market Score." />
+                  </h4>
+                  <span className="text-xs text-muted-foreground">
+                    {previewScore.catalogSignals.points}/{previewScore.catalogSignals.max} pts
+                  </span>
+                </div>
+                
+                <div className="space-y-2">
+                  {CATALOG_SIGNALS_CHECKS.map((check) => (
+                    <div key={check.id} className="flex items-center justify-between p-2 rounded bg-muted/50">
+                      <div className="flex items-center gap-2">
+                        <Checkbox
+                          id={check.id}
+                          checked={step2[check.id as keyof WizardStep2Data] === true}
+                          onCheckedChange={(checked) => setStep2({ ...step2, [check.id]: checked === true })}
+                        />
+                        <Label htmlFor={check.id} className="text-xs cursor-pointer">
+                          {check.label}
+                        </Label>
+                      </div>
+                      <span className="text-[10px] text-green-600 dark:text-green-400">+{check.points}</span>
                     </div>
-                    <span className="text-[10px] text-green-600 dark:text-green-400">+2</span>
-                  </div>
-                  
-                  <div className="flex items-center justify-between p-2 rounded bg-muted/50">
-                    <div className="flex items-center gap-2">
-                      <Checkbox
-                        id="profitableBooks"
-                        checked={step2.profitableBooks === true}
-                        onCheckedChange={(checked) => setStep2({ ...step2, profitableBooks: checked === true })}
-                      />
-                      <Label htmlFor="profitableBooks" className="text-xs cursor-pointer">
-                        ≥3 libros vendiendo
-                      </Label>
-                    </div>
-                    <span className="text-[10px] text-green-600 dark:text-green-400">+2</span>
-                  </div>
-                  
-                  <div className="flex items-center justify-between p-2 rounded bg-muted/50">
-                    <div className="flex items-center gap-2">
-                      <Checkbox
-                        id="indieAuthors"
-                        checked={step2.indieAuthors === true}
-                        onCheckedChange={(checked) => setStep2({ ...step2, indieAuthors: checked === true })}
-                      />
-                      <Label htmlFor="indieAuthors" className="text-xs cursor-pointer">
-                        Autores indie vendiendo
-                      </Label>
-                    </div>
-                    <span className="text-[10px] text-green-600 dark:text-green-400">+2</span>
-                  </div>
-                  
-                  <div className="flex items-center justify-between p-2 rounded bg-muted/50">
-                    <div className="flex items-center gap-2">
-                      <Checkbox
-                        id="intentMatch"
-                        checked={step2.intentMatch === true}
-                        onCheckedChange={(checked) => setStep2({ ...step2, intentMatch: checked === true })}
-                      />
-                      <Label htmlFor="intentMatch" className="text-xs cursor-pointer">
-                        Top refleja intención
-                      </Label>
-                    </div>
-                    <span className="text-[10px] text-green-600 dark:text-green-400">+2</span>
-                  </div>
-                  
-                  <div className="flex items-center justify-between p-2 rounded bg-muted/50">
-                    <div className="flex items-center gap-2">
-                      <Checkbox
-                        id="variants"
-                        checked={step2.variants === true}
-                        onCheckedChange={(checked) => setStep2({ ...step2, variants: checked === true })}
-                      />
-                      <Label htmlFor="variants" className="text-xs cursor-pointer">
-                        Variantes con potencial
-                      </Label>
-                    </div>
-                    <span className="text-[10px] text-green-600 dark:text-green-400">+2</span>
-                  </div>
+                  ))}
                 </div>
               </div>
               
@@ -883,7 +771,7 @@ export function NewKeywordWizard({
               
               <div className="space-y-3">
                 {EDITORIAL_CHECKS.map((check) => (
-                  <div key={check.id} className="flex items-center space-x-3">
+                  <div key={check.id} className="flex items-center space-x-3 p-2 rounded bg-muted/30">
                     <Checkbox
                       id={check.id}
                       checked={editorialChecks[check.id] === true}
@@ -898,26 +786,14 @@ export function NewKeywordWizard({
                 ))}
               </div>
               
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <span>Editorial Fit:</span>
-                <Badge variant="outline" className={cn(
-                  editorialScore >= 3 ? 'bg-green-500/20 text-green-700 dark:text-green-300' :
-                  editorialScore >= 2 ? 'bg-yellow-500/20 text-yellow-700 dark:text-yellow-300' :
-                  'bg-muted text-muted-foreground'
-                )}>
-                  {editorialScore}/4
-                </Badge>
-                <span className="text-xs">(solo orientativo, no afecta al Market Score)</span>
-              </div>
-              
               <div className="space-y-2">
                 <Label htmlFor="notes">Notas (opcional)</Label>
                 <Textarea
                   id="notes"
                   value={step3.notes}
                   onChange={(e) => setStep3({ ...step3, notes: e.target.value })}
-                  placeholder="Notas adicionales sobre esta keyword..."
-                  rows={3}
+                  placeholder="Observaciones para decisión editorial..."
+                  rows={4}
                 />
               </div>
             </div>
@@ -926,174 +802,117 @@ export function NewKeywordWizard({
           {/* ============ STEP 4: RESUMEN ============ */}
           {currentStep === 4 && (
             <div className="space-y-6">
-              {/* Bloque A: Viabilidad de mercado (Market Score) - siempre visible */}
-              <div className="p-4 rounded-lg border border-border bg-muted/30 space-y-4">
-                <h4 className="font-medium text-lg flex items-center gap-2">
-                  <BarChart3 className="w-5 h-5 text-primary" />
-                  Viabilidad de mercado (Market Score)
-                </h4>
+              <h3 className="text-lg font-medium">Resumen</h3>
+              
+              {/* A: Viabilidad de Mercado */}
+              <div className="p-4 rounded-lg border border-border bg-muted/30 space-y-3">
+                <h4 className="font-medium">Viabilidad de Mercado</h4>
                 
-                {/* Basic info */}
-                <div className="grid grid-cols-2 gap-y-3 text-sm">
-                  <span className="text-muted-foreground">Keyword:</span>
-                  <span className="font-medium">{step1.keyword}</span>
-                  
-                  <span className="text-muted-foreground">Marketplace:</span>
-                  <span className="flex items-center gap-2">
-                    <span>{selectedMarketplace?.flag}</span>
-                    <span>{selectedMarketplace?.name}</span>
-                  </span>
-                  
-                  <span className="text-muted-foreground">Propósito:</span>
-                  <span>{KEYWORD_PURPOSE_OPTIONS.find(o => o.value === step1.purpose)?.label}</span>
-                  
-                  <span className="text-muted-foreground">Estado:</span>
-                  <Badge variant="outline" className={KEYWORD_STATUS_OPTIONS.find(o => o.value === status)?.color}>
-                    {KEYWORD_STATUS_OPTIONS.find(o => o.value === status)?.label}
+                <div className="flex items-center justify-between">
+                  <span className="text-2xl font-bold">{step1.keyword}</span>
+                  <Badge variant="outline">{selectedMarketplace?.name}</Badge>
+                </div>
+                
+                <div className="flex items-center gap-4">
+                  <div className="flex-1">
+                    <Progress value={previewScore.total} className="h-3" />
+                  </div>
+                  <Badge className={cn(
+                    'text-lg px-3',
+                    previewScore.total >= 70 ? 'bg-green-500/20 text-green-700 dark:text-green-300' :
+                    previewScore.total >= 40 ? 'bg-yellow-500/20 text-yellow-700 dark:text-yellow-300' :
+                    'bg-red-500/20 text-red-700 dark:text-red-300'
+                  )}>
+                    {previewScore.total}
                   </Badge>
                 </div>
                 
-                <div className="h-px bg-border" />
-                
-                {/* Market data */}
-                <div className="grid grid-cols-2 gap-y-3 text-sm">
-                  <span className="text-muted-foreground">Volumen búsqueda:</span>
-                  <span>{step2.searchVolume.toLocaleString()}</span>
-                  
-                  <span className="text-muted-foreground">Competidores:</span>
-                  <span>{step2.competitors.toLocaleString()}</span>
-                  
-                  <span className="text-muted-foreground">Precio medio:</span>
-                  <span>${step2.price.toFixed(2)}</span>
-                  
-                  <span className="text-muted-foreground">Regalías:</span>
-                  <span>${step2.royalties.toFixed(2)}</span>
-                </div>
-                
-                <div className="h-px bg-border" />
-                
-                {/* Score */}
-                <div className="flex items-center justify-between">
-                  <div>
-                    <span className="text-sm text-muted-foreground">Market Score:</span>
+                <div className="grid grid-cols-2 gap-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Volumen:</span>
+                    <span>{step2.searchVolume.toLocaleString()}</span>
                   </div>
-                  <div className="flex items-center gap-3">
-                    <span className={cn(
-                      'text-3xl font-bold',
-                      previewScore.total >= 70 ? 'text-green-600 dark:text-green-400' :
-                      previewScore.total >= 40 ? 'text-yellow-600 dark:text-yellow-400' :
-                      'text-red-600 dark:text-red-400'
-                    )}>
-                      {previewScore.total}
-                    </span>
-                    <div className="flex flex-col gap-1">
-                      <Badge className={cn(
-                        previewScore.total >= 70 ? 'bg-green-500/20 text-green-700 dark:text-green-300' :
-                        previewScore.total >= 40 ? 'bg-yellow-500/20 text-yellow-700 dark:text-yellow-300' :
-                        'bg-red-500/20 text-red-700 dark:text-red-300'
-                      )}>
-                        {scoreInfo.label}
-                      </Badge>
-                      {!isDataComplete && (
-                        <Badge variant="outline" className="text-amber-600 dark:text-amber-400 border-amber-500/50">
-                          Incompleta
-                        </Badge>
-                      )}
-                    </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Competidores:</span>
+                    <span>{step2.competitors.toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Precio:</span>
+                    <span>${step2.price.toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Regalías:</span>
+                    <span>${step2.royalties.toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Estructura:</span>
+                    <span>{previewScore.marketStructure.points}/{previewScore.marketStructure.max} pts</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Catálogo:</span>
+                    <span>{previewScore.catalogSignals.points}/{previewScore.catalogSignals.max} pts</span>
                   </div>
                 </div>
-                
-                {previewScore.penalties.points < 0 && (
-                  <p className="text-xs text-amber-600 dark:text-amber-400">
-                    ⚠ {previewScore.penalties.label}
-                  </p>
-                )}
               </div>
               
-              {/* Bloque B: Contexto editorial (opcional) - solo si hay datos */}
-              {(editorialScore > 0 || step3.notes) ? (
-                <div className="p-4 rounded-lg border border-border bg-muted/30 space-y-4">
-                  <h4 className="font-medium text-lg flex items-center gap-2">
-                    <Lightbulb className="w-5 h-5 text-blue-500" />
-                    Contexto editorial (opcional)
-                  </h4>
-                  
-                  {editorialScore > 0 && (
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-muted-foreground">Strategic Fit:</span>
-                      <Badge variant="outline" className={cn(
-                        editorialScore >= 7 ? 'bg-green-500/20 text-green-700 dark:text-green-300' :
-                        editorialScore >= 4 ? 'bg-yellow-500/20 text-yellow-700 dark:text-yellow-300' :
-                        'bg-muted text-muted-foreground'
-                      )}>
-                        {editorialScore}/10
+              {/* B: Contexto Editorial (if exists) */}
+              {editorialScore > 0 && (
+                <div className="p-4 rounded-lg border border-border bg-muted/30 space-y-3">
+                  <h4 className="font-medium">Contexto Editorial</h4>
+                  <div className="flex items-center gap-2">
+                    <Badge variant="outline">{editorialScore}/5 checks</Badge>
+                    <span className="text-xs text-muted-foreground italic">
+                      (No afecta al Market Score)
+                    </span>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {EDITORIAL_CHECKS.filter(c => editorialChecks[c.id]).map(check => (
+                      <Badge key={check.id} variant="secondary" className="text-xs">
+                        ✓ {check.label}
                       </Badge>
-                    </div>
-                  )}
-                  
-                  {editorialScore > 0 && (
-                    <div className="text-xs text-muted-foreground">
-                      <span className="font-medium">Checks marcados:</span>{' '}
-                      {EDITORIAL_CHECKS.filter(c => editorialChecks[c.id]).map(c => c.label).join(', ') || 'Ninguno'}
-                    </div>
-                  )}
-                  
-                  {step3.notes && (
-                    <div className="text-sm">
-                      <span className="text-muted-foreground">Notas: </span>
-                      <span>{step3.notes}</span>
-                    </div>
-                  )}
+                    ))}
+                  </div>
                 </div>
-              ) : step1.purpose === 'ads' ? (
-                <div className="p-3 rounded-lg bg-muted/50 text-sm text-muted-foreground flex items-center gap-2">
-                  <Check className="w-4 h-4 text-green-500" />
-                  Contexto editorial no completado (correcto para Ads).
-                </div>
-              ) : null}
+              )}
+              
+              {/* Metadata */}
+              <div className="flex items-center gap-2 flex-wrap">
+                <Badge variant="outline">{KEYWORD_PURPOSE_OPTIONS.find(p => p.value === step1.purpose)?.label}</Badge>
+                <Badge variant="outline" className={KEYWORD_STATUS_OPTIONS.find(s => s.value === status)?.color}>
+                  {KEYWORD_STATUS_OPTIONS.find(s => s.value === status)?.label}
+                </Badge>
+                {step1.intent && (
+                  <Badge variant="outline">
+                    {INTENT_TYPES.find(i => i.value === step1.intent)?.label}
+                  </Badge>
+                )}
+              </div>
             </div>
           )}
         </div>
         
-        <DialogFooter className="flex-col sm:flex-row gap-2">
-          <div className="flex gap-2 flex-1">
+        {/* Footer */}
+        <DialogFooter className="flex justify-between sm:justify-between">
+          <div>
             {currentStep > 1 && (
-              <Button variant="outline" onClick={handleBack}>
-                <ArrowLeft className="w-4 h-4 mr-2" />
+              <Button variant="outline" onClick={handleBack} className="gap-2">
+                <ArrowLeft className="w-4 h-4" />
                 Atrás
               </Button>
             )}
           </div>
-          
           <div className="flex gap-2">
             <Button variant="ghost" onClick={() => handleOpenChange(false)}>
               Cancelar
             </Button>
-            
             {currentStep < 4 ? (
-              <div className="flex flex-col items-end gap-1">
-                <Button 
-                  onClick={handleNext} 
-                  disabled={currentStep === 1 && !canProceedStep1}
-                >
-                  {currentStep === 3 && step1.purpose === 'ads' && editorialScore === 0 
-                    ? 'Saltar' 
-                    : 'Siguiente'}
-                  <ArrowRight className="w-4 h-4 ml-2" />
-                </Button>
-                {currentStep === 2 && step1.purpose === 'ads' && (
-                  <span className="text-xs text-muted-foreground">
-                    El paso "Contexto" es opcional para Ads.
-                  </span>
-                )}
-              </div>
+              <Button onClick={handleNext} disabled={currentStep === 1 && !canProceedStep1} className="gap-2">
+                Siguiente
+                <ArrowRight className="w-4 h-4" />
+              </Button>
             ) : (
-              <Button 
-                onClick={handleComplete} 
-                className="bg-primary"
-                disabled={hasDuplicate}
-              >
-                <Check className="w-4 h-4 mr-2" />
+              <Button onClick={handleComplete} disabled={hasDuplicate} className="gap-2">
+                <Check className="w-4 h-4" />
                 Crear Keyword
               </Button>
             )}
@@ -1101,12 +920,12 @@ export function NewKeywordWizard({
         </DialogFooter>
       </DialogContent>
       
-      {/* Market Configuration Modal - can be opened from wizard */}
+      {/* Market Config Modal */}
       <MarketConfigModal
         isOpen={configModalOpen}
         onClose={() => setConfigModalOpen(false)}
-        currentMarketplace={marketplaceId}
-        onConfigChange={() => setConfigVersion(v => v + 1)}
+        marketplaceId={marketplaceId}
+        onSave={() => setConfigVersion(v => v + 1)}
       />
     </Dialog>
   );

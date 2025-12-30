@@ -25,44 +25,30 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
-import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
 import { Info, Save, RotateCcw, Sparkles } from 'lucide-react';
 import type { Keyword } from '@/types/advertising';
 import { getAutoStatusFromScore } from '@/lib/keyword-builder';
 import {
   type MarketData,
+  type MarketStructure,
+  type CatalogSignals,
   type EditorialData,
-  type BrandRisk,
   type TrafficSource,
   type KeywordStatus,
   calculateMarketScore,
   calculateEditorialScore,
   getDefaultMarketData,
   getDefaultEditorialData,
+  getDefaultMarketStructure,
+  getDefaultCatalogSignals,
   getMarketScoreInfo,
-  BRAND_RISK_OPTIONS,
   TRAFFIC_SOURCE_OPTIONS,
   KEYWORD_STATUS_OPTIONS,
+  MARKET_STRUCTURE_CHECKS,
+  CATALOG_SIGNALS_CHECKS,
+  EDITORIAL_CHECKS,
 } from '@/lib/market-score';
-
-// Editorial checks (4 checks - do NOT affect Market Score)
-const EDITORIAL_CHECKS = [
-  { id: 'canProduce', label: 'Puedo producir este tipo de libro' },
-  { id: 'canDoBetter', label: 'Puedo hacerlo mejor o más útil' },
-  { id: 'canDifferentiate', label: 'Puedo diferenciarlo claramente' },
-  { id: 'hasInterest', label: 'Tengo interés en el tema' },
-];
-
-// Market Structure checks (6 checks x 2pts = 12pts - AFFECTS Market Score)
-const MARKET_STRUCTURE_CHECKS = [
-  { id: 'understandable', label: 'Se entiende por sí sola', tooltip: 'La keyword es clara y no requiere contexto adicional.' },
-  { id: 'amazonSuggested', label: 'Sugerencia Amazon', tooltip: 'Aparece como autocompletado en la barra de búsqueda de Amazon.' },
-  { id: 'profitableBooks', label: '≥3 libros vendiendo', tooltip: 'Hay al menos 3 libros con ventas consistentes en el nicho.' },
-  { id: 'indieAuthors', label: 'Autores indie vendiendo', tooltip: 'Hay autores independientes posicionados, no solo editoriales grandes.' },
-  { id: 'intentMatch', label: 'Top refleja intención', tooltip: 'Los resultados top coinciden con la intención real de búsqueda.' },
-  { id: 'variants', label: 'Variantes con potencial', tooltip: 'Existen keywords relacionadas que también pueden funcionar.' },
-];
 
 interface KeywordDetailPanelProps {
   keyword: Keyword | null;
@@ -84,13 +70,15 @@ export const KeywordDetailPanel = ({
   const [competitors, setCompetitors] = useState(0);
   const [price, setPrice] = useState(9.99);
   const [royalties, setRoyalties] = useState(2.00);
-  const [brandRisk, setBrandRisk] = useState<BrandRisk>('low');
   const [trafficSource, setTrafficSource] = useState<TrafficSource>('amazon');
   
   // Market Structure state (12 pts block - 6 checks x 2pts)
-  const [marketStructureChecks, setMarketStructureChecks] = useState<Record<string, boolean>>({});
+  const [marketStructureChecks, setMarketStructureChecks] = useState<MarketStructure>(getDefaultMarketStructure());
   
-  // Editorial Data state (10 checks aligned with wizard)
+  // Catalog Signals state (12 pts block)
+  const [catalogSignalsChecks, setCatalogSignalsChecks] = useState<CatalogSignals>(getDefaultCatalogSignals());
+  
+  // Editorial Data state (5 checks - do NOT affect Market Score)
   const [editorialChecks, setEditorialChecks] = useState<Record<string, boolean>>({});
   const [editorialNotes, setEditorialNotes] = useState('');
   const [status, setStatus] = useState<KeywordStatus>('pending');
@@ -106,28 +94,35 @@ export const KeywordDetailPanel = ({
       setCompetitors(keyword.competitors || md.competitors);
       setPrice(keyword.price || md.price);
       setRoyalties(keyword.royalties || md.royalties);
-      setBrandRisk(md.brandRisk);
       setTrafficSource(md.trafficSource);
       
       // Market Structure data (6 checks)
-      const ms = keyword.marketStructure;
+      const ms = keyword.marketStructure ?? getDefaultMarketStructure();
       setMarketStructureChecks({
-        understandable: ms?.understandable ?? false,
-        amazonSuggested: ms?.amazonSuggested ?? false,
-        profitableBooks: ms?.profitableBooks ?? false,
-        indieAuthors: ms?.indieAuthors ?? false,
-        intentMatch: ms?.intentMatch ?? false,
-        variants: ms?.variants ?? false,
+        selfContained: ms.selfContained ?? false,
+        amazonSuggestion: ms.amazonSuggestion ?? false,
+        booksSellingWell: ms.booksSellingWell ?? false,
+        indieAuthorsSelling: ms.indieAuthorsSelling ?? false,
+        topMatchesIntent: ms.topMatchesIntent ?? false,
+        variantsPotential: ms.variantsPotential ?? false,
       });
       
-      // Editorial data - load from keyword editorialScore or build from checklist
+      // Catalog Signals data (3 checks)
+      const cs = keyword.catalogSignals ?? getDefaultCatalogSignals();
+      setCatalogSignalsChecks({
+        hasBooksOver200Reviews: cs.hasBooksOver200Reviews ?? false,
+        hasProfitableBooks: cs.hasProfitableBooks ?? false,
+        hasBooksUnder100Reviews: cs.hasBooksUnder100Reviews ?? false,
+      });
+      
+      // Editorial data - load from keyword editorialData
       const ed = keyword.editorialData ?? getDefaultEditorialData();
-      // Convert legacy checklist to editorial checks format
       const checks: Record<string, boolean> = {};
-      if (ed.checklist.canCreate === true) checks.canProduce = true;
-      if (ed.checklist.canDoBetter === true) checks.canDoBetter = true;
+      if (ed.checklist.makesSenseAsBook === true) checks.makesSenseAsBook = true;
+      if (ed.checklist.canCreateThisBook === true) checks.canCreateThisBook = true;
+      if (ed.checklist.canDoItBetter === true) checks.canDoItBetter = true;
       if (ed.checklist.canDifferentiate === true) checks.canDifferentiate = true;
-      if (ed.checklist.fitsStrategy === true) checks.hasInterest = true;
+      if (ed.checklist.personalInterest === true) checks.personalInterest = true;
       setEditorialChecks(checks);
       setEditorialNotes(ed.notes);
       
@@ -144,28 +139,28 @@ export const KeywordDetailPanel = ({
     competitors,
     price,
     royalties,
-    brandRisk,
     trafficSource,
-  }), [searchVolume, competitors, price, royalties, brandRisk, trafficSource]);
+  }), [searchVolume, competitors, price, royalties, trafficSource]);
 
-  // Market Structure for scoring (6 checks)
-  const marketStructure = useMemo(() => marketStructureChecks, [marketStructureChecks]);
-
-  const scoreBreakdown = useMemo(() => calculateMarketScore(marketData, marketplaceId, marketStructure), [marketData, marketplaceId, marketStructure]);
+  const scoreBreakdown = useMemo(() => 
+    calculateMarketScore(marketData, marketplaceId, marketStructureChecks, catalogSignalsChecks), 
+    [marketData, marketplaceId, marketStructureChecks, catalogSignalsChecks]
+  );
   const scoreInfo = useMemo(() => getMarketScoreInfo(scoreBreakdown.total), [scoreBreakdown.total]);
 
   // Calculate Editorial Score from checks
   const editorialData: EditorialData = useMemo(() => ({
     checklist: { 
-      canCreate: editorialChecks.canProduce ?? null, 
-      canDoBetter: editorialChecks.canDoBetter ?? null, 
+      makesSenseAsBook: editorialChecks.makesSenseAsBook ?? null, 
+      canCreateThisBook: editorialChecks.canCreateThisBook ?? null,
+      canDoItBetter: editorialChecks.canDoItBetter ?? null, 
       canDifferentiate: editorialChecks.canDifferentiate ?? null, 
-      fitsStrategy: editorialChecks.hasInterest ?? null 
+      personalInterest: editorialChecks.personalInterest ?? null 
     },
     notes: editorialNotes,
   }), [editorialChecks, editorialNotes]);
 
-  const editorialScore = useMemo(() => Object.values(editorialChecks).filter(Boolean).length, [editorialChecks]);
+  const editorialScore = useMemo(() => calculateEditorialScore(editorialData), [editorialData]);
 
   // Auto-update status based on score if not manually set
   const autoStatus = useMemo(() => getAutoStatusFromScore(scoreBreakdown.total), [scoreBreakdown.total]);
@@ -184,7 +179,8 @@ export const KeywordDetailPanel = ({
       royalties,
       marketScore: scoreBreakdown.total,
       marketData,
-      marketStructure,
+      marketStructure: marketStructureChecks,
+      catalogSignals: catalogSignalsChecks,
       editorialData,
       editorialScore,
       status: finalStatus,
@@ -216,26 +212,34 @@ export const KeywordDetailPanel = ({
     setCompetitors(keyword.competitors || md.competitors);
     setPrice(keyword.price || md.price);
     setRoyalties(keyword.royalties || md.royalties);
-    setBrandRisk(md.brandRisk);
     setTrafficSource(md.trafficSource);
     
     // Reset market structure
-    const ms = keyword.marketStructure;
+    const ms = keyword.marketStructure ?? getDefaultMarketStructure();
     setMarketStructureChecks({
-      understandable: ms?.understandable ?? false,
-      amazonSuggested: ms?.amazonSuggested ?? false,
-      profitableBooks: ms?.profitableBooks ?? false,
-      indieAuthors: ms?.indieAuthors ?? false,
-      intentMatch: ms?.intentMatch ?? false,
-      variants: ms?.variants ?? false,
+      selfContained: ms.selfContained ?? false,
+      amazonSuggestion: ms.amazonSuggestion ?? false,
+      booksSellingWell: ms.booksSellingWell ?? false,
+      indieAuthorsSelling: ms.indieAuthorsSelling ?? false,
+      topMatchesIntent: ms.topMatchesIntent ?? false,
+      variantsPotential: ms.variantsPotential ?? false,
+    });
+    
+    // Reset catalog signals
+    const cs = keyword.catalogSignals ?? getDefaultCatalogSignals();
+    setCatalogSignalsChecks({
+      hasBooksOver200Reviews: cs.hasBooksOver200Reviews ?? false,
+      hasProfitableBooks: cs.hasProfitableBooks ?? false,
+      hasBooksUnder100Reviews: cs.hasBooksUnder100Reviews ?? false,
     });
     
     const ed = keyword.editorialData ?? getDefaultEditorialData();
     const checks: Record<string, boolean> = {};
-    if (ed.checklist.canCreate === true) checks.canProduce = true;
-    if (ed.checklist.canDoBetter === true) checks.canDoBetter = true;
+    if (ed.checklist.makesSenseAsBook === true) checks.makesSenseAsBook = true;
+    if (ed.checklist.canCreateThisBook === true) checks.canCreateThisBook = true;
+    if (ed.checklist.canDoItBetter === true) checks.canDoItBetter = true;
     if (ed.checklist.canDifferentiate === true) checks.canDifferentiate = true;
-    if (ed.checklist.fitsStrategy === true) checks.hasInterest = true;
+    if (ed.checklist.personalInterest === true) checks.personalInterest = true;
     setEditorialChecks(checks);
     setEditorialNotes(ed.notes);
     
@@ -320,6 +324,10 @@ export const KeywordDetailPanel = ({
                       <span>Estructura mercado</span>
                       <span className="font-mono">{scoreBreakdown.marketStructure.points}/{scoreBreakdown.marketStructure.max}</span>
                     </div>
+                    <div className="flex justify-between text-primary">
+                      <span>Señales catálogo</span>
+                      <span className="font-mono">{scoreBreakdown.catalogSignals.points}/{scoreBreakdown.catalogSignals.max}</span>
+                    </div>
                     {scoreBreakdown.penalties.points !== 0 && (
                       <div className="flex justify-between text-red-500">
                         <span>Penalizaciones</span>
@@ -399,7 +407,7 @@ export const KeywordDetailPanel = ({
                         <Info className="w-3.5 h-3.5 text-muted-foreground cursor-help" />
                       </TooltipTrigger>
                       <TooltipContent side="top" className="max-w-xs">
-                        Precio medio observado en los top resultados de la competencia. Precios &lt;9.99$ penalizan el score.
+                        Precio medio observado en los top resultados de la competencia.
                       </TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
@@ -424,7 +432,7 @@ export const KeywordDetailPanel = ({
                         <Info className="w-3.5 h-3.5 text-muted-foreground cursor-help" />
                       </TooltipTrigger>
                       <TooltipContent side="top" className="max-w-xs">
-                        Regalías medias aproximadas de la competencia. Mayor regalía = más margen para invertir en Ads.
+                        Regalías medias aproximadas de la competencia.
                       </TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
@@ -439,37 +447,8 @@ export const KeywordDetailPanel = ({
                 />
               </div>
             </div>
-
-            {/* Brand Risk */}
-            <div className="space-y-2">
-              <div className="flex items-center gap-1">
-                <Label>Brand Risk</Label>
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Info className="w-3.5 h-3.5 text-muted-foreground cursor-help" />
-                    </TooltipTrigger>
-                    <TooltipContent side="top" className="max-w-xs">
-                      Riesgo de marca registrada o propiedad intelectual. Un riesgo alto penaliza el Market Score.
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              </div>
-              <Select value={brandRisk} onValueChange={(v) => setBrandRisk(v as BrandRisk)}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {BRAND_RISK_OPTIONS.map((opt) => (
-                    <SelectItem key={opt.value} value={opt.value}>
-                      <span className={opt.color}>{opt.label}</span>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Traffic Source */}
+            
+            {/* Fuente de tráfico */}
             <div className="space-y-2">
               <div className="flex items-center gap-1">
                 <Label>Fuente de tráfico</Label>
@@ -479,7 +458,7 @@ export const KeywordDetailPanel = ({
                       <Info className="w-3.5 h-3.5 text-muted-foreground cursor-help" />
                     </TooltipTrigger>
                     <TooltipContent side="top" className="max-w-xs">
-                      Si el tráfico depende de marca personal/RRSS, suele implicar competencia dura y puede penalizar el score.
+                      La fuente principal del tráfico de esta keyword. Afecta las penalizaciones del Market Score.
                     </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
@@ -491,7 +470,12 @@ export const KeywordDetailPanel = ({
                 <SelectContent>
                   {TRAFFIC_SOURCE_OPTIONS.map((opt) => (
                     <SelectItem key={opt.value} value={opt.value}>
-                      <span className={opt.color}>{opt.label}</span>
+                      <div className="flex items-center gap-2">
+                        <Badge variant="outline" className={opt.color}>{opt.label}</Badge>
+                        {opt.penalty !== 0 && (
+                          <span className="text-xs text-muted-foreground">({opt.penalty})</span>
+                        )}
+                      </div>
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -504,105 +488,167 @@ export const KeywordDetailPanel = ({
           {/* ========== SECCIÓN 3: ESTRUCTURA DEL MERCADO (12 pts) ========== */}
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-2">
+              <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
                 Estructura del Mercado
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Info className="w-3.5 h-3.5 text-muted-foreground cursor-help" />
-                    </TooltipTrigger>
-                    <TooltipContent side="right" className="max-w-xs">
-                      Señales de estructura del mercado. Aporta hasta 12 puntos al Market Score total (6 checks × 2pts).
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
               </h3>
-              <Badge variant="outline" className="text-sm">
-                {scoreBreakdown.marketStructure.points}/{scoreBreakdown.marketStructure.max}
+              <Badge variant="outline" className="text-primary">
+                {scoreBreakdown.marketStructure.points}/{scoreBreakdown.marketStructure.max} pts
               </Badge>
             </div>
-
+            
             <div className="grid grid-cols-2 gap-2">
               {MARKET_STRUCTURE_CHECKS.map((check) => (
-                <div key={check.id} className="flex items-center justify-between p-2 rounded-lg bg-muted/30 border border-border/50">
+                <div key={check.id} className="flex items-center justify-between p-2 rounded bg-muted/30">
                   <div className="flex items-center gap-2">
                     <Checkbox
                       id={check.id}
-                      checked={marketStructureChecks[check.id] === true}
-                      onCheckedChange={(checked) => setMarketStructureChecks(prev => ({ ...prev, [check.id]: checked === true }))}
+                      checked={marketStructureChecks[check.id as keyof MarketStructure] ?? false}
+                      onCheckedChange={(checked) => setMarketStructureChecks({
+                        ...marketStructureChecks,
+                        [check.id]: checked === true,
+                      })}
                     />
-                    <div className="flex items-center gap-1">
-                      <label htmlFor={check.id} className="text-xs cursor-pointer">
-                        {check.label}
-                      </label>
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Info className="w-3 h-3 text-muted-foreground cursor-help" />
-                          </TooltipTrigger>
-                          <TooltipContent side="right" className="max-w-xs">
-                            {check.tooltip}
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                    </div>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Label htmlFor={check.id} className="text-xs cursor-pointer">
+                            {check.label}
+                          </Label>
+                        </TooltipTrigger>
+                        <TooltipContent side="top" className="max-w-xs">
+                          {check.tooltip}
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
                   </div>
-                  <Badge variant={marketStructureChecks[check.id] ? 'default' : 'secondary'} className="text-[10px]">
-                    +2
-                  </Badge>
+                  <span className="text-[10px] text-green-600 dark:text-green-400">+{check.points}</span>
                 </div>
               ))}
             </div>
           </div>
 
           <Separator />
+
+          {/* ========== SECCIÓN 4: SEÑALES DE CATÁLOGO (12 pts) ========== */}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+                Señales de Catálogo
+              </h3>
+              <Badge variant="outline" className="text-primary">
+                {scoreBreakdown.catalogSignals.points}/{scoreBreakdown.catalogSignals.max} pts
+              </Badge>
+            </div>
+            
+            <div className="space-y-2">
+              {CATALOG_SIGNALS_CHECKS.map((check) => (
+                <div key={check.id} className="flex items-center justify-between p-2 rounded bg-muted/30">
+                  <div className="flex items-center gap-2">
+                    <Checkbox
+                      id={check.id}
+                      checked={catalogSignalsChecks[check.id as keyof CatalogSignals] ?? false}
+                      onCheckedChange={(checked) => setCatalogSignalsChecks({
+                        ...catalogSignalsChecks,
+                        [check.id]: checked === true,
+                      })}
+                    />
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Label htmlFor={check.id} className="text-sm cursor-pointer">
+                            {check.label}
+                          </Label>
+                        </TooltipTrigger>
+                        <TooltipContent side="top" className="max-w-xs">
+                          {check.tooltip}
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </div>
+                  <span className="text-xs text-green-600 dark:text-green-400">+{check.points}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <Separator />
+
+          {/* ========== SECCIÓN 5: CONTEXTO EDITORIAL ========== */}
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
                 Contexto Editorial
               </h3>
-              <Badge variant="outline" className="text-sm">
-                {editorialScore}/4
+              <Badge variant="outline" className="text-muted-foreground">
+                {editorialScore}/5 checks
               </Badge>
             </div>
             
-            <p className="text-xs text-muted-foreground">
-              Esta sección NO afecta el Market Score. Sirve para decisión editorial/estrategia.
+            <p className="text-xs text-muted-foreground italic">
+              Esta información NO afecta al Market Score. Sirve solo para decisiones editoriales.
             </p>
-
+            
             <div className="space-y-2">
               {EDITORIAL_CHECKS.map((check) => (
-                <div key={check.id} className="flex items-center space-x-3 p-2 rounded-lg bg-muted/30">
+                <div key={check.id} className="flex items-center space-x-3 p-2 rounded bg-muted/30">
                   <Checkbox
-                    id={`detail-${check.id}`}
+                    id={check.id}
                     checked={editorialChecks[check.id] === true}
-                    onCheckedChange={(checked) =>
-                      setEditorialChecks({ ...editorialChecks, [check.id]: checked === true })
-                    }
+                    onCheckedChange={(checked) => setEditorialChecks({
+                      ...editorialChecks,
+                      [check.id]: checked === true,
+                    })}
                   />
-                  <label htmlFor={`detail-${check.id}`} className="cursor-pointer text-sm flex-1">
+                  <Label htmlFor={check.id} className="cursor-pointer text-sm">
                     {check.label}
-                  </label>
+                  </Label>
                 </div>
               ))}
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="editorialNotes">Notas editoriales</Label>
+              <Textarea
+                id="editorialNotes"
+                value={editorialNotes}
+                onChange={(e) => setEditorialNotes(e.target.value)}
+                placeholder="Observaciones para decisión editorial..."
+                rows={3}
+              />
             </div>
           </div>
 
           <Separator />
 
-          {/* ========== SECCIÓN 4: NOTAS & ESTADO ========== */}
+          {/* ========== SECCIÓN 6: NOTAS Y ESTADO ========== */}
           <div className="space-y-4">
             <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
-              Estado y Notas
+              Notas y Estado
             </h3>
-
+            
+            <div className="space-y-2">
+              <Label htmlFor="notes">Notas generales</Label>
+              <Textarea
+                id="notes"
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                placeholder="Notas adicionales sobre esta keyword..."
+                rows={3}
+              />
+            </div>
+            
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <Label>Estado</Label>
                 {statusManuallySet && (
-                  <Button variant="ghost" size="sm" onClick={handleResetToAutoStatus} className="h-6 text-xs gap-1">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleResetToAutoStatus}
+                    className="text-xs text-muted-foreground gap-1"
+                  >
                     <Sparkles className="w-3 h-3" />
-                    Auto ({autoStatus === 'valid' ? 'Válida' : autoStatus === 'pending' ? 'Pendiente' : 'Descartada'})
+                    Volver a automático
                   </Button>
                 )}
               </div>
@@ -613,38 +659,27 @@ export const KeywordDetailPanel = ({
                 <SelectContent>
                   {KEYWORD_STATUS_OPTIONS.map((opt) => (
                     <SelectItem key={opt.value} value={opt.value}>
-                      <span className={opt.color}>{opt.label}</span>
+                      <Badge variant="outline" className={opt.color}>{opt.label}</Badge>
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
-              {!statusManuallySet && (
-                <p className="text-xs text-muted-foreground">
-                  Estado automático según Market Score
-                </p>
-              )}
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="notes">Notas</Label>
-              <Textarea
-                id="notes"
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                placeholder="Añade notas sobre esta keyword..."
-                rows={3}
-              />
+              <p className="text-xs text-muted-foreground">
+                {statusManuallySet 
+                  ? 'Estado establecido manualmente.' 
+                  : `Estado automático basado en Market Score (${autoStatus}).`}
+              </p>
             </div>
           </div>
         </div>
 
-        {/* Footer Actions */}
-        <div className="flex gap-2 pt-4 border-t">
+        {/* Footer */}
+        <div className="flex items-center justify-between pt-4 border-t">
           <Button variant="outline" onClick={handleReset} className="gap-2">
             <RotateCcw className="w-4 h-4" />
-            Resetear
+            Restablecer
           </Button>
-          <Button onClick={handleSave} className="flex-1 gap-2">
+          <Button onClick={handleSave} className="gap-2">
             <Save className="w-4 h-4" />
             Guardar
           </Button>
