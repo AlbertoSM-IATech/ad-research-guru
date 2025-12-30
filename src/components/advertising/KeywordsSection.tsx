@@ -318,12 +318,12 @@ export const KeywordsSection = ({
       
       // Merge market structure (6 checks)
       const newMarketStructure = {
-        understandable: updates.marketStructure?.understandable ?? keyword.marketStructure?.understandable ?? false,
-        amazonSuggested: updates.marketStructure?.amazonSuggested ?? keyword.marketStructure?.amazonSuggested ?? false,
-        profitableBooks: updates.marketStructure?.profitableBooks ?? keyword.marketStructure?.profitableBooks ?? false,
-        indieAuthors: updates.marketStructure?.indieAuthors ?? keyword.marketStructure?.indieAuthors ?? false,
-        intentMatch: updates.marketStructure?.intentMatch ?? keyword.marketStructure?.intentMatch ?? false,
-        variants: updates.marketStructure?.variants ?? keyword.marketStructure?.variants ?? false,
+        selfContained: updates.marketStructure?.selfContained ?? keyword.marketStructure?.selfContained ?? false,
+        amazonSuggestion: updates.marketStructure?.amazonSuggestion ?? keyword.marketStructure?.amazonSuggestion ?? false,
+        booksSellingWell: updates.marketStructure?.booksSellingWell ?? keyword.marketStructure?.booksSellingWell ?? false,
+        indieAuthorsSelling: updates.marketStructure?.indieAuthorsSelling ?? keyword.marketStructure?.indieAuthorsSelling ?? false,
+        topMatchesIntent: updates.marketStructure?.topMatchesIntent ?? keyword.marketStructure?.topMatchesIntent ?? false,
+        variantsPotential: updates.marketStructure?.variantsPotential ?? keyword.marketStructure?.variantsPotential ?? false,
       };
       
       const newMarketScore = calculateMarketScore({
@@ -331,7 +331,6 @@ export const KeywordsSection = ({
         competitors: newCompetitors,
         price: newPrice,
         royalties: newRoyalties,
-        brandRisk: marketData.brandRisk,
         trafficSource: marketData.trafficSource,
       }, marketplaceId, newMarketStructure).total;
       
@@ -741,33 +740,33 @@ export const KeywordsSection = ({
                         </TableCell>
                         <TableCell className="text-center" onClick={(e) => e.stopPropagation()}>
                           <Checkbox
-                            checked={keyword.marketStructure?.understandable ?? false}
+                            checked={keyword.marketStructure?.selfContained ?? false}
                             onCheckedChange={(checked) => handleUpdateWithHistory(keyword.id, {
                               marketStructure: {
                                 ...keyword.marketStructure,
-                                understandable: checked === true,
+                                selfContained: checked === true,
                               }
                             })}
                           />
                         </TableCell>
                         <TableCell className="text-center" onClick={(e) => e.stopPropagation()}>
                           <Checkbox
-                            checked={keyword.marketStructure?.profitableBooks ?? false}
+                            checked={keyword.marketStructure?.booksSellingWell ?? false}
                             onCheckedChange={(checked) => handleUpdateWithHistory(keyword.id, {
                               marketStructure: {
                                 ...keyword.marketStructure,
-                                profitableBooks: checked === true,
+                                booksSellingWell: checked === true,
                               }
                             })}
                           />
                         </TableCell>
                         <TableCell className="text-center" onClick={(e) => e.stopPropagation()}>
                           <Checkbox
-                            checked={keyword.marketStructure?.intentMatch ?? false}
+                            checked={keyword.marketStructure?.topMatchesIntent ?? false}
                             onCheckedChange={(checked) => handleUpdateWithHistory(keyword.id, {
                               marketStructure: {
                                 ...keyword.marketStructure,
-                                intentMatch: checked === true,
+                                topMatchesIntent: checked === true,
                               }
                             })}
                           />
