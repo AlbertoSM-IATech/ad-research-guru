@@ -644,12 +644,12 @@ export function NewKeywordWizard({
                 </Select>
               </div>
               
-              {/* Estructura del Mercado (12 pts) - 6 checks x 2pts */}
+              {/* DEMANDA (antes "Estructura del Mercado") (12 pts) - 6 checks x 2pts */}
               <div className="space-y-3 p-4 rounded-lg border border-border bg-muted/30">
                 <div className="flex items-center justify-between">
                   <h4 className="text-sm font-medium flex items-center gap-2">
-                    Estructura del Mercado
-                    <FieldTooltip content="Señales de estructura del mercado. Aporta hasta 12 puntos al Market Score (6 checks × 2pts)." />
+                    Demanda
+                    <FieldTooltip content="Señales de demanda del mercado. Aporta hasta 12 puntos al Market Score (6 checks × 2pts)." />
                   </h4>
                   <span className="text-xs text-muted-foreground">
                     {previewScore.marketStructure.points}/{previewScore.marketStructure.max} pts
@@ -675,12 +675,12 @@ export function NewKeywordWizard({
                 </div>
               </div>
               
-              {/* Señales de Catálogo (12 pts) */}
+              {/* COMPETENCIA (antes "Señales de Catálogo") (12 pts) */}
               <div className="space-y-3 p-4 rounded-lg border border-border bg-muted/30">
                 <div className="flex items-center justify-between">
                   <h4 className="text-sm font-medium flex items-center gap-2">
-                    Señales de Catálogo
-                    <FieldTooltip content="Señales sobre el catálogo existente. Aporta hasta 12 puntos al Market Score." />
+                    Competencia
+                    <FieldTooltip content="Señales de competencia del mercado. Aporta hasta 12 puntos al Market Score." />
                   </h4>
                   <span className="text-xs text-muted-foreground">
                     {previewScore.catalogSignals.points}/{previewScore.catalogSignals.max} pts
@@ -719,8 +719,24 @@ export function NewKeywordWizard({
                     </div>
                   </div>
                   
-                  {/* Checks booleanos restantes */}
-                  {CATALOG_SIGNALS_CHECKS.map((check) => (
+                  {/* Métrica automática: Menos de 3000 resultados */}
+                  <div className="flex items-center justify-between p-2 rounded bg-muted/50 opacity-75">
+                    <div className="flex items-center gap-2">
+                      <Checkbox
+                        id="wizardAutoLowCompetition"
+                        checked={(step2.competitors ?? 0) < 3000}
+                        disabled
+                      />
+                      <Label htmlFor="wizardAutoLowCompetition" className="text-xs cursor-help text-muted-foreground">
+                        Menos de 3000 resultados
+                        <span className="ml-1 text-[10px] italic">(auto)</span>
+                      </Label>
+                    </div>
+                    <span className="text-[10px] text-green-600 dark:text-green-400">+5</span>
+                  </div>
+                  
+                  {/* Checks booleanos restantes (solo los NO autoCalculados) */}
+                  {CATALOG_SIGNALS_CHECKS.filter(check => !(check as any).autoCalculated).map((check) => (
                     <div key={check.id} className="flex items-center justify-between p-2 rounded bg-muted/50">
                       <div className="flex items-center gap-2">
                         <Checkbox
@@ -881,11 +897,11 @@ export function NewKeywordWizard({
                     <span>${step2.royalties.toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Estructura:</span>
+                    <span className="text-muted-foreground">Demanda:</span>
                     <span>{previewScore.marketStructure.points}/{previewScore.marketStructure.max} pts</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Catálogo:</span>
+                    <span className="text-muted-foreground">Competencia:</span>
                     <span>{previewScore.catalogSignals.points}/{previewScore.catalogSignals.max} pts</span>
                   </div>
                 </div>
