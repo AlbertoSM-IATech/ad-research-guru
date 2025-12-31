@@ -924,8 +924,8 @@ export function NewKeywordWizard({
       <MarketConfigModal
         isOpen={configModalOpen}
         onClose={() => setConfigModalOpen(false)}
-        marketplaceId={marketplaceId}
-        onSave={() => setConfigVersion(v => v + 1)}
+        currentMarketplace={marketplaceId}
+        onConfigChange={() => setConfigVersion(v => v + 1)}
       />
     </Dialog>
   );
