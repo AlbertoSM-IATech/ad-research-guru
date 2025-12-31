@@ -49,11 +49,15 @@ import {
   MARKET_STRUCTURE_CHECKS,
   CATALOG_SIGNALS_CHECKS,
   EDITORIAL_CHECKS,
+  BOOKS_OVER_200_REVIEWS_OPTIONS,
+  BOOKS_OVER_200_REVIEWS_FIELD,
   calculateMarketScore,
   getMarketScoreInfo,
+  getBooksOver200ReviewsPoints,
   type KeywordPurpose,
   type KeywordStatus,
   type TrafficSource,
+  type BooksOver200ReviewsRange,
 } from '@/lib/market-score';
 import {
   type WizardStep1Data,
@@ -237,7 +241,7 @@ export function NewKeywordWizard({
       variantsPotential: step2.variantsPotential ?? false,
     };
     const catalogSignals = {
-      hasBooksOver200Reviews: step2.hasBooksOver200Reviews ?? false,
+      booksOver200ReviewsRange: step2.booksOver200ReviewsRange ?? null,
       hasProfitableBooks: step2.hasProfitableBooks ?? false,
       hasBooksUnder100Reviews: step2.hasBooksUnder100Reviews ?? false,
     };
@@ -683,7 +687,39 @@ export function NewKeywordWizard({
                   </span>
                 </div>
                 
-                <div className="space-y-2">
+                <div className="space-y-3">
+                  {/* Campo especial: Libros +200 reviews (rango) */}
+                  <div className="p-2 rounded bg-muted/50 space-y-2">
+                    <div className="flex items-center gap-1">
+                      <Label className="text-xs font-medium">{BOOKS_OVER_200_REVIEWS_FIELD.label}</Label>
+                      <FieldTooltip content={BOOKS_OVER_200_REVIEWS_FIELD.tooltip} />
+                    </div>
+                    <div className="flex items-center justify-between gap-2">
+                      <Select
+                        value={step2.booksOver200ReviewsRange ?? ''}
+                        onValueChange={(value) => setStep2({ 
+                          ...step2, 
+                          booksOver200ReviewsRange: (value || null) as BooksOver200ReviewsRange 
+                        })}
+                      >
+                        <SelectTrigger className="w-32 h-7 text-xs">
+                          <SelectValue placeholder="Seleccionar..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {BOOKS_OVER_200_REVIEWS_OPTIONS.map((option) => (
+                            <SelectItem key={option.value} value={option.value}>
+                              {option.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <span className="text-[10px] text-green-600 dark:text-green-400">
+                        +{getBooksOver200ReviewsPoints(step2.booksOver200ReviewsRange ?? null)}/{BOOKS_OVER_200_REVIEWS_FIELD.maxPoints}
+                      </span>
+                    </div>
+                  </div>
+                  
+                  {/* Checks booleanos restantes */}
                   {CATALOG_SIGNALS_CHECKS.map((check) => (
                     <div key={check.id} className="flex items-center justify-between p-2 rounded bg-muted/50">
                       <div className="flex items-center gap-2">
