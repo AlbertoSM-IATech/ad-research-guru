@@ -489,11 +489,11 @@ export const KeywordDetailPanel = ({
 
           <Separator />
 
-          {/* ========== SECCIÓN 3: ESTRUCTURA DEL MERCADO (12 pts) ========== */}
+          {/* ========== SECCIÓN 3: DEMANDA (antes "Estructura del Mercado") (12 pts) ========== */}
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
-                Estructura del Mercado
+                Demanda
               </h3>
               <Badge variant="outline" className="text-primary">
                 {scoreBreakdown.marketStructure.points}/{scoreBreakdown.marketStructure.max} pts
@@ -533,11 +533,11 @@ export const KeywordDetailPanel = ({
 
           <Separator />
 
-          {/* ========== SECCIÓN 4: SEÑALES DE CATÁLOGO (12 pts) ========== */}
+          {/* ========== SECCIÓN 4: COMPETENCIA (antes "Señales de Catálogo") (12 pts) ========== */}
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
-                Señales de Catálogo
+                Competencia
               </h3>
               <Badge variant="outline" className="text-primary">
                 {scoreBreakdown.catalogSignals.points}/{scoreBreakdown.catalogSignals.max} pts
@@ -585,8 +585,33 @@ export const KeywordDetailPanel = ({
                 </div>
               </div>
               
-              {/* Checks booleanos restantes */}
-              {CATALOG_SIGNALS_CHECKS.map((check) => (
+              {/* Métrica automática: Menos de 3000 resultados */}
+              <div className="flex items-center justify-between p-2 rounded bg-muted/30 opacity-75">
+                <div className="flex items-center gap-2">
+                  <Checkbox
+                    id="autoLowCompetition"
+                    checked={(competitors ?? 0) < 3000}
+                    disabled
+                  />
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Label htmlFor="autoLowCompetition" className="text-sm cursor-help text-muted-foreground">
+                          Menos de 3000 resultados
+                          <span className="ml-1 text-xs italic">(auto)</span>
+                        </Label>
+                      </TooltipTrigger>
+                      <TooltipContent side="top" className="max-w-xs">
+                        Se calcula automáticamente: si hay menos de 3000 resultados en Amazon, la competencia es favorable.
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </div>
+                <span className="text-xs text-green-600 dark:text-green-400">+5</span>
+              </div>
+              
+              {/* Checks booleanos restantes (solo los NO autoCalculados) */}
+              {CATALOG_SIGNALS_CHECKS.filter(check => !(check as any).autoCalculated).map((check) => (
                 <div key={check.id} className="flex items-center justify-between p-2 rounded bg-muted/30">
                   <div className="flex items-center gap-2">
                     <Checkbox

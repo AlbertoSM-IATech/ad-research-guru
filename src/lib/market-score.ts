@@ -275,10 +275,18 @@ export function calculateMarketScore(
   
   total += structurePoints;
   
-  // 6) SEÑALES DE CATÁLOGO (12 pts)
+  // 6) COMPETENCIA (antes "Señales de Catálogo") (12 pts)
   let catalogPoints = 0;
   let catalogChecks = 0;
   const catalogLabels: string[] = [];
+  
+  // "Menos de 3000 resultados" - calculado automáticamente desde data.competitors
+  const hasFewCompetitors = data.competitors < 3000;
+  if (hasFewCompetitors) {
+    catalogPoints += 5;
+    catalogChecks++;
+    catalogLabels.push('<3000 resultados');
+  }
   
   if (catalogSignals) {
     // Libros +200 reviews (rango → 1-4 pts)
@@ -288,11 +296,7 @@ export function calculateMarketScore(
       catalogChecks++; 
       catalogLabels.push(`+200 RW (${booksOver200Points}pts)`);
     }
-    if (catalogSignals.hasProfitableBooks) { 
-      catalogPoints += 5; 
-      catalogChecks++; 
-      catalogLabels.push('≥3 rentables');
-    }
+    // hasProfitableBooks ya no se usa manualmente - se calcula automáticamente arriba
     if (catalogSignals.hasBooksUnder100Reviews) { 
       catalogPoints += 3; 
       catalogChecks++; 
@@ -436,7 +440,7 @@ export const KEYWORD_PURPOSE_OPTIONS: { value: KeywordPurpose; label: string; de
 export const MARKET_STRUCTURE_CHECKS = [
   { id: 'selfContained', label: 'Se entiende por sí sola', tooltip: 'La keyword es clara y no requiere contexto adicional.', points: 2 },
   { id: 'amazonSuggestion', label: 'Sugerencia Amazon', tooltip: 'Aparece como autocompletado en la barra de búsqueda de Amazon.', points: 2 },
-  { id: 'booksSellingWell', label: '≥3 libros vendiendo', tooltip: 'Hay al menos 3 libros con ventas consistentes en el nicho.', points: 2 },
+  { id: 'booksSellingWell', label: '≥3 libros vendiendo', tooltip: '¿Hay 3 o más libros vendiendo bien con esta palabra clave?', points: 2 },
   { id: 'indieAuthorsSelling', label: 'Autores indie vendiendo', tooltip: 'Hay autores independientes posicionados, no solo editoriales grandes.', points: 2 },
   { id: 'topMatchesIntent', label: 'Top refleja intención', tooltip: 'Los resultados top coinciden con la intención real de búsqueda.', points: 2 },
   { id: 'variantsPotential', label: 'Variantes con potencial', tooltip: 'Existen keywords relacionadas que también pueden funcionar.', points: 2 },
@@ -446,7 +450,7 @@ export const MARKET_STRUCTURE_CHECKS = [
 
 // Checks booleanos de catálogo (sin incluir booksOver200ReviewsRange que es un rango)
 export const CATALOG_SIGNALS_CHECKS = [
-  { id: 'hasProfitableBooks', label: '≥3 libros rentables', tooltip: 'Al menos 3 libros generan ingresos consistentes.', points: 5 },
+  { id: 'hasProfitableBooks', label: 'Menos de 3000 resultados', tooltip: 'Se calcula automáticamente: si hay menos de 3000 resultados en Amazon, la competencia es favorable.', points: 5, autoCalculated: true },
   { id: 'hasBooksUnder100Reviews', label: 'Libros −100 reviews', tooltip: 'Hay libros con menos de 100 reviews, indica oportunidad de entrada.', points: 3 },
 ] as const;
 
