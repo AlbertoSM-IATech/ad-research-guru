@@ -39,7 +39,7 @@ export interface WizardStep2Data {
   topMatchesIntent?: boolean;
   variantsPotential?: boolean;
   // Catalog Signals (12 pts block)
-  hasBooksOver200Reviews?: boolean;
+  booksOver200ReviewsRange?: import('@/lib/market-score').BooksOver200ReviewsRange;
   hasProfitableBooks?: boolean;
   hasBooksUnder100Reviews?: boolean;
 }
@@ -114,7 +114,7 @@ export function buildNewKeywordFromWizard(payload: WizardPayload): Omit<Keyword,
   
   // Build Catalog Signals (12 pts max)
   const catalogSignals: CatalogSignals = {
-    hasBooksOver200Reviews: step2.hasBooksOver200Reviews ?? false,
+    booksOver200ReviewsRange: step2.booksOver200ReviewsRange ?? null,
     hasProfitableBooks: step2.hasProfitableBooks ?? false,
     hasBooksUnder100Reviews: step2.hasBooksUnder100Reviews ?? false,
   };
@@ -213,7 +213,7 @@ export function getDefaultStep2Data(): WizardStep2Data {
     indieAuthorsSelling: false,
     topMatchesIntent: false,
     variantsPotential: false,
-    hasBooksOver200Reviews: false,
+    booksOver200ReviewsRange: null,
     hasProfitableBooks: false,
     hasBooksUnder100Reviews: false,
   };

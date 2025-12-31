@@ -36,6 +36,7 @@ import {
   type EditorialData,
   type TrafficSource,
   type KeywordStatus,
+  type BooksOver200ReviewsRange,
   calculateMarketScore,
   calculateEditorialScore,
   getDefaultMarketData,
@@ -43,11 +44,14 @@ import {
   getDefaultMarketStructure,
   getDefaultCatalogSignals,
   getMarketScoreInfo,
+  getBooksOver200ReviewsPoints,
   TRAFFIC_SOURCE_OPTIONS,
   KEYWORD_STATUS_OPTIONS,
   MARKET_STRUCTURE_CHECKS,
   CATALOG_SIGNALS_CHECKS,
   EDITORIAL_CHECKS,
+  BOOKS_OVER_200_REVIEWS_OPTIONS,
+  BOOKS_OVER_200_REVIEWS_FIELD,
 } from '@/lib/market-score';
 
 interface KeywordDetailPanelProps {
@@ -107,10 +111,10 @@ export const KeywordDetailPanel = ({
         variantsPotential: ms.variantsPotential ?? false,
       });
       
-      // Catalog Signals data (3 checks)
+      // Catalog Signals data
       const cs = keyword.catalogSignals ?? getDefaultCatalogSignals();
       setCatalogSignalsChecks({
-        hasBooksOver200Reviews: cs.hasBooksOver200Reviews ?? false,
+        booksOver200ReviewsRange: cs.booksOver200ReviewsRange ?? null,
         hasProfitableBooks: cs.hasProfitableBooks ?? false,
         hasBooksUnder100Reviews: cs.hasBooksUnder100Reviews ?? false,
       });
@@ -228,7 +232,7 @@ export const KeywordDetailPanel = ({
     // Reset catalog signals
     const cs = keyword.catalogSignals ?? getDefaultCatalogSignals();
     setCatalogSignalsChecks({
-      hasBooksOver200Reviews: cs.hasBooksOver200Reviews ?? false,
+      booksOver200ReviewsRange: cs.booksOver200ReviewsRange ?? null,
       hasProfitableBooks: cs.hasProfitableBooks ?? false,
       hasBooksUnder100Reviews: cs.hasBooksUnder100Reviews ?? false,
     });
@@ -540,13 +544,54 @@ export const KeywordDetailPanel = ({
               </Badge>
             </div>
             
-            <div className="space-y-2">
+            <div className="space-y-3">
+              {/* Campo especial: Libros +200 reviews (rango) */}
+              <div className="p-3 rounded bg-muted/30 space-y-2">
+                <div className="flex items-center gap-2">
+                  <Label className="text-sm font-medium">{BOOKS_OVER_200_REVIEWS_FIELD.label}</Label>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Info className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
+                      </TooltipTrigger>
+                      <TooltipContent side="top" className="max-w-xs">
+                        {BOOKS_OVER_200_REVIEWS_FIELD.tooltip}
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </div>
+                <div className="flex items-center justify-between gap-4">
+                  <Select
+                    value={catalogSignalsChecks.booksOver200ReviewsRange ?? ''}
+                    onValueChange={(value) => setCatalogSignalsChecks({
+                      ...catalogSignalsChecks,
+                      booksOver200ReviewsRange: (value || null) as BooksOver200ReviewsRange,
+                    })}
+                  >
+                    <SelectTrigger className="w-40 h-8 text-sm">
+                      <SelectValue placeholder="Seleccionar..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {BOOKS_OVER_200_REVIEWS_OPTIONS.map((option) => (
+                        <SelectItem key={option.value} value={option.value}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <span className="text-xs text-green-600 dark:text-green-400">
+                    +{getBooksOver200ReviewsPoints(catalogSignalsChecks.booksOver200ReviewsRange ?? null)} / {BOOKS_OVER_200_REVIEWS_FIELD.maxPoints} pts
+                  </span>
+                </div>
+              </div>
+              
+              {/* Checks booleanos restantes */}
               {CATALOG_SIGNALS_CHECKS.map((check) => (
                 <div key={check.id} className="flex items-center justify-between p-2 rounded bg-muted/30">
                   <div className="flex items-center gap-2">
                     <Checkbox
                       id={check.id}
-                      checked={catalogSignalsChecks[check.id as keyof CatalogSignals] ?? false}
+                      checked={(catalogSignalsChecks[check.id as keyof CatalogSignals] as boolean) ?? false}
                       onCheckedChange={(checked) => setCatalogSignalsChecks({
                         ...catalogSignalsChecks,
                         [check.id]: checked === true,

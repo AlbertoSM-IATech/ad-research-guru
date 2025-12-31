@@ -62,8 +62,24 @@ export interface MarketStructure {
 // ============ CATALOG SIGNALS (12 pts block) ============
 // Señales de catálogo - AFECTAN al Market Score
 
+// Rangos para "Libros +200 reviews" - mapeo a puntos
+export type BooksOver200ReviewsRange = '0-5' | '6-9' | '10-15' | '>15' | null;
+
+export const BOOKS_OVER_200_REVIEWS_OPTIONS = [
+  { value: '0-5', label: '0 - 5', points: 1 },
+  { value: '6-9', label: '6 - 9', points: 2 },
+  { value: '10-15', label: '10 - 15', points: 3 },
+  { value: '>15', label: 'Más de 15', points: 4 },
+] as const;
+
+export function getBooksOver200ReviewsPoints(range: BooksOver200ReviewsRange): number {
+  if (!range) return 0;
+  const option = BOOKS_OVER_200_REVIEWS_OPTIONS.find(o => o.value === range);
+  return option?.points ?? 0;
+}
+
 export interface CatalogSignals {
-  hasBooksOver200Reviews?: boolean;  // Libros +200 reviews (+4)
+  booksOver200ReviewsRange?: BooksOver200ReviewsRange; // Libros +200 reviews (1-4 pts según rango)
   hasProfitableBooks?: boolean;      // ≥3 libros rentables (+5)
   hasBooksUnder100Reviews?: boolean; // Libros −100 reviews (+3)
 }
@@ -114,7 +130,7 @@ export const getDefaultMarketStructure = (): MarketStructure => ({
 });
 
 export const getDefaultCatalogSignals = (): CatalogSignals => ({
-  hasBooksOver200Reviews: false,
+  booksOver200ReviewsRange: null,
   hasProfitableBooks: false,
   hasBooksUnder100Reviews: false,
 });
@@ -265,10 +281,12 @@ export function calculateMarketScore(
   const catalogLabels: string[] = [];
   
   if (catalogSignals) {
-    if (catalogSignals.hasBooksOver200Reviews) { 
-      catalogPoints += 4; 
+    // Libros +200 reviews (rango → 1-4 pts)
+    const booksOver200Points = getBooksOver200ReviewsPoints(catalogSignals.booksOver200ReviewsRange ?? null);
+    if (booksOver200Points > 0) { 
+      catalogPoints += booksOver200Points; 
       catalogChecks++; 
-      catalogLabels.push('+200 reviews');
+      catalogLabels.push(`+200 RW (${booksOver200Points}pts)`);
     }
     if (catalogSignals.hasProfitableBooks) { 
       catalogPoints += 5; 
@@ -426,11 +444,19 @@ export const MARKET_STRUCTURE_CHECKS = [
 
 // ============ CATALOG SIGNALS CHECKS ============
 
+// Checks booleanos de catálogo (sin incluir booksOver200ReviewsRange que es un rango)
 export const CATALOG_SIGNALS_CHECKS = [
-  { id: 'hasBooksOver200Reviews', label: 'Libros +200 reviews', tooltip: 'Hay libros con más de 200 reviews, indica mercado maduro.', points: 4 },
   { id: 'hasProfitableBooks', label: '≥3 libros rentables', tooltip: 'Al menos 3 libros generan ingresos consistentes.', points: 5 },
   { id: 'hasBooksUnder100Reviews', label: 'Libros −100 reviews', tooltip: 'Hay libros con menos de 100 reviews, indica oportunidad de entrada.', points: 3 },
 ] as const;
+
+// Metadata para el campo de rango "Libros +200 reviews"
+export const BOOKS_OVER_200_REVIEWS_FIELD = {
+  id: 'booksOver200ReviewsRange',
+  label: 'Libros con +200 reviews',
+  tooltip: 'Número aproximado de libros del nicho que superan las 200 reviews. Indica validación fuerte de demanda y aporta hasta 4 puntos al Market Score.',
+  maxPoints: 4,
+} as const;
 
 // ============ EDITORIAL CHECKS ============
 // 5 checks que NO afectan al Market Score
