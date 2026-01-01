@@ -24,7 +24,7 @@ import { HeaderOverflowMenu } from './HeaderOverflowMenu';
 import { MarketConfigModal } from './MarketConfigModal';
 import { BackupImportModal } from './BackupImportModal';
 import { isAIDemoMode, toggleAIDemoMode } from '@/lib/ai-demo-service';
-import { loadPersistedState, usePersistence, getLastSyncAt } from '@/hooks/useLocalPersistence';
+import { loadPersistedState, usePersistence, getLastSyncAt, getAdResearchStorageKey, clearBookStorage } from '@/hooks/useLocalPersistence';
 import { type BackupSummary } from './BackupImportModal';
 import { toast } from 'sonner';
 import { 
@@ -54,7 +54,11 @@ import {
 } from '@/lib/demo-data-generator';
 import { createKeywordDefaults } from '@/lib/keyword-helpers';
 
-const generateId = () => Math.random().toString(36).substring(2, 15);
+// Generate unique ID using crypto.randomUUID with fallback
+const generateId = () =>
+  (typeof crypto !== 'undefined' && 'randomUUID' in crypto)
+    ? crypto.randomUUID()
+    : `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
 
 // Helper to check if book context is complete
 const isBookContextComplete = (bookInfo: BookInfo): boolean => {
@@ -81,7 +85,11 @@ const formatLastSync = (date: Date | null): string => {
   return `${day}/${month} ${hours}:${minutes}`;
 };
 
-export const AdvertisingResearch = () => {
+interface AdvertisingResearchProps {
+  bookId?: string;
+}
+
+export const AdvertisingResearch = ({ bookId }: AdvertisingResearchProps) => {
   // Hydration flag - must be first
   const [hasHydrated, setHasHydrated] = useState(false);
   
@@ -166,7 +174,7 @@ export const AdvertisingResearch = () => {
 
   // ============= HYDRATION FROM LOCALSTORAGE =============
   useEffect(() => {
-    const persisted = loadPersistedState();
+    const persisted = loadPersistedState(bookId);
     if (persisted) {
       setSelectedMarketplace(persisted.selectedMarketplace);
       setActiveTab(persisted.activeTab);
@@ -182,20 +190,20 @@ export const AdvertisingResearch = () => {
       setHasLoadedExamples(true);
     }
     // Set initial last sync time
-    setLastSyncAt(getLastSyncAt());
+    setLastSyncAt(getLastSyncAt(bookId));
     setHasHydrated(true);
-  }, []);
+  }, [bookId]);
 
   // ============= LAST SYNC REFRESH (every 10s) =============
   useEffect(() => {
     if (!hasHydrated) return;
     
     const interval = setInterval(() => {
-      setLastSyncAt(getLastSyncAt());
+      setLastSyncAt(getLastSyncAt(bookId));
     }, 10000);
     
     return () => clearInterval(interval);
-  }, [hasHydrated]);
+  }, [hasHydrated, bookId]);
 
   // ============= PENDING CHANGES TRACKING =============
   // Use a ref to track if this is the first render after hydration
@@ -265,7 +273,8 @@ export const AdvertisingResearch = () => {
       showInsights,
     },
     hasHydrated,
-    handleSyncComplete
+    handleSyncComplete,
+    bookId
   );
   
   // Handle manual save
@@ -555,8 +564,9 @@ export const AdvertisingResearch = () => {
 
   // Keyboard shortcut handlers
   const handleSave = useCallback(() => {
-    console.log('Saving...');
-  }, []);
+    saveNow();
+    toast.success('Guardado con ⌘S');
+  }, [saveNow]);
 
   // Search focus via ref - no DOM hacks
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -573,8 +583,8 @@ export const AdvertisingResearch = () => {
 
   // Reset data handler - clears localStorage and resets all states to initial values
   const handleResetData = useCallback(() => {
-    // 1. Clear localStorage
-    localStorage.removeItem('ad-research:v2');
+    // 1. Clear all localStorage keys for this book (including UI state)
+    clearBookStorage(bookId);
     
     // 2. Reset all states to initial values
     setSelectedMarketplace('us');
@@ -602,10 +612,8 @@ export const AdvertisingResearch = () => {
     setIsBookPanelOpen(true);
     
     // 5. Show confirmation toast
-    import('sonner').then(({ toast }) => {
-      toast.success('Datos reseteados');
-    });
-  }, []);
+    toast.success('Datos reseteados');
+  }, [bookId]);
 
   // Regenerate demo data handler - generates fresh demo data with competitors
   const handleRegenerateDemo = useCallback(() => {
@@ -642,7 +650,7 @@ export const AdvertisingResearch = () => {
     });
   }, [selectedMarketplace]);
 
-  // Export backup handler - downloads current state as JSON
+  // Export backup handler - downloads current state as JSON (v2)
   const handleExportBackup = useCallback(() => {
     const serializeData = <T,>(data: T): T => {
       return JSON.parse(JSON.stringify(data, (key, value) => {
@@ -654,9 +662,9 @@ export const AdvertisingResearch = () => {
     };
 
     const backup = {
-      version: 1,
+      version: 2,
       exportedAt: new Date().toISOString(),
-      storageKey: 'ad-research:v1',
+      storageKey: getAdResearchStorageKey(bookId),
       data: {
         selectedMarketplace,
         activeTab,
@@ -674,7 +682,7 @@ export const AdvertisingResearch = () => {
     const url = URL.createObjectURL(blob);
     
     const date = new Date().toISOString().split('T')[0];
-    const filename = `ad-research-backup-v1-${date}.json`;
+    const filename = `ad-research-backup-v2-${date}.json`;
     
     const a = document.createElement('a');
     a.href = url;
@@ -686,7 +694,7 @@ export const AdvertisingResearch = () => {
     
     toast.success('Backup exportado');
     toast.info(`Archivo: ${filename}`, { duration: 4000 });
-  }, [selectedMarketplace, activeTab, bookInfo, keywordsByMarket, asinsByMarket, categoriesByMarket, campaignPlansByMarket, showInsights]);
+  }, [bookId, selectedMarketplace, activeTab, bookInfo, keywordsByMarket, asinsByMarket, categoriesByMarket, campaignPlansByMarket, showInsights]);
 
   // Import backup handler - restores state from imported data
   const handleImportBackup = useCallback((data: {

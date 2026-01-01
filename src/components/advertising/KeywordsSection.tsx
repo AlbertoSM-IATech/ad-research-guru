@@ -23,7 +23,7 @@ import { KeywordDetailPanel } from './KeywordDetailPanel';
 import { MarketScoreCell } from './MarketScoreCell';
 import { NewKeywordWizard } from './NewKeywordWizard';
 import { type Keyword, type CampaignType, type CompetitionLevel, type RelevanceLevel, type IntentType, type KeywordState, type BookInfo, type HistoryEntry, RELEVANCE_LEVELS, INTENT_TYPES, KEYWORD_STATES, calculateRelevance, classifyIntent } from '@/types/advertising';
-import { calculateMarketScore, getDefaultMarketData } from '@/lib/market-score';
+import { calculateMarketScore, getDefaultMarketData, KEYWORD_STATUS_OPTIONS, type KeywordStatus } from '@/lib/market-score';
 import { createKeywordDefaults } from '@/lib/keyword-helpers';
 import { getAutoStatusFromScore } from '@/lib/keyword-builder';
 import { sortKeywords, getKeywordMarketScore, isMarketDataIncomplete, SORT_OPTIONS, type SortField, type SortOrder } from '@/lib/keyword-sorting';
@@ -511,7 +511,7 @@ export const KeywordsSection = ({
                       <InfoTooltip content="Score de mercado 0-100. Click para ver desglose." />
                     </div>
                   </TableHead>
-                  <TableHead className="cursor-pointer hover:text-foreground w-[100px]" onClick={() => handleSort('state')}>
+                  <TableHead className="cursor-pointer hover:text-foreground w-[100px]" onClick={() => handleSort('status')}>
                     <div className="flex items-center gap-1">Estado <ArrowUpDown className="w-3 h-3" /></div>
                   </TableHead>
                   <TableHead className="w-[50px] text-center">
@@ -587,12 +587,13 @@ export const KeywordsSection = ({
                           <MarketScoreCell marketData={keyword.marketData} score={score} isIncomplete={incomplete} onValidate={() => setValidationKeyword(keyword)} />
                         </TableCell>
                         <TableCell onClick={e => e.stopPropagation()}>
-                          <InlineSelectBadge value={keyword.state || 'pending'} options={KEYWORD_STATES.map(s => ({
+                          <InlineSelectBadge value={keyword.status || 'pending'} options={KEYWORD_STATUS_OPTIONS.map(s => ({
                     value: s.value,
                     label: s.label,
-                    icon: s.icon
+                    color: s.color
                   }))} onChange={value => handleUpdateWithHistory(keyword.id, {
-                    state: value as KeywordState
+                    status: value as KeywordStatus,
+                    statusManuallySet: true
                   })} />
                         </TableCell>
                         <TableCell className="text-center" onClick={e => e.stopPropagation()}>
