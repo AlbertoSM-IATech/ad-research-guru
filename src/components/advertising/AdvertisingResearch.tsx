@@ -27,38 +27,16 @@ import { isAIDemoMode, toggleAIDemoMode } from '@/lib/ai-demo-service';
 import { loadPersistedState, usePersistence, getLastSyncAt, getAdResearchStorageKey, clearBookStorage } from '@/hooks/useLocalPersistence';
 import { type BackupSummary } from './BackupImportModal';
 import { toast } from 'sonner';
-import { 
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from '@/components/ui/collapsible';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@/components/ui/tooltip';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { ChevronDown, TrendingUp } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { 
-  type Keyword, 
-  type TargetASIN, 
-  type AdvertisingCategory, 
-  type BookInfo,
-  type CampaignPlan,
-} from '@/types/advertising';
-import { 
-  generateDemoKeywords, 
-  generateDemoASINs, 
-  generateDemoCategories 
-} from '@/lib/demo-data-generator';
+import { type Keyword, type TargetASIN, type AdvertisingCategory, type BookInfo, type CampaignPlan } from '@/types/advertising';
+import { generateDemoKeywords, generateDemoASINs, generateDemoCategories } from '@/lib/demo-data-generator';
 import { createKeywordDefaults } from '@/lib/keyword-helpers';
 
 // Generate unique ID using crypto.randomUUID with fallback
-const generateId = () =>
-  (typeof crypto !== 'undefined' && 'randomUUID' in crypto)
-    ? crypto.randomUUID()
-    : `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+const generateId = () => typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
 
 // Helper to check if book context is complete
 const isBookContextComplete = (bookInfo: BookInfo): boolean => {
@@ -68,15 +46,13 @@ const isBookContextComplete = (bookInfo: BookInfo): boolean => {
 // Helper to format last sync time
 const formatLastSync = (date: Date | null): string => {
   if (!date) return '—';
-  
   const now = new Date();
   const diffMs = now.getTime() - date.getTime();
   const diffSec = Math.floor(diffMs / 1000);
   const diffMin = Math.floor(diffSec / 60);
-  
   if (diffSec < 60) return 'hace unos segundos';
   if (diffMin < 60) return `hace ${diffMin} min`;
-  
+
   // Format as DD/MM HH:MM
   const day = date.getDate().toString().padStart(2, '0');
   const month = (date.getMonth() + 1).toString().padStart(2, '0');
@@ -84,36 +60,39 @@ const formatLastSync = (date: Date | null): string => {
   const minutes = date.getMinutes().toString().padStart(2, '0');
   return `${day}/${month} ${hours}:${minutes}`;
 };
-
 interface AdvertisingResearchProps {
   bookId?: string;
 }
-
-export const AdvertisingResearch = ({ bookId }: AdvertisingResearchProps) => {
+export const AdvertisingResearch = ({
+  bookId
+}: AdvertisingResearchProps) => {
   // Hydration flag - must be first
   const [hasHydrated, setHasHydrated] = useState(false);
-  
+
   // Last sync indicator
   const [lastSyncAt, setLastSyncAt] = useState<Date | null>(null);
   const [isSyncing, setIsSyncing] = useState(false);
-  
+
   // Sync history (last 5 syncs)
   const [syncHistory, setSyncHistory] = useState<Date[]>([]);
-  
+
   // Pending changes counter
   const [pendingChangesCount, setPendingChangesCount] = useState(0);
-  
   const [selectedMarketplace, setSelectedMarketplace] = useState('us');
   const [activeTab, setActiveTab] = useState<'keywords' | 'asins' | 'categories'>('keywords');
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [hasLoadedExamples, setHasLoadedExamples] = useState(false);
   const [isDemoMode, setIsDemoMode] = useState(isAIDemoMode());
   const [showInsights, setShowInsights] = useState(false);
-  
+
   // Tour state
-  const { hasCompletedTour, setHasCompletedTour, resetTour } = useTourStatus();
+  const {
+    hasCompletedTour,
+    setHasCompletedTour,
+    resetTour
+  } = useTourStatus();
   const [showTour, setShowTour] = useState(false);
-  
+
   // Modal states
   const [showExportModal, setShowExportModal] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
@@ -121,13 +100,13 @@ export const AdvertisingResearch = ({ bookId }: AdvertisingResearchProps) => {
   const [showCampaignPlanner, setShowCampaignPlanner] = useState(false);
   const [showMarketConfigModal, setShowMarketConfigModal] = useState(false);
   const [configVersion, setConfigVersion] = useState(0); // To trigger re-renders on config change
-  
+
   // Book panel state - React controlled, no DOM hacks
   const [isBookPanelOpen, setIsBookPanelOpen] = useState(true);
-  
+
   // AI Assistant state - React controlled
   const [isAIAssistantOpen, setIsAIAssistantOpen] = useState(false);
-  
+
   // Selection states for each tab - lifted from sections for AIAssistant access
   const [selection, setSelection] = useState<{
     keywords: Set<string>;
@@ -136,34 +115,40 @@ export const AdvertisingResearch = ({ bookId }: AdvertisingResearchProps) => {
   }>({
     keywords: new Set(),
     asins: new Set(),
-    categories: new Set(),
+    categories: new Set()
   });
 
   // Selection helpers
   const setTabSelection = useCallback((tab: 'keywords' | 'asins' | 'categories', nextSet: Set<string>) => {
-    setSelection(prev => ({ ...prev, [tab]: nextSet }));
+    setSelection(prev => ({
+      ...prev,
+      [tab]: nextSet
+    }));
   }, []);
-
   const clearTabSelection = useCallback((tab: 'keywords' | 'asins' | 'categories') => {
-    setSelection(prev => ({ ...prev, [tab]: new Set() }));
+    setSelection(prev => ({
+      ...prev,
+      [tab]: new Set()
+    }));
   }, []);
-
   const clearAllSelection = useCallback(() => {
-    setSelection({ keywords: new Set(), asins: new Set(), categories: new Set() });
+    setSelection({
+      keywords: new Set(),
+      asins: new Set(),
+      categories: new Set()
+    });
   }, []);
 
   // Clear selection when marketplace changes (don't mix IDs between markets)
   useEffect(() => {
     clearAllSelection();
   }, [selectedMarketplace, clearAllSelection]);
-  
   const [bookInfo, setBookInfo] = useState<BookInfo>({
     title: '',
     subtitle: '',
     description: '',
     categories: []
   });
-  
   const [keywordsByMarket, setKeywordsByMarket] = useState<Record<string, Keyword[]>>({});
   const [asinsByMarket, setAsinsByMarket] = useState<Record<string, TargetASIN[]>>({});
   const [categoriesByMarket, setCategoriesByMarket] = useState<Record<string, AdvertisingCategory[]>>({});
@@ -197,42 +182,30 @@ export const AdvertisingResearch = ({ bookId }: AdvertisingResearchProps) => {
   // ============= LAST SYNC REFRESH (every 10s) =============
   useEffect(() => {
     if (!hasHydrated) return;
-    
     const interval = setInterval(() => {
       setLastSyncAt(getLastSyncAt(bookId));
     }, 10000);
-    
     return () => clearInterval(interval);
   }, [hasHydrated, bookId]);
 
   // ============= PENDING CHANGES TRACKING =============
   // Use a ref to track if this is the first render after hydration
   const isFirstRenderAfterHydration = useRef(true);
-  
+
   // Track changes to persistable state (increment pendingChangesCount)
   useEffect(() => {
     // Don't count changes before hydration
     if (!hasHydrated) return;
-    
+
     // Skip the first render after hydration (initial load)
     if (isFirstRenderAfterHydration.current) {
       isFirstRenderAfterHydration.current = false;
       return;
     }
-    
+
     // Increment pending changes count
     setPendingChangesCount(prev => prev + 1);
-  }, [
-    hasHydrated,
-    selectedMarketplace,
-    activeTab,
-    bookInfo,
-    keywordsByMarket,
-    asinsByMarket,
-    categoriesByMarket,
-    campaignPlansByMarket,
-    showInsights,
-  ]);
+  }, [hasHydrated, selectedMarketplace, activeTab, bookInfo, keywordsByMarket, asinsByMarket, categoriesByMarket, campaignPlansByMarket, showInsights]);
 
   // ============= WARN BEFORE LEAVING WITH PENDING CHANGES =============
   useEffect(() => {
@@ -244,7 +217,6 @@ export const AdvertisingResearch = ({ bookId }: AdvertisingResearchProps) => {
         return '';
       }
     };
-
     window.addEventListener('beforeunload', handleBeforeUnload);
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, [pendingChangesCount]);
@@ -260,31 +232,26 @@ export const AdvertisingResearch = ({ bookId }: AdvertisingResearchProps) => {
     // Reset syncing animation after 1.5s
     setTimeout(() => setIsSyncing(false), 1500);
   }, []);
+  const {
+    saveNow
+  } = usePersistence({
+    selectedMarketplace,
+    activeTab,
+    bookInfo,
+    keywordsByMarket,
+    asinsByMarket,
+    categoriesByMarket,
+    campaignPlansByMarket,
+    showInsights
+  }, hasHydrated, handleSyncComplete, bookId);
 
-  const { saveNow } = usePersistence(
-    {
-      selectedMarketplace,
-      activeTab,
-      bookInfo,
-      keywordsByMarket,
-      asinsByMarket,
-      categoriesByMarket,
-      campaignPlansByMarket,
-      showInsights,
-    },
-    hasHydrated,
-    handleSyncComplete,
-    bookId
-  );
-  
   // Handle manual save
   const handleSaveNow = useCallback(() => {
     saveNow();
     toast.success('Guardado manualmente');
   }, [saveNow]);
-
   const bookContextComplete = isBookContextComplete(bookInfo);
-  
+
   // Auto-collapse book panel when context is complete
   useEffect(() => {
     if (bookContextComplete) {
@@ -299,44 +266,49 @@ export const AdvertisingResearch = ({ bookId }: AdvertisingResearchProps) => {
       const currentKeywords = keywordsByMarket[selectedMarketplace] || [];
       const currentASINs = asinsByMarket[selectedMarketplace] || [];
       const currentCategories = categoriesByMarket[selectedMarketplace] || [];
-
       if (currentKeywords.length === 0 && currentASINs.length === 0 && currentCategories.length === 0) {
         // Load demo keywords (150)
         const exampleKeywords = generateDemoKeywords(selectedMarketplace, 150).map(k => ({
           ...k,
           id: generateId(),
           createdAt: new Date(),
-          updatedAt: new Date(),
+          updatedAt: new Date()
         }));
-        setKeywordsByMarket(prev => ({ ...prev, [selectedMarketplace]: exampleKeywords }));
+        setKeywordsByMarket(prev => ({
+          ...prev,
+          [selectedMarketplace]: exampleKeywords
+        }));
 
         // Load demo ASINs (40)
         const exampleASINs = generateDemoASINs(selectedMarketplace, 40).map(a => ({
           ...a,
           id: generateId(),
           createdAt: new Date(),
-          updatedAt: new Date(),
+          updatedAt: new Date()
         }));
-        setAsinsByMarket(prev => ({ ...prev, [selectedMarketplace]: exampleASINs }));
+        setAsinsByMarket(prev => ({
+          ...prev,
+          [selectedMarketplace]: exampleASINs
+        }));
 
         // Load demo categories (15)
         const exampleCategories = generateDemoCategories(selectedMarketplace, 15).map(c => ({
           ...c,
           id: generateId(),
           createdAt: new Date(),
-          updatedAt: new Date(),
+          updatedAt: new Date()
         }));
-        setCategoriesByMarket(prev => ({ ...prev, [selectedMarketplace]: exampleCategories }));
-
+        setCategoriesByMarket(prev => ({
+          ...prev,
+          [selectedMarketplace]: exampleCategories
+        }));
         setHasLoadedExamples(true);
       }
     }
   }, [hasHydrated, selectedMarketplace, hasLoadedExamples, keywordsByMarket, asinsByMarket, categoriesByMarket]);
-
   const currentKeywords = keywordsByMarket[selectedMarketplace] || [];
   const currentASINs = asinsByMarket[selectedMarketplace] || [];
   const currentCategories = categoriesByMarket[selectedMarketplace] || [];
-
   const filteredKeywords = useMemo(() => currentKeywords.filter(k => globalSearchTerm ? k.keyword.toLowerCase().includes(globalSearchTerm.toLowerCase()) : true), [currentKeywords, globalSearchTerm]);
   const filteredASINs = useMemo(() => currentASINs.filter(a => globalSearchTerm ? a.asin.toLowerCase().includes(globalSearchTerm.toLowerCase()) : true), [currentASINs, globalSearchTerm]);
   const filteredCategories = useMemo(() => currentCategories.filter(c => globalSearchTerm ? c.name.toLowerCase().includes(globalSearchTerm.toLowerCase()) : true), [currentCategories, globalSearchTerm]);
@@ -354,7 +326,6 @@ export const AdvertisingResearch = ({ bookId }: AdvertisingResearchProps) => {
       [selectedMarketplace]: [...(prev[selectedMarketplace] || []), newKeyword]
     }));
   }, [selectedMarketplace]);
-
   const handleAddBulkKeywords = useCallback((keywords: Array<Omit<Keyword, 'id' | 'createdAt' | 'updatedAt'>>) => {
     const newKeywords = keywords.map(k => ({
       ...k,
@@ -367,7 +338,6 @@ export const AdvertisingResearch = ({ bookId }: AdvertisingResearchProps) => {
       [selectedMarketplace]: [...(prev[selectedMarketplace] || []), ...newKeywords]
     }));
   }, [selectedMarketplace]);
-
   const handleUpdateKeyword = useCallback((id: string, updates: Partial<Keyword>) => {
     setKeywordsByMarket(prev => ({
       ...prev,
@@ -378,21 +348,18 @@ export const AdvertisingResearch = ({ bookId }: AdvertisingResearchProps) => {
       } : k)
     }));
   }, [selectedMarketplace]);
-
   const handleDeleteKeyword = useCallback((id: string) => {
     setKeywordsByMarket(prev => ({
       ...prev,
       [selectedMarketplace]: (prev[selectedMarketplace] || []).filter(k => k.id !== id)
     }));
   }, [selectedMarketplace]);
-
   const handleDeleteBulkKeywords = useCallback((ids: string[]) => {
     setKeywordsByMarket(prev => ({
       ...prev,
       [selectedMarketplace]: (prev[selectedMarketplace] || []).filter(k => !ids.includes(k.id))
     }));
   }, [selectedMarketplace]);
-
   const handleUpdateBulkKeywords = useCallback((ids: string[], updates: Partial<Keyword>) => {
     setKeywordsByMarket(prev => ({
       ...prev,
@@ -417,7 +384,6 @@ export const AdvertisingResearch = ({ bookId }: AdvertisingResearchProps) => {
       [selectedMarketplace]: [...(prev[selectedMarketplace] || []), newASIN]
     }));
   }, [selectedMarketplace]);
-
   const handleAddBulkASINs = useCallback((asins: Array<Omit<TargetASIN, 'id' | 'createdAt' | 'updatedAt'>>) => {
     const newASINs = asins.map(a => ({
       ...a,
@@ -430,7 +396,6 @@ export const AdvertisingResearch = ({ bookId }: AdvertisingResearchProps) => {
       [selectedMarketplace]: [...(prev[selectedMarketplace] || []), ...newASINs]
     }));
   }, [selectedMarketplace]);
-
   const handleUpdateASIN = useCallback((id: string, updates: Partial<TargetASIN>) => {
     setAsinsByMarket(prev => ({
       ...prev,
@@ -441,14 +406,12 @@ export const AdvertisingResearch = ({ bookId }: AdvertisingResearchProps) => {
       } : a)
     }));
   }, [selectedMarketplace]);
-
   const handleDeleteASIN = useCallback((id: string) => {
     setAsinsByMarket(prev => ({
       ...prev,
       [selectedMarketplace]: (prev[selectedMarketplace] || []).filter(a => a.id !== id)
     }));
   }, [selectedMarketplace]);
-
   const handleDeleteBulkASINs = useCallback((ids: string[]) => {
     setAsinsByMarket(prev => ({
       ...prev,
@@ -469,7 +432,6 @@ export const AdvertisingResearch = ({ bookId }: AdvertisingResearchProps) => {
       [selectedMarketplace]: [...(prev[selectedMarketplace] || []), newCategory]
     }));
   }, [selectedMarketplace]);
-
   const handleAddBulkCategories = useCallback((categories: Array<Omit<AdvertisingCategory, 'id' | 'createdAt' | 'updatedAt'>>) => {
     const newCategories = categories.map(c => ({
       ...c,
@@ -482,7 +444,6 @@ export const AdvertisingResearch = ({ bookId }: AdvertisingResearchProps) => {
       [selectedMarketplace]: [...(prev[selectedMarketplace] || []), ...newCategories]
     }));
   }, [selectedMarketplace]);
-
   const handleUpdateCategory = useCallback((id: string, updates: Partial<AdvertisingCategory>) => {
     setCategoriesByMarket(prev => ({
       ...prev,
@@ -493,14 +454,12 @@ export const AdvertisingResearch = ({ bookId }: AdvertisingResearchProps) => {
       } : c)
     }));
   }, [selectedMarketplace]);
-
   const handleDeleteCategory = useCallback((id: string) => {
     setCategoriesByMarket(prev => ({
       ...prev,
       [selectedMarketplace]: (prev[selectedMarketplace] || []).filter(c => c.id !== id)
     }));
   }, [selectedMarketplace]);
-
   const handleDeleteBulkCategories = useCallback((ids: string[]) => {
     setCategoriesByMarket(prev => ({
       ...prev,
@@ -510,7 +469,6 @@ export const AdvertisingResearch = ({ bookId }: AdvertisingResearchProps) => {
 
   // Campaign Plan handlers
   const currentPlans = campaignPlansByMarket[selectedMarketplace] || [];
-  
   const handleCreatePlan = useCallback((planData: Omit<CampaignPlan, 'id' | 'createdAt' | 'updatedAt'>) => {
     const newPlan: CampaignPlan = {
       ...planData,
@@ -523,7 +481,6 @@ export const AdvertisingResearch = ({ bookId }: AdvertisingResearchProps) => {
       [selectedMarketplace]: [...(prev[selectedMarketplace] || []), newPlan]
     }));
   }, [selectedMarketplace]);
-
   const handleUpdatePlan = useCallback((id: string, updates: Partial<CampaignPlan>) => {
     setCampaignPlansByMarket(prev => ({
       ...prev,
@@ -534,14 +491,12 @@ export const AdvertisingResearch = ({ bookId }: AdvertisingResearchProps) => {
       } : p)
     }));
   }, [selectedMarketplace]);
-
   const handleDeletePlan = useCallback((id: string) => {
     setCampaignPlansByMarket(prev => ({
       ...prev,
       [selectedMarketplace]: (prev[selectedMarketplace] || []).filter(p => p.id !== id)
     }));
   }, [selectedMarketplace]);
-
   const handleAssignKeywords = useCallback((planId: string, keywordIds: string[]) => {
     setCampaignPlansByMarket(prev => ({
       ...prev,
@@ -558,7 +513,7 @@ export const AdvertisingResearch = ({ bookId }: AdvertisingResearchProps) => {
     handleAddKeyword(createKeywordDefaults({
       keyword,
       marketplaceId: selectedMarketplace,
-      notes: 'Añadida desde sugerencias',
+      notes: 'Añadida desde sugerencias'
     }));
   }, [handleAddKeyword, selectedMarketplace]);
 
@@ -585,11 +540,16 @@ export const AdvertisingResearch = ({ bookId }: AdvertisingResearchProps) => {
   const handleResetData = useCallback(() => {
     // 1. Clear all localStorage keys for this book (including UI state)
     clearBookStorage(bookId);
-    
+
     // 2. Reset all states to initial values
     setSelectedMarketplace('us');
     setActiveTab('keywords');
-    setBookInfo({ title: '', subtitle: '', description: '', categories: [] });
+    setBookInfo({
+      title: '',
+      subtitle: '',
+      description: '',
+      categories: []
+    });
     setKeywordsByMarket({});
     setAsinsByMarket({});
     setCategoriesByMarket({});
@@ -597,20 +557,24 @@ export const AdvertisingResearch = ({ bookId }: AdvertisingResearchProps) => {
     setGlobalSearchTerm('');
     setGlobalFilter('all');
     setGlobalSort('relevance');
-    setSelection({ keywords: new Set(), asins: new Set(), categories: new Set() });
+    setSelection({
+      keywords: new Set(),
+      asins: new Set(),
+      categories: new Set()
+    });
     setShowInsights(false);
     setHasLoadedExamples(false); // This will trigger demo data reload
     setPendingChangesCount(0); // Reset pending changes
-    
+
     // 3. Close any open modals
     setShowExportModal(false);
     setShowImportModal(false);
     setShowCampaignPlanner(false);
-    
+
     // 4. Close AI assistant and reopen book panel
     setIsAIAssistantOpen(false);
     setIsBookPanelOpen(true);
-    
+
     // 5. Show confirmation toast
     toast.success('Datos reseteados');
   }, [bookId]);
@@ -622,30 +586,41 @@ export const AdvertisingResearch = ({ bookId }: AdvertisingResearchProps) => {
       ...k,
       id: generateId(),
       createdAt: new Date(),
-      updatedAt: new Date(),
+      updatedAt: new Date()
     }));
-    setKeywordsByMarket(prev => ({ ...prev, [selectedMarketplace]: exampleKeywords }));
+    setKeywordsByMarket(prev => ({
+      ...prev,
+      [selectedMarketplace]: exampleKeywords
+    }));
 
     // Generate fresh demo ASINs (40)
     const exampleASINs = generateDemoASINs(selectedMarketplace, 40).map(a => ({
       ...a,
       id: generateId(),
       createdAt: new Date(),
-      updatedAt: new Date(),
+      updatedAt: new Date()
     }));
-    setAsinsByMarket(prev => ({ ...prev, [selectedMarketplace]: exampleASINs }));
+    setAsinsByMarket(prev => ({
+      ...prev,
+      [selectedMarketplace]: exampleASINs
+    }));
 
     // Generate fresh demo categories (15)
     const exampleCategories = generateDemoCategories(selectedMarketplace, 15).map(c => ({
       ...c,
       id: generateId(),
       createdAt: new Date(),
-      updatedAt: new Date(),
+      updatedAt: new Date()
     }));
-    setCategoriesByMarket(prev => ({ ...prev, [selectedMarketplace]: exampleCategories }));
+    setCategoriesByMarket(prev => ({
+      ...prev,
+      [selectedMarketplace]: exampleCategories
+    }));
 
     // Show confirmation toast
-    import('sonner').then(({ toast }) => {
+    import('sonner').then(({
+      toast
+    }) => {
       toast.success('Datos demo regenerados con datos de competidores');
     });
   }, [selectedMarketplace]);
@@ -660,7 +635,6 @@ export const AdvertisingResearch = ({ bookId }: AdvertisingResearchProps) => {
         return value;
       }));
     };
-
     const backup = {
       version: 2,
       exportedAt: new Date().toISOString(),
@@ -673,17 +647,16 @@ export const AdvertisingResearch = ({ bookId }: AdvertisingResearchProps) => {
         asinsByMarket: serializeData(asinsByMarket),
         categoriesByMarket: serializeData(categoriesByMarket),
         campaignPlansByMarket: serializeData(campaignPlansByMarket),
-        showInsights,
-      },
+        showInsights
+      }
     };
-
     const jsonString = JSON.stringify(backup, null, 2);
-    const blob = new Blob([jsonString], { type: 'application/json' });
+    const blob = new Blob([jsonString], {
+      type: 'application/json'
+    });
     const url = URL.createObjectURL(blob);
-    
     const date = new Date().toISOString().split('T')[0];
     const filename = `ad-research-backup-v2-${date}.json`;
-    
     const a = document.createElement('a');
     a.href = url;
     a.download = filename;
@@ -691,9 +664,10 @@ export const AdvertisingResearch = ({ bookId }: AdvertisingResearchProps) => {
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
-    
     toast.success('Backup exportado');
-    toast.info(`Archivo: ${filename}`, { duration: 4000 });
+    toast.info(`Archivo: ${filename}`, {
+      duration: 4000
+    });
   }, [bookId, selectedMarketplace, activeTab, bookInfo, keywordsByMarket, asinsByMarket, categoriesByMarket, campaignPlansByMarket, showInsights]);
 
   // Import backup handler - restores state from imported data
@@ -718,25 +692,28 @@ export const AdvertisingResearch = ({ bookId }: AdvertisingResearchProps) => {
     if (data.showInsights !== undefined) {
       setShowInsights(data.showInsights);
     }
-    
+
     // Prevent demo data from loading
     setHasLoadedExamples(true);
-    
+
     // Clear selection
-    setSelection({ keywords: new Set(), asins: new Set(), categories: new Set() });
-    
+    setSelection({
+      keywords: new Set(),
+      asins: new Set(),
+      categories: new Set()
+    });
+
     // Reset pending changes (backup is now the source of truth)
     setPendingChangesCount(0);
-    
+
     // Close backup modal
     setShowBackupImportModal(false);
-    
+
     // Show success toasts
     toast.success('Backup importado correctamente');
-    toast.info(
-      `Markets: ${summary.markets} | Keywords: ${summary.keywords} | ASINs: ${summary.asins} | Categorías: ${summary.categories}`,
-      { duration: 5000 }
-    );
+    toast.info(`Markets: ${summary.markets} | Keywords: ${summary.keywords} | ASINs: ${summary.asins} | Categorías: ${summary.categories}`, {
+      duration: 5000
+    });
   }, []);
 
   // Education sections (accessible from overflow menu)
@@ -758,14 +735,9 @@ export const AdvertisingResearch = ({ bookId }: AdvertisingResearchProps) => {
       <li>Prioriza keywords con alta relevancia para tu libro</li>
     </ul>
   }];
-
-  return (
-    <div className="min-h-screen bg-background">
+  return <div className="min-h-screen bg-background">
       {/* Keyboard Shortcuts */}
-      <KeyboardShortcutsManager
-        onSave={handleSave}
-        onSearch={handleFocusSearch}
-      />
+      <KeyboardShortcutsManager onSave={handleSave} onSearch={handleFocusSearch} />
       
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         {/* === HEADER === Minimalista y profesional */}
@@ -774,74 +746,43 @@ export const AdvertisingResearch = ({ bookId }: AdvertisingResearchProps) => {
             {/* Title + Sync indicator */}
             <div className="flex items-center gap-3">
               <h1 className="font-heading text-2xl font-bold text-foreground">
-                Investigación Publicitaria
+                Análisis de Mercado y Validación de Nicho
               </h1>
               {/* Sync status indicators - Desktop */}
               <div className="hidden md:flex items-center gap-2">
                 {/* Pending changes indicator + Save Now button */}
-                <span 
-                  className={`inline-flex items-center gap-1.5 text-xs transition-all duration-300 ${
-                    pendingChangesCount > 0 
-                      ? 'text-amber-500 dark:text-amber-400' 
-                      : 'text-muted-foreground'
-                  } ${isSyncing ? 'animate-pulse' : ''}`}
-                >
-                  <span 
-                    className={`w-1.5 h-1.5 rounded-full transition-all duration-300 ${
-                      pendingChangesCount > 0 
-                        ? 'bg-amber-500 dark:bg-amber-400' 
-                        : 'bg-green-500'
-                    } ${isSyncing ? 'animate-pulse scale-125' : ''}`}
-                  />
-                  {pendingChangesCount > 0 
-                    ? `Cambios pendientes: ${pendingChangesCount}` 
-                    : 'Todo sincronizado'}
+                <span className={`inline-flex items-center gap-1.5 text-xs transition-all duration-300 ${pendingChangesCount > 0 ? 'text-amber-500 dark:text-amber-400' : 'text-muted-foreground'} ${isSyncing ? 'animate-pulse' : ''}`}>
+                  <span className={`w-1.5 h-1.5 rounded-full transition-all duration-300 ${pendingChangesCount > 0 ? 'bg-amber-500 dark:bg-amber-400' : 'bg-green-500'} ${isSyncing ? 'animate-pulse scale-125' : ''}`} />
+                  {pendingChangesCount > 0 ? `Cambios pendientes: ${pendingChangesCount}` : 'Todo sincronizado'}
                 </span>
                 
                 {/* Save Now button - only show when there are pending changes */}
-                {pendingChangesCount > 0 && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-6 px-2 text-xs gap-1 text-amber-600 dark:text-amber-400 hover:text-amber-700 dark:hover:text-amber-300"
-                    onClick={handleSaveNow}
-                  >
+                {pendingChangesCount > 0 && <Button variant="ghost" size="sm" className="h-6 px-2 text-xs gap-1 text-amber-600 dark:text-amber-400 hover:text-amber-700 dark:hover:text-amber-300" onClick={handleSaveNow}>
                     <Save className="w-3 h-3" />
                     Guardar
-                  </Button>
-                )}
+                  </Button>}
                 
                 {/* Last sync time with history tooltip */}
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <span 
-                        className={`inline-flex items-center gap-1.5 text-xs text-muted-foreground transition-all duration-300 cursor-help ${
-                          isSyncing ? 'text-primary' : ''
-                        }`}
-                      >
+                      <span className={`inline-flex items-center gap-1.5 text-xs text-muted-foreground transition-all duration-300 cursor-help ${isSyncing ? 'text-primary' : ''}`}>
                         Última sincronización: {formatLastSync(lastSyncAt)}
                       </span>
                     </TooltipTrigger>
                     <TooltipContent side="bottom" className="max-w-xs">
                       <div className="space-y-1">
                         <p className="font-medium text-xs">Historial de sincronización</p>
-                        {syncHistory.length === 0 ? (
-                          <p className="text-xs text-muted-foreground">Sin sincronizaciones recientes</p>
-                        ) : (
-                          <ul className="text-xs space-y-0.5">
-                            {syncHistory.map((date, i) => (
-                              <li key={i} className="text-muted-foreground">
-                                {date.toLocaleTimeString('es-ES', { 
-                                  hour: '2-digit', 
-                                  minute: '2-digit', 
-                                  second: '2-digit' 
-                                })}
+                        {syncHistory.length === 0 ? <p className="text-xs text-muted-foreground">Sin sincronizaciones recientes</p> : <ul className="text-xs space-y-0.5">
+                            {syncHistory.map((date, i) => <li key={i} className="text-muted-foreground">
+                                {date.toLocaleTimeString('es-ES', {
+                            hour: '2-digit',
+                            minute: '2-digit',
+                            second: '2-digit'
+                          })}
                                 {i === 0 && <span className="ml-1 text-green-500">(última)</span>}
-                              </li>
-                            ))}
-                          </ul>
-                        )}
+                              </li>)}
+                          </ul>}
                       </div>
                     </TooltipContent>
                   </Tooltip>
@@ -853,116 +794,63 @@ export const AdvertisingResearch = ({ bookId }: AdvertisingResearchProps) => {
             <div className="flex items-center gap-3">
               {/* Marketplace Selector */}
               <div data-tour="marketplace">
-                <MarketplaceSelector 
-                  value={selectedMarketplace} 
-                  onChange={setSelectedMarketplace} 
-                />
+                <MarketplaceSelector value={selectedMarketplace} onChange={setSelectedMarketplace} />
               </div>
               
               
               {/* AI Assistant Button - Único punto de entrada, controlado por estado */}
-              <Button
-                variant="default"
-                size="sm"
-                className="gap-2 relative"
-                onClick={() => setIsAIAssistantOpen(true)}
-              >
+              <Button variant="default" size="sm" className="gap-2 relative" onClick={() => setIsAIAssistantOpen(true)}>
                 <Sparkles className="w-4 h-4" />
                 <span className="hidden sm:inline">Asistente IA</span>
                 {/* Pending changes badge */}
-                {pendingChangesCount > 0 && (
-                  <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] px-1 flex items-center justify-center rounded-full bg-amber-500 text-white text-[10px] font-bold shadow-sm animate-pulse">
+                {pendingChangesCount > 0 && <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] px-1 flex items-center justify-center rounded-full bg-amber-500 text-white text-[10px] font-bold shadow-sm animate-pulse">
                     {pendingChangesCount > 99 ? '99+' : pendingChangesCount}
-                  </span>
-                )}
+                  </span>}
               </Button>
               
               {/* Theme Toggle - Discreto */}
               <ThemeToggle />
               
               {/* Overflow Menu */}
-              <HeaderOverflowMenu
-                onImport={() => setShowImportModal(true)}
-                onExport={() => setShowExportModal(true)}
-                onStartTour={() => setShowTour(true)}
-                onOpenCampaignPlanner={() => setShowCampaignPlanner(true)}
-                onToggleDemo={handleToggleDemo}
-                isDemoMode={isDemoMode}
-                onResetData={handleResetData}
-                onExportBackup={handleExportBackup}
-                onImportBackup={() => setShowBackupImportModal(true)}
-                onRegenerateDemo={handleRegenerateDemo}
-                onOpenMarketConfig={() => setShowMarketConfigModal(true)}
-              />
+              <HeaderOverflowMenu onImport={() => setShowImportModal(true)} onExport={() => setShowExportModal(true)} onStartTour={() => setShowTour(true)} onOpenCampaignPlanner={() => setShowCampaignPlanner(true)} onToggleDemo={handleToggleDemo} isDemoMode={isDemoMode} onResetData={handleResetData} onExportBackup={handleExportBackup} onImportBackup={() => setShowBackupImportModal(true)} onRegenerateDemo={handleRegenerateDemo} onOpenMarketConfig={() => setShowMarketConfigModal(true)} />
             </div>
           </div>
           
           {/* Sync status indicators - Mobile */}
           <div className="md:hidden mt-2 flex flex-wrap items-center gap-x-3 gap-y-1">
             {/* Pending changes indicator */}
-            <span 
-              className={`inline-flex items-center gap-1.5 text-xs transition-all duration-300 ${
-                pendingChangesCount > 0 
-                  ? 'text-amber-500 dark:text-amber-400' 
-                  : 'text-muted-foreground'
-              } ${isSyncing ? 'animate-pulse' : ''}`}
-            >
-              <span 
-                className={`w-1.5 h-1.5 rounded-full transition-all duration-300 ${
-                  pendingChangesCount > 0 
-                    ? 'bg-amber-500 dark:bg-amber-400' 
-                    : 'bg-green-500'
-                } ${isSyncing ? 'animate-pulse scale-125' : ''}`}
-              />
-              {pendingChangesCount > 0 
-                ? `Pendientes: ${pendingChangesCount}` 
-                : 'Sincronizado'}
+            <span className={`inline-flex items-center gap-1.5 text-xs transition-all duration-300 ${pendingChangesCount > 0 ? 'text-amber-500 dark:text-amber-400' : 'text-muted-foreground'} ${isSyncing ? 'animate-pulse' : ''}`}>
+              <span className={`w-1.5 h-1.5 rounded-full transition-all duration-300 ${pendingChangesCount > 0 ? 'bg-amber-500 dark:bg-amber-400' : 'bg-green-500'} ${isSyncing ? 'animate-pulse scale-125' : ''}`} />
+              {pendingChangesCount > 0 ? `Pendientes: ${pendingChangesCount}` : 'Sincronizado'}
             </span>
             
             {/* Save Now button - mobile */}
-            {pendingChangesCount > 0 && (
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-5 px-1.5 text-[10px] gap-0.5 text-amber-600 dark:text-amber-400"
-                onClick={handleSaveNow}
-              >
+            {pendingChangesCount > 0 && <Button variant="ghost" size="sm" className="h-5 px-1.5 text-[10px] gap-0.5 text-amber-600 dark:text-amber-400" onClick={handleSaveNow}>
                 <Save className="w-3 h-3" />
                 Guardar
-              </Button>
-            )}
+              </Button>}
             
             {/* Last sync time with history tooltip */}
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <span 
-                    className={`inline-flex items-center gap-1.5 text-xs text-muted-foreground transition-all duration-300 cursor-help ${
-                      isSyncing ? 'text-primary' : ''
-                    }`}
-                  >
+                  <span className={`inline-flex items-center gap-1.5 text-xs text-muted-foreground transition-all duration-300 cursor-help ${isSyncing ? 'text-primary' : ''}`}>
                     Sync: {formatLastSync(lastSyncAt)}
                   </span>
                 </TooltipTrigger>
                 <TooltipContent side="bottom" className="max-w-xs">
                   <div className="space-y-1">
                     <p className="font-medium text-xs">Historial</p>
-                    {syncHistory.length === 0 ? (
-                      <p className="text-xs text-muted-foreground">Sin sincronizaciones</p>
-                    ) : (
-                      <ul className="text-xs space-y-0.5">
-                        {syncHistory.map((date, i) => (
-                          <li key={i} className="text-muted-foreground">
-                            {date.toLocaleTimeString('es-ES', { 
-                              hour: '2-digit', 
-                              minute: '2-digit', 
-                              second: '2-digit' 
-                            })}
+                    {syncHistory.length === 0 ? <p className="text-xs text-muted-foreground">Sin sincronizaciones</p> : <ul className="text-xs space-y-0.5">
+                        {syncHistory.map((date, i) => <li key={i} className="text-muted-foreground">
+                            {date.toLocaleTimeString('es-ES', {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        second: '2-digit'
+                      })}
                             {i === 0 && <span className="ml-1 text-green-500">(última)</span>}
-                          </li>
-                        ))}
-                      </ul>
-                    )}
+                          </li>)}
+                      </ul>}
                   </div>
                 </TooltipContent>
               </Tooltip>
@@ -971,132 +859,70 @@ export const AdvertisingResearch = ({ bookId }: AdvertisingResearchProps) => {
           
           {/* Mobile search */}
           <div className="md:hidden mt-4" data-tour="global-search-mobile">
-            <GlobalSearch 
-              searchTerm={globalSearchTerm} 
-              onSearchChange={setGlobalSearchTerm} 
-              filter={globalFilter} 
-              onFilterChange={setGlobalFilter} 
-              sort={globalSort} 
-              onSortChange={setGlobalSort} 
-              resultsCount={{
-                keywords: filteredKeywords.length,
-                asins: filteredASINs.length,
-                categories: filteredCategories.length
-              }}
-              compact
-            />
+            <GlobalSearch searchTerm={globalSearchTerm} onSearchChange={setGlobalSearchTerm} filter={globalFilter} onFilterChange={setGlobalFilter} sort={globalSort} onSortChange={setGlobalSort} resultsCount={{
+            keywords: filteredKeywords.length,
+            asins: filteredASINs.length,
+            categories: filteredCategories.length
+          }} compact />
           </div>
         </header>
 
         {/* === SECCIÓN 1: CONTEXTO === Controlado por estado, sin DOM hacks */}
-        {(isBookPanelOpen || !bookContextComplete) && (
-          <section className="mb-6">
+        {(isBookPanelOpen || !bookContextComplete) && <section className="mb-6">
             <BookInfoPanel bookInfo={bookInfo} onChange={setBookInfo} />
-          </section>
-        )}
+          </section>}
         
         {/* Context summary when complete and panel closed - Minimal */}
-        {bookContextComplete && !isBookPanelOpen && (
-          <div className="mb-6 p-3 rounded-lg border border-border/50 bg-muted/30 flex items-center justify-between">
+        {bookContextComplete && !isBookPanelOpen && <div className="mb-6 p-3 rounded-lg border border-border/50 bg-muted/30 flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="w-8 h-8 rounded-md bg-primary/10 flex items-center justify-center">
                 <Target className="w-4 h-4 text-primary" />
               </div>
               <div>
                 <p className="text-sm font-medium">{bookInfo.title}</p>
-                {bookInfo.subtitle && (
-                  <p className="text-xs text-muted-foreground">{bookInfo.subtitle}</p>
-                )}
+                {bookInfo.subtitle && <p className="text-xs text-muted-foreground">{bookInfo.subtitle}</p>}
               </div>
             </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setIsBookPanelOpen(true)}
-              className="text-xs"
-            >
+            <Button variant="ghost" size="sm" onClick={() => setIsBookPanelOpen(true)} className="text-xs">
               Editar contexto
             </Button>
-          </div>
-        )}
+          </div>}
 
         {/* === SECCIÓN 2: TRABAJO (CORE) === Dominante visualmente */}
         <section className="mb-6" data-tour="tabs">
-          <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'keywords' | 'asins' | 'categories')} className="space-y-4">
+          <Tabs value={activeTab} onValueChange={v => setActiveTab(v as 'keywords' | 'asins' | 'categories')} className="space-y-4">
             <TabsList className="grid w-full grid-cols-3 lg:w-[450px] bg-muted">
               <TabsTrigger value="keywords" className="gap-2 data-[state=active]:bg-card">
                 <Search className="w-4 h-4" />
                 <span className="hidden sm:inline">Keywords</span>
-                {currentKeywords.length > 0 && (
-                  <span className="ml-1 px-1.5 py-0.5 text-xs rounded-full bg-primary/10 text-primary">
+                {currentKeywords.length > 0 && <span className="ml-1 px-1.5 py-0.5 text-xs rounded-full bg-primary/10 text-primary">
                     {currentKeywords.length}
-                  </span>
-                )}
+                  </span>}
               </TabsTrigger>
               <TabsTrigger value="asins" className="gap-2 data-[state=active]:bg-card">
                 <Target className="w-4 h-4" />
                 <span className="hidden sm:inline">ASIN</span>
-                {currentASINs.length > 0 && (
-                  <span className="ml-1 px-1.5 py-0.5 text-xs rounded-full bg-primary/10 text-primary">
+                {currentASINs.length > 0 && <span className="ml-1 px-1.5 py-0.5 text-xs rounded-full bg-primary/10 text-primary">
                     {currentASINs.length}
-                  </span>
-                )}
+                  </span>}
               </TabsTrigger>
               <TabsTrigger value="categories" className="gap-2 data-[state=active]:bg-card">
                 <FolderOpen className="w-4 h-4" />
                 <span className="hidden sm:inline">Categorías</span>
-                {currentCategories.length > 0 && (
-                  <span className="ml-1 px-1.5 py-0.5 text-xs rounded-full bg-primary/10 text-primary">
+                {currentCategories.length > 0 && <span className="ml-1 px-1.5 py-0.5 text-xs rounded-full bg-primary/10 text-primary">
                     {currentCategories.length}
-                  </span>
-                )}
+                  </span>}
               </TabsTrigger>
             </TabsList>
 
             <TabsContent value="keywords" className="mt-4">
-              <KeywordsSection 
-                keywords={globalFilter === 'all' || globalFilter === 'keywords' ? filteredKeywords : []} 
-                onAdd={handleAddKeyword} 
-                onAddBulk={handleAddBulkKeywords} 
-                onUpdate={handleUpdateKeyword} 
-                onDelete={handleDeleteKeyword} 
-                onDeleteBulk={handleDeleteBulkKeywords} 
-                onUpdateBulk={handleUpdateBulkKeywords} 
-                marketplaceId={selectedMarketplace} 
-                bookInfo={bookInfo}
-                selectedIds={selection.keywords}
-                onSelectedIdsChange={(ids) => setTabSelection('keywords', ids)}
-                searchTerm={globalSearchTerm}
-                onSearchTermChange={setGlobalSearchTerm}
-              />
+              <KeywordsSection keywords={globalFilter === 'all' || globalFilter === 'keywords' ? filteredKeywords : []} onAdd={handleAddKeyword} onAddBulk={handleAddBulkKeywords} onUpdate={handleUpdateKeyword} onDelete={handleDeleteKeyword} onDeleteBulk={handleDeleteBulkKeywords} onUpdateBulk={handleUpdateBulkKeywords} marketplaceId={selectedMarketplace} bookInfo={bookInfo} selectedIds={selection.keywords} onSelectedIdsChange={ids => setTabSelection('keywords', ids)} searchTerm={globalSearchTerm} onSearchTermChange={setGlobalSearchTerm} />
             </TabsContent>
             <TabsContent value="asins" className="mt-4">
-              <ASINSection 
-                asins={globalFilter === 'all' || globalFilter === 'asins' ? filteredASINs : []} 
-                keywords={currentKeywords}
-                bookTitle={bookInfo.title}
-                onAdd={handleAddASIN} 
-                onAddBulk={handleAddBulkASINs} 
-                onUpdate={handleUpdateASIN} 
-                onDelete={handleDeleteASIN} 
-                onDeleteBulk={handleDeleteBulkASINs} 
-                marketplaceId={selectedMarketplace}
-                selectedIds={selection.asins}
-                onSelectedIdsChange={(ids) => setTabSelection('asins', ids)}
-              />
+              <ASINSection asins={globalFilter === 'all' || globalFilter === 'asins' ? filteredASINs : []} keywords={currentKeywords} bookTitle={bookInfo.title} onAdd={handleAddASIN} onAddBulk={handleAddBulkASINs} onUpdate={handleUpdateASIN} onDelete={handleDeleteASIN} onDeleteBulk={handleDeleteBulkASINs} marketplaceId={selectedMarketplace} selectedIds={selection.asins} onSelectedIdsChange={ids => setTabSelection('asins', ids)} />
             </TabsContent>
             <TabsContent value="categories" className="mt-4">
-              <CategoriesSection 
-                categories={globalFilter === 'all' || globalFilter === 'categories' ? filteredCategories : []} 
-                onAdd={handleAddCategory} 
-                onAddBulk={handleAddBulkCategories} 
-                onUpdate={handleUpdateCategory} 
-                onDelete={handleDeleteCategory} 
-                onDeleteBulk={handleDeleteBulkCategories} 
-                marketplaceId={selectedMarketplace}
-                selectedIds={selection.categories}
-                onSelectedIdsChange={(ids) => setTabSelection('categories', ids)}
-              />
+              <CategoriesSection categories={globalFilter === 'all' || globalFilter === 'categories' ? filteredCategories : []} onAdd={handleAddCategory} onAddBulk={handleAddBulkCategories} onUpdate={handleUpdateCategory} onDelete={handleDeleteCategory} onDeleteBulk={handleDeleteBulkCategories} marketplaceId={selectedMarketplace} selectedIds={selection.categories} onSelectedIdsChange={ids => setTabSelection('categories', ids)} />
             </TabsContent>
           </Tabs>
         </section>
@@ -1119,23 +945,12 @@ export const AdvertisingResearch = ({ bookId }: AdvertisingResearchProps) => {
             
             <CollapsibleContent className="pt-4 space-y-6">
               <div data-tour="stats">
-                <StatsPanel 
-                  keywords={currentKeywords} 
-                  asins={currentASINs} 
-                  categories={currentCategories} 
-                />
+                <StatsPanel keywords={currentKeywords} asins={currentASINs} categories={currentCategories} />
               </div>
               
               <Separator />
               
-              <VisualizationsTab 
-                keywords={currentKeywords} 
-                asins={currentASINs} 
-                categories={currentCategories} 
-                keywordsByMarket={keywordsByMarket} 
-                asinsByMarket={asinsByMarket} 
-                categoriesByMarket={categoriesByMarket} 
-              />
+              <VisualizationsTab keywords={currentKeywords} asins={currentASINs} categories={currentCategories} keywordsByMarket={keywordsByMarket} asinsByMarket={asinsByMarket} categoriesByMarket={categoriesByMarket} />
               
               <Separator />
               
@@ -1148,98 +963,44 @@ export const AdvertisingResearch = ({ bookId }: AdvertisingResearchProps) => {
       {/* === MODALS Y PANELES OCULTOS === */}
       
       {/* Suggestions Panel - Accesible pero no dominante */}
-      <SuggestionsPanel 
-        keywords={currentKeywords} 
-        onAddKeyword={handleAddSuggestion} 
-        isOpen={showSuggestions} 
-        onClose={() => setShowSuggestions(!showSuggestions)} 
-      />
+      <SuggestionsPanel keywords={currentKeywords} onAddKeyword={handleAddSuggestion} isOpen={showSuggestions} onClose={() => setShowSuggestions(!showSuggestions)} />
       
       {/* Guided Tour - Solo desde overflow */}
       {/* Guided Tour */}
-      <GuidedTour
-        isOpen={showTour}
-        onClose={() => setShowTour(false)}
-        onComplete={() => {
-          setHasCompletedTour(true);
-          setShowTour(false);
-        }}
-        onRequestUIState={(state: UIStateRequest) => {
-          if (state.activeTab !== undefined) {
-            setActiveTab(state.activeTab);
-          }
-          if (state.showInsights !== undefined) {
-            setShowInsights(state.showInsights);
-          }
-          if (state.isBookPanelOpen !== undefined) {
-            setIsBookPanelOpen(state.isBookPanelOpen);
-          }
-        }}
-      />
+      <GuidedTour isOpen={showTour} onClose={() => setShowTour(false)} onComplete={() => {
+      setHasCompletedTour(true);
+      setShowTour(false);
+    }} onRequestUIState={(state: UIStateRequest) => {
+      if (state.activeTab !== undefined) {
+        setActiveTab(state.activeTab);
+      }
+      if (state.showInsights !== undefined) {
+        setShowInsights(state.showInsights);
+      }
+      if (state.isBookPanelOpen !== undefined) {
+        setIsBookPanelOpen(state.isBookPanelOpen);
+      }
+    }} />
       
       {/* Advanced Export Modal */}
-      <AdvancedExportModal
-        isOpen={showExportModal}
-        onClose={() => setShowExportModal(false)}
-        keywords={currentKeywords}
-        asins={currentASINs}
-        categories={currentCategories}
-        marketplaceId={selectedMarketplace}
-      />
+      <AdvancedExportModal isOpen={showExportModal} onClose={() => setShowExportModal(false)} keywords={currentKeywords} asins={currentASINs} categories={currentCategories} marketplaceId={selectedMarketplace} />
       
       {/* Advanced Import Modal */}
-      <AdvancedImportModal
-        isOpen={showImportModal}
-        onClose={() => setShowImportModal(false)}
-        onImport={handleAddBulkKeywords}
-        marketplaceId={selectedMarketplace}
-        bookInfo={bookInfo}
-        existingKeywords={currentKeywords.map(k => k.keyword)}
-      />
+      <AdvancedImportModal isOpen={showImportModal} onClose={() => setShowImportModal(false)} onImport={handleAddBulkKeywords} marketplaceId={selectedMarketplace} bookInfo={bookInfo} existingKeywords={currentKeywords.map(k => k.keyword)} />
       
       {/* Campaign Plan Manager */}
-      <CampaignPlanManager
-        keywords={currentKeywords}
-        plans={currentPlans}
-        onCreatePlan={handleCreatePlan}
-        onUpdatePlan={handleUpdatePlan}
-        onDeletePlan={handleDeletePlan}
-        onAssignKeywords={handleAssignKeywords}
-        isOpen={showCampaignPlanner}
-        onClose={() => setShowCampaignPlanner(false)}
-      />
+      <CampaignPlanManager keywords={currentKeywords} plans={currentPlans} onCreatePlan={handleCreatePlan} onUpdatePlan={handleUpdatePlan} onDeletePlan={handleDeletePlan} onAssignKeywords={handleAssignKeywords} isOpen={showCampaignPlanner} onClose={() => setShowCampaignPlanner(false)} />
       
       {/* AI Assistant Drawer - Único punto de IA */}
-      <AIAssistantDrawer
-        open={isAIAssistantOpen}
-        onOpenChange={setIsAIAssistantOpen}
-        marketplaceId={selectedMarketplace}
-        bookInfo={bookInfo}
-        activeTab={activeTab as 'keywords' | 'asins' | 'categories'}
-        onChangeActiveTab={(tab) => setActiveTab(tab)}
-        keywords={currentKeywords}
-        asins={currentASINs}
-        categories={currentCategories}
-        selection={selection}
-        onAddKeywords={handleAddBulkKeywords}
-        onUpdateKeywordsBulk={handleUpdateBulkKeywords}
-        onUpdateBookInfo={(updates) => setBookInfo(prev => ({ ...prev, ...updates }))}
-      />
+      <AIAssistantDrawer open={isAIAssistantOpen} onOpenChange={setIsAIAssistantOpen} marketplaceId={selectedMarketplace} bookInfo={bookInfo} activeTab={activeTab as 'keywords' | 'asins' | 'categories'} onChangeActiveTab={tab => setActiveTab(tab)} keywords={currentKeywords} asins={currentASINs} categories={currentCategories} selection={selection} onAddKeywords={handleAddBulkKeywords} onUpdateKeywordsBulk={handleUpdateBulkKeywords} onUpdateBookInfo={updates => setBookInfo(prev => ({
+      ...prev,
+      ...updates
+    }))} />
       
       {/* Backup Import Modal */}
-      <BackupImportModal
-        isOpen={showBackupImportModal}
-        onClose={() => setShowBackupImportModal(false)}
-        onImport={handleImportBackup}
-      />
+      <BackupImportModal isOpen={showBackupImportModal} onClose={() => setShowBackupImportModal(false)} onImport={handleImportBackup} />
       
       {/* Market Config Modal */}
-      <MarketConfigModal
-        isOpen={showMarketConfigModal}
-        onClose={() => setShowMarketConfigModal(false)}
-        currentMarketplace={selectedMarketplace}
-        onConfigChange={() => setConfigVersion(v => v + 1)}
-      />
-    </div>
-  );
+      <MarketConfigModal isOpen={showMarketConfigModal} onClose={() => setShowMarketConfigModal(false)} currentMarketplace={selectedMarketplace} onConfigChange={() => setConfigVersion(v => v + 1)} />
+    </div>;
 };
