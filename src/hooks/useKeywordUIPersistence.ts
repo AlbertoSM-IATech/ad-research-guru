@@ -16,8 +16,9 @@ export interface KeywordUIState {
 const STORAGE_VERSION = 'v1';
 const DEBOUNCE_MS = 300;
 
-function getStorageKey(marketplaceId: string): string {
-  return `ad-research:keywords-ui:${STORAGE_VERSION}:${marketplaceId}`;
+function getStorageKey(bookId: string | undefined, marketplaceId: string): string {
+  const bookPrefix = bookId ?? 'default';
+  return `ad-research:${bookPrefix}:keywords-ui:${STORAGE_VERSION}:${marketplaceId}`;
 }
 
 function getDefaultState(): KeywordUIState {
@@ -42,11 +43,11 @@ function getDefaultState(): KeywordUIState {
   };
 }
 
-function loadFromStorage(marketplaceId: string): KeywordUIState | null {
+function loadFromStorage(bookId: string | undefined, marketplaceId: string): KeywordUIState | null {
   if (typeof window === 'undefined') return null;
   
   try {
-    const key = getStorageKey(marketplaceId);
+    const key = getStorageKey(bookId, marketplaceId);
     const stored = localStorage.getItem(key);
     if (!stored) return null;
     
@@ -60,20 +61,26 @@ function loadFromStorage(marketplaceId: string): KeywordUIState | null {
   }
 }
 
-function saveToStorage(marketplaceId: string, state: KeywordUIState): void {
+function saveToStorage(bookId: string | undefined, marketplaceId: string, state: KeywordUIState): void {
   if (typeof window === 'undefined') return;
   
   try {
-    const key = getStorageKey(marketplaceId);
+    const key = getStorageKey(bookId, marketplaceId);
     localStorage.setItem(key, JSON.stringify(state));
   } catch {
     // Silently fail on storage errors
   }
 }
 
-export function useKeywordUIPersistence(marketplaceId: string) {
+export function useKeywordUIPersistence(marketplaceId: string, bookId?: string) {
   const [isHydrated, setIsHydrated] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const bookIdRef = useRef(bookId);
+  
+  // Keep bookId ref updated
+  useEffect(() => {
+    bookIdRef.current = bookId;
+  }, [bookId]);
   
   // Initialize state from localStorage on mount
   const [state, setState] = useState<KeywordUIState>(() => {
@@ -81,7 +88,7 @@ export function useKeywordUIPersistence(marketplaceId: string) {
     if (typeof window === 'undefined') return getDefaultState();
     
     // Client-side: try to load from storage
-    const stored = loadFromStorage(marketplaceId);
+    const stored = loadFromStorage(bookId, marketplaceId);
     return stored || getDefaultState();
   });
   
@@ -89,12 +96,12 @@ export function useKeywordUIPersistence(marketplaceId: string) {
   useEffect(() => {
     if (typeof window === 'undefined') return;
     
-    const stored = loadFromStorage(marketplaceId);
+    const stored = loadFromStorage(bookId, marketplaceId);
     if (stored) {
       setState(stored);
     }
     setIsHydrated(true);
-  }, [marketplaceId]);
+  }, [marketplaceId, bookId]);
   
   // Save to storage with debounce
   const persistState = useCallback((newState: KeywordUIState) => {
@@ -105,7 +112,7 @@ export function useKeywordUIPersistence(marketplaceId: string) {
     }
     
     debounceRef.current = setTimeout(() => {
-      saveToStorage(marketplaceId, newState);
+      saveToStorage(bookIdRef.current, marketplaceId, newState);
     }, DEBOUNCE_MS);
   }, [marketplaceId, isHydrated]);
   
@@ -153,7 +160,7 @@ export function useKeywordUIPersistence(marketplaceId: string) {
   const resetAll = useCallback(() => {
     const defaultState = getDefaultState();
     setState(defaultState);
-    saveToStorage(marketplaceId, defaultState);
+    saveToStorage(bookIdRef.current, marketplaceId, defaultState);
   }, [marketplaceId]);
   
   // Cleanup timeout on unmount

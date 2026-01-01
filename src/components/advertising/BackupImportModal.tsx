@@ -83,6 +83,7 @@ export const BackupImportModal = ({ isOpen, onClose, onImport }: BackupImportMod
   const [parsedData, setParsedData] = useState<BackupData | null>(null);
   const [summary, setSummary] = useState<BackupSummary | null>(null);
   const [showHelp, setShowHelp] = useState(false);
+  const [isLegacyV1, setIsLegacyV1] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const resetState = () => {
@@ -91,6 +92,7 @@ export const BackupImportModal = ({ isOpen, onClose, onImport }: BackupImportMod
     setValidationMessage('');
     setParsedData(null);
     setSummary(null);
+    setIsLegacyV1(false);
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
@@ -105,6 +107,7 @@ export const BackupImportModal = ({ isOpen, onClose, onImport }: BackupImportMod
     setValidationMessage('');
     setParsedData(null);
     setSummary(null);
+    setIsLegacyV1(false);
 
     let json: BackupData;
     try {
@@ -116,10 +119,13 @@ export const BackupImportModal = ({ isOpen, onClose, onImport }: BackupImportMod
       return;
     }
 
-    // Validate version
-    if (json.version !== 1) {
+    // Validate version - accept v2 as standard, v1 as legacy compatibility
+    if (json.version === 1) {
+      setIsLegacyV1(true);
+      // Continue validation for v1
+    } else if (json.version !== 2) {
       setValidationStatus('invalid');
-      setValidationMessage(`Versión no soportada: ${json.version} (se requiere v1)`);
+      setValidationMessage(`Versión no soportada: ${json.version} (se requiere v2)`);
       return;
     }
 
@@ -168,7 +174,7 @@ export const BackupImportModal = ({ isOpen, onClose, onImport }: BackupImportMod
     };
 
     setValidationStatus('valid');
-    setValidationMessage('Backup válido');
+    setValidationMessage(isLegacyV1 ? 'Backup v1 (legacy) válido' : 'Backup válido');
     setSummary(backupSummary);
     setParsedData(json);
   };
@@ -266,6 +272,14 @@ export const BackupImportModal = ({ isOpen, onClose, onImport }: BackupImportMod
             <div className="flex items-start gap-2 p-3 rounded-md text-sm bg-destructive/10 text-destructive">
               <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
               <span>{validationMessage}</span>
+            </div>
+          )}
+
+          {/* Legacy V1 warning */}
+          {isLegacyV1 && validationStatus === 'valid' && (
+            <div className="flex items-start gap-2 p-3 rounded-md text-sm bg-yellow-500/10 text-yellow-600 dark:text-yellow-400">
+              <Info className="h-4 w-4 mt-0.5 shrink-0" />
+              <span>Backup antiguo v1, importando en modo compatibilidad</span>
             </div>
           )}
 

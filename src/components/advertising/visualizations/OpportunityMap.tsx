@@ -167,7 +167,7 @@ export const OpportunityMap = ({ keywords, marketplaceId }: OpportunityMapProps)
           dataKey="x"
           name="Competidores"
           domain={[0, maxCompetitors]}
-          tickFormatter={(v) => v >= 1000 ? `${(v/1000).toFixed(0)}k` : v.toString()}
+          tickFormatter={(v) => Number(v).toLocaleString()}
           tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }}
           tickLine={{ stroke: 'hsl(var(--border))' }}
         >
@@ -178,7 +178,7 @@ export const OpportunityMap = ({ keywords, marketplaceId }: OpportunityMapProps)
           dataKey="y"
           name="Volumen"
           domain={[0, maxVolume * 1.1]}
-          tickFormatter={(v) => v >= 1000 ? `${(v/1000).toFixed(0)}k` : v.toString()}
+          tickFormatter={(v) => Number(v).toLocaleString()}
           tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }}
           tickLine={{ stroke: 'hsl(var(--border))' }}
         >

@@ -8,7 +8,8 @@ export type SortField =
   | 'competitors'
   | 'competitionLevel' 
   | 'relevance' 
-  | 'state' 
+  | 'state'
+  | 'status'
   | 'marketScore';
 export type SortOrder = 'asc' | 'desc';
 
@@ -29,7 +30,8 @@ export const SORT_OPTIONS: SortOption[] = [
   { field: 'competitors', order: 'desc', label: 'Competidores (mayor primero)' },
   { field: 'competitionLevel', order: 'asc', label: 'Nivel competencia (menor primero)' },
   { field: 'competitionLevel', order: 'desc', label: 'Nivel competencia (mayor primero)' },
-  { field: 'state', order: 'asc', label: 'Estado' },
+  { field: 'status', order: 'asc', label: 'Estado (Pendiente→Válida→Descartada)' },
+  { field: 'state', order: 'asc', label: 'Fase (legacy)' },
 ];
 
 // Get the market score for a keyword (uses cached value or calculates)
@@ -107,6 +109,14 @@ export function sortKeywords(
         comparison = 
           stateOrder.indexOf(a.state || 'pending') - 
           stateOrder.indexOf(b.state || 'pending');
+        break;
+      }
+      
+      case 'status': {
+        const statusOrder = ['pending', 'valid', 'discarded'];
+        comparison = 
+          statusOrder.indexOf(a.status || 'pending') - 
+          statusOrder.indexOf(b.status || 'pending');
         break;
       }
         

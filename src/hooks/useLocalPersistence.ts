@@ -7,7 +7,15 @@ import type {
   CampaignPlan,
 } from '@/types/advertising';
 
-const STORAGE_KEY = 'ad-research:v2';
+const STORAGE_VERSION = 2;
+
+// Dynamic storage key based on bookId
+export function getAdResearchStorageKey(bookId?: string): string {
+  return bookId 
+    ? `ad-research:${bookId}:v${STORAGE_VERSION}` 
+    : `ad-research:v${STORAGE_VERSION}`;
+}
+
 const DEBOUNCE_MS = 400;
 
 export interface PersistedStateV1 {
@@ -56,13 +64,15 @@ function deserializeDates<T>(obj: T): T {
   return obj;
 }
 
-export function getLastSyncAt(): Date | null {
+export function getLastSyncAt(bookId?: string): Date | null {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const storageKey = getAdResearchStorageKey(bookId);
+    const raw = localStorage.getItem(storageKey);
     if (!raw) return null;
     
     const parsed = JSON.parse(raw);
-    if (parsed.version !== 1 || !parsed.updatedAt) return null;
+    // Fixed: validate version === 2 (not !== 1)
+    if (parsed.version !== 2 || !parsed.updatedAt) return null;
     
     return new Date(parsed.updatedAt);
   } catch {
@@ -70,9 +80,10 @@ export function getLastSyncAt(): Date | null {
   }
 }
 
-export function loadPersistedState(): PersistedStateV1 | null {
+export function loadPersistedState(bookId?: string): PersistedStateV1 | null {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const storageKey = getAdResearchStorageKey(bookId);
+    const raw = localStorage.getItem(storageKey);
     if (!raw) return null;
     
     const parsed = JSON.parse(raw) as PersistedStateV1;
@@ -91,17 +102,48 @@ export function loadPersistedState(): PersistedStateV1 | null {
   }
 }
 
-export function savePersistedState(state: Omit<PersistedStateV1, 'version' | 'updatedAt'>): void {
+export function savePersistedState(state: Omit<PersistedStateV1, 'version' | 'updatedAt'>, bookId?: string): void {
   try {
+    const storageKey = getAdResearchStorageKey(bookId);
     const toSave: PersistedStateV1 = {
       ...serializeData(state),
       version: 2,
       updatedAt: new Date().toISOString(),
     };
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(toSave));
+    localStorage.setItem(storageKey, JSON.stringify(toSave));
   } catch (error) {
     console.warn('[Persistence] Failed to save state:', error);
   }
+}
+
+// Helper to clear all localStorage keys for a specific book
+export function clearBookStorage(bookId?: string): void {
+  const prefix = bookId ? `ad-research:${bookId}:` : 'ad-research:';
+  const keysToRemove: string[] = [];
+  
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    if (key && key.startsWith(prefix)) {
+      keysToRemove.push(key);
+    }
+  }
+  
+  // Also remove global keys if no bookId (standalone mode)
+  if (!bookId) {
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && (
+        key.startsWith('ad-research:v') ||
+        key.startsWith('ad-research:keywords-ui:')
+      )) {
+        if (!keysToRemove.includes(key)) {
+          keysToRemove.push(key);
+        }
+      }
+    }
+  }
+  
+  keysToRemove.forEach(key => localStorage.removeItem(key));
 }
 
 export interface UsePersistenceOptions {
@@ -122,15 +164,21 @@ export interface UsePersistenceReturn {
 export function usePersistence(
   state: UsePersistenceOptions,
   hasHydrated: boolean,
-  onSave?: () => void
+  onSave?: () => void,
+  bookId?: string
 ): UsePersistenceReturn {
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const stateRef = useRef(state);
+  const bookIdRef = useRef(bookId);
   
-  // Keep stateRef updated
+  // Keep refs updated
   useEffect(() => {
     stateRef.current = state;
   }, [state]);
+  
+  useEffect(() => {
+    bookIdRef.current = bookId;
+  }, [bookId]);
   
   // Force save function (no debounce)
   const saveNow = useCallback(() => {
@@ -152,7 +200,7 @@ export function usePersistence(
       categoriesByMarket: stateRef.current.categoriesByMarket,
       campaignPlansByMarket: stateRef.current.campaignPlansByMarket,
       showInsights: stateRef.current.showInsights,
-    });
+    }, bookIdRef.current);
     onSave?.();
   }, [hasHydrated, onSave]);
   
@@ -175,7 +223,7 @@ export function usePersistence(
         categoriesByMarket: state.categoriesByMarket,
         campaignPlansByMarket: state.campaignPlansByMarket,
         showInsights: state.showInsights,
-      });
+      }, bookId);
       // Notify caller that save completed
       onSave?.();
     }, DEBOUNCE_MS);
@@ -195,6 +243,7 @@ export function usePersistence(
     state.categoriesByMarket,
     state.campaignPlansByMarket,
     state.showInsights,
+    bookId,
     onSave,
   ]);
   
