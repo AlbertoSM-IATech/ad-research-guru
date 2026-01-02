@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, useCallback } from 'react';
-import { Plus, Search, Trash2, ArrowUpDown, Upload, LayoutGrid, LayoutList, History, PanelRightOpen } from 'lucide-react';
+import { Plus, Search, Trash2, ArrowUpDown, Upload, LayoutGrid, LayoutList, Eye, BookOpen, Megaphone, Info } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -7,9 +7,6 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { InfoTooltip } from './InfoTooltip';
-import { InlineEditableCell } from './InlineEditableCell';
-import { InlineCampaignTypeSelect } from './InlineCampaignTypeSelect';
-import { InlineCompetitionLevelSelect } from './InlineCompetitionLevelSelect';
 import { InlineSelectBadge } from './InlineSelectBadge';
 import { BulkKeywordImport } from './BulkKeywordImport';
 import { BulkCopyTools } from './BulkCopyTools';
@@ -31,6 +28,7 @@ import { applyKeywordFilters, applyQuickFilter, type QuickFilter } from '@/lib/k
 import { useKeywordUIPersistence } from '@/hooks/useKeywordUIPersistence';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+
 interface KeywordsSectionProps {
   keywords: Keyword[];
   onAdd: (keyword: Omit<Keyword, 'id' | 'createdAt' | 'updatedAt'> | Keyword) => void;
@@ -48,8 +46,12 @@ interface KeywordsSectionProps {
   searchTerm: string;
   onSearchTermChange: (term: string) => void;
 }
+
 type ViewMode = 'table' | 'cards';
+type FunctionalView = 'editorial' | 'ads';
+
 const ITEMS_PER_PAGE = 20;
+
 export const KeywordsSection = ({
   keywords,
   onAdd,
@@ -65,9 +67,7 @@ export const KeywordsSection = ({
   searchTerm,
   onSearchTermChange
 }: KeywordsSectionProps) => {
-  const {
-    toast
-  } = useToast();
+  const { toast } = useToast();
 
   // Use persistence hook for UI state
   const {
@@ -93,6 +93,9 @@ export const KeywordsSection = ({
   const [wizardInitialKeyword, setWizardInitialKeyword] = useState('');
   const [validationKeyword, setValidationKeyword] = useState<Keyword | null>(null);
   const [advancedFiltersExpanded, setAdvancedFiltersExpanded] = useState(false);
+  
+  // Functional view state (Editorial vs Ads)
+  const [functionalView, setFunctionalView] = useState<FunctionalView>('editorial');
 
   // Sync persisted state when hydrated
   useEffect(() => {
@@ -116,19 +119,14 @@ export const KeywordsSection = ({
     setQuickAddKeyword('');
   };
 
-  // Handle wizard completion - open detail panel immediately (no setTimeout hack)
+  // Handle wizard completion - open detail panel immediately
   const handleWizardComplete = (keyword: Keyword) => {
-    // Add the keyword (it already has id, createdAt, updatedAt from wizard)
     onAdd(keyword);
     setWizardInitialKeyword('');
-
-    // Show toast
     toast({
       title: 'Keyword creada',
       description: `Market Score: ${keyword.marketScore}/100`
     });
-
-    // Open detail panel immediately - no need to search, we have the complete keyword
     setValidationKeyword(keyword);
   };
 
@@ -137,11 +135,12 @@ export const KeywordsSection = ({
     setValidationKeyword(keyword);
   };
 
-  // Open wizard for new keyword (no pre-filled keyword)
+  // Open wizard for new keyword
   const handleOpenNewKeywordWizard = () => {
     setWizardInitialKeyword('');
     setIsWizardOpen(true);
   };
+
   const handleSort = (field: SortField) => {
     let newOrder: SortOrder;
     if (sortField === field) {
@@ -153,16 +152,19 @@ export const KeywordsSection = ({
     setSortOrder(newOrder);
     updateSort(field, newOrder);
   };
+
   const handleSortOptionChange = (value: string) => {
     const [field, order] = value.split('-') as [SortField, SortOrder];
     setSortField(field);
     setSortOrder(order);
     updateSort(field, order);
   };
+
   const handleViewModeChange = (mode: ViewMode) => {
     setViewMode(mode);
     updateViewMode(mode);
   };
+
   const toggleSelectAll = () => {
     if (selectedIds.size === filteredKeywords.length) {
       onSelectedIdsChange(new Set());
@@ -170,6 +172,7 @@ export const KeywordsSection = ({
       onSelectedIdsChange(new Set(filteredKeywords.map(k => k.id)));
     }
   };
+
   const toggleSelect = (id: string) => {
     const newSet = new Set(selectedIds);
     if (newSet.has(id)) {
@@ -179,15 +182,15 @@ export const KeywordsSection = ({
     }
     onSelectedIdsChange(newSet);
   };
+
   const handleDeleteSelected = () => {
     if (selectedIds.size === 0) return;
     const count = selectedIds.size;
     onDeleteBulk(Array.from(selectedIds));
     onSelectedIdsChange(new Set());
-    toast({
-      title: `${count} keywords eliminadas`
-    });
+    toast({ title: `${count} keywords eliminadas` });
   };
+
   const handleBulkImport = (newKeywords: Array<Omit<Keyword, 'id' | 'createdAt' | 'updatedAt'>>) => {
     const classifiedKeywords = newKeywords.map(k => ({
       ...k,
@@ -196,26 +199,21 @@ export const KeywordsSection = ({
       state: k.state || 'pending' as KeywordState
     }));
     onAddBulk(classifiedKeywords);
-    toast({
-      title: `${classifiedKeywords.length} keywords añadidas`
-    });
+    toast({ title: `${classifiedKeywords.length} keywords añadidas` });
   };
+
   const handleBulkChangeCampaignType = (types: CampaignType[]) => {
-    onUpdateBulk(Array.from(selectedIds), {
-      campaignTypes: types
-    });
+    onUpdateBulk(Array.from(selectedIds), { campaignTypes: types });
     onSelectedIdsChange(new Set());
   };
+
   const handleBulkChangeState = (state: KeywordState) => {
-    onUpdateBulk(Array.from(selectedIds), {
-      state
-    });
+    onUpdateBulk(Array.from(selectedIds), { state });
     onSelectedIdsChange(new Set());
   };
+
   const handleBulkChangeRelevance = (relevance: RelevanceLevel) => {
-    onUpdateBulk(Array.from(selectedIds), {
-      relevance
-    });
+    onUpdateBulk(Array.from(selectedIds), { relevance });
     onSelectedIdsChange(new Set());
   };
 
@@ -250,21 +248,18 @@ export const KeywordsSection = ({
     });
 
     // Auto-update status if not manually set and market data changed
-    let finalUpdates = {
-      ...updates
-    };
+    let finalUpdates = { ...updates };
     const marketDataFields = ['searchVolume', 'competitors', 'price', 'royalties'];
     const isMarketDataUpdate = marketDataFields.some(f => updates[f as keyof typeof updates] !== undefined);
     const isMarketStructureUpdate = updates.marketStructure !== undefined;
+
     if ((isMarketDataUpdate || isMarketStructureUpdate) && !keyword.statusManuallySet) {
-      // Recalculate market score with new data
       const newSearchVolume = updates.searchVolume ?? keyword.searchVolume;
       const newCompetitors = updates.competitors ?? keyword.competitors;
       const newPrice = updates.price ?? keyword.price;
       const newRoyalties = updates.royalties ?? keyword.royalties;
       const marketData = keyword.marketData ?? getDefaultMarketData();
 
-      // Merge market structure (6 checks)
       const newMarketStructure = {
         selfContained: updates.marketStructure?.selfContained ?? keyword.marketStructure?.selfContained ?? false,
         amazonSuggestion: updates.marketStructure?.amazonSuggestion ?? keyword.marketStructure?.amazonSuggestion ?? false,
@@ -273,6 +268,7 @@ export const KeywordsSection = ({
         topMatchesIntent: updates.marketStructure?.topMatchesIntent ?? keyword.marketStructure?.topMatchesIntent ?? false,
         variantsPotential: updates.marketStructure?.variantsPotential ?? keyword.marketStructure?.variantsPotential ?? false
       };
+
       const newMarketScore = calculateMarketScore({
         searchVolume: newSearchVolume,
         competitors: newCompetitors,
@@ -280,9 +276,11 @@ export const KeywordsSection = ({
         royalties: newRoyalties,
         trafficSource: marketData.trafficSource
       }, marketplaceId, newMarketStructure).total;
+
       finalUpdates.marketScore = newMarketScore;
       finalUpdates.status = getAutoStatusFromScore(newMarketScore);
     }
+
     if (historyEntries.length > 0) {
       onUpdate(id, {
         ...finalUpdates,
@@ -293,12 +291,11 @@ export const KeywordsSection = ({
     }
   };
 
-  // Handle quick filter change - resets advanced filters
+  // Handle quick filter change
   const handleQuickFilterChange = (filter: QuickFilter) => {
     setQuickFilter(filter);
     updateQuickFilter(filter);
     if (filter !== 'all') {
-      // Reset advanced filters when using quick filter
       const resetFilters: AdvancedFiltersState = {
         competition: 'all',
         campaignType: 'all',
@@ -317,7 +314,7 @@ export const KeywordsSection = ({
     setCurrentPage(1);
   };
 
-  // Handle advanced filter change - resets quick filter
+  // Handle advanced filter change
   const handleAdvancedFiltersChange = (newFilters: AdvancedFiltersState) => {
     setFilters(newFilters);
     updateFilters(newFilters);
@@ -336,9 +333,15 @@ export const KeywordsSection = ({
     };
   }, [keywords]);
 
-  // Filter and sort keywords
+  // Filter and sort keywords with functional view purpose filtering
   const filteredKeywords = useMemo(() => {
     let result = keywords;
+
+    // Apply functional view purpose filter
+    const purposeFilter = functionalView === 'editorial' 
+      ? ['editorial', 'both'] 
+      : ['ads', 'both'];
+    result = result.filter(k => purposeFilter.includes(k.purpose));
 
     // Apply quick filter first if active
     if (quickFilter !== 'all') {
@@ -360,9 +363,8 @@ export const KeywordsSection = ({
       state: filters.state
     });
 
-    // Finally sort
     return sortKeywords(result, sortField, sortOrder);
-  }, [keywords, searchTerm, filters, quickFilter, sortField, sortOrder]);
+  }, [keywords, searchTerm, filters, quickFilter, sortField, sortOrder, functionalView]);
 
   // Purge invalid selection IDs when filtered list changes
   useEffect(() => {
@@ -372,6 +374,7 @@ export const KeywordsSection = ({
       stableOnSelectedIdsChange(nextSelected);
     }
   }, [filteredKeywords, selectedIds, stableOnSelectedIdsChange]);
+
   const totalPages = Math.ceil(filteredKeywords.length / ITEMS_PER_PAGE);
   const paginatedKeywords = filteredKeywords.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
 
@@ -382,31 +385,110 @@ export const KeywordsSection = ({
     if (score > 0) return 'bg-red-500/5 hover:bg-red-500/10';
     return 'hover:bg-muted/30';
   };
-  return <div data-tour="keywords-section" className="space-y-6 animate-fade-in">
-      {/* Header */}
-      <div className="flex items-center gap-2">
-        <h3 className="font-heading font-semibold text-xl">Palabras Clave</h3>
-        <InfoTooltip content="Gestiona las palabras clave. Edita directamente haciendo clic en cualquier celda." />
+
+  // Get status badge styling
+  const getStatusBadge = (status: KeywordStatus) => {
+    const option = KEYWORD_STATUS_OPTIONS.find(s => s.value === status);
+    return option || KEYWORD_STATUS_OPTIONS[0];
+  };
+
+  return (
+    <div data-tour="keywords-section" className="space-y-6 animate-fade-in">
+      {/* Functional View Toggle */}
+      <div className="flex flex-col gap-4">
+        <div className="flex items-center justify-between">
+          <h3 className="font-heading font-semibold text-xl">Palabras Clave</h3>
+          
+          {/* View Toggle: Editorial / Ads */}
+          <div className="flex items-center gap-2 p-1 bg-muted rounded-lg">
+            <Button
+              variant={functionalView === 'editorial' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => setFunctionalView('editorial')}
+              className={cn(
+                "gap-2 transition-all",
+                functionalView === 'editorial' && "bg-primary text-primary-foreground"
+              )}
+            >
+              <BookOpen className="w-4 h-4" />
+              Estudio de Nicho
+            </Button>
+            <Button
+              variant={functionalView === 'ads' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => setFunctionalView('ads')}
+              className={cn(
+                "gap-2 transition-all",
+                functionalView === 'ads' && "bg-primary text-primary-foreground"
+              )}
+            >
+              <Megaphone className="w-4 h-4" />
+              Gestión de Ads
+            </Button>
+          </div>
+        </div>
+        
+        {/* Contextual message */}
+        <div className={cn(
+          "flex items-center gap-2 px-4 py-2 rounded-lg text-sm",
+          functionalView === 'editorial' 
+            ? "bg-blue-500/10 text-blue-700 dark:text-blue-300 border border-blue-500/20"
+            : "bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-500/20"
+        )}>
+          <Info className="w-4 h-4 flex-shrink-0" />
+          {functionalView === 'editorial' 
+            ? "Esta vista está pensada para decisiones editoriales, no para inversión publicitaria."
+            : "Esta vista está pensada para decisiones de inversión en Ads."
+          }
+        </div>
       </div>
 
       {/* Bulk Actions Toolbar */}
-      <BulkActionsToolbar selectedCount={selectedIds.size} onChangeCampaignType={handleBulkChangeCampaignType} onChangeState={handleBulkChangeState} onChangeRelevance={handleBulkChangeRelevance} onDelete={handleDeleteSelected} />
+      <BulkActionsToolbar 
+        selectedCount={selectedIds.size} 
+        onChangeCampaignType={handleBulkChangeCampaignType} 
+        onChangeState={handleBulkChangeState} 
+        onChangeRelevance={handleBulkChangeRelevance} 
+        onDelete={handleDeleteSelected} 
+      />
 
       {/* Quick Filters + Advanced Filters trigger */}
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <QuickFiltersBar activeFilter={quickFilter} onFilterChange={handleQuickFilterChange} counts={quickFilterCounts} />
-        <AdvancedFilters filters={filters} onFiltersChange={handleAdvancedFiltersChange} renderTriggerOnly isExpanded={advancedFiltersExpanded} onToggleExpanded={() => setAdvancedFiltersExpanded(!advancedFiltersExpanded)} />
+        <QuickFiltersBar 
+          activeFilter={quickFilter} 
+          onFilterChange={handleQuickFilterChange} 
+          counts={quickFilterCounts} 
+        />
+        <AdvancedFilters 
+          filters={filters} 
+          onFiltersChange={handleAdvancedFiltersChange} 
+          renderTriggerOnly 
+          isExpanded={advancedFiltersExpanded} 
+          onToggleExpanded={() => setAdvancedFiltersExpanded(!advancedFiltersExpanded)} 
+        />
       </div>
 
-      {/* Advanced Filters Content - Full width when expanded */}
-      {advancedFiltersExpanded && <AdvancedFiltersContent filters={filters} onFiltersChange={handleAdvancedFiltersChange} />}
+      {/* Advanced Filters Content */}
+      {advancedFiltersExpanded && (
+        <AdvancedFiltersContent filters={filters} onFiltersChange={handleAdvancedFiltersChange} />
+      )}
 
-      {/* Quick Add, Search & Sort - 3 columns layout */}
+      {/* Quick Add, Search & Sort */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3 items-center">
         {/* Column 1: Quick Add */}
         <div className="flex gap-2">
-          <Input placeholder="Escribe una keyword..." value={quickAddKeyword} onChange={e => setQuickAddKeyword(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleQuickAdd()} className="flex-1" />
-          <Button onClick={quickAddKeyword.trim() ? handleQuickAdd : handleOpenNewKeywordWizard} size="sm" className="gap-1 bg-primary hover:bg-primary/90 whitespace-nowrap">
+          <Input 
+            placeholder="Escribe una keyword..." 
+            value={quickAddKeyword} 
+            onChange={e => setQuickAddKeyword(e.target.value)} 
+            onKeyDown={e => e.key === 'Enter' && handleQuickAdd()} 
+            className="flex-1" 
+          />
+          <Button 
+            onClick={quickAddKeyword.trim() ? handleQuickAdd : handleOpenNewKeywordWizard} 
+            size="sm" 
+            className="gap-1 bg-primary hover:bg-primary/90 whitespace-nowrap"
+          >
             <Plus className="w-4 h-4" />
             {quickAddKeyword.trim() ? 'Añadir' : 'Nueva'}
           </Button>
@@ -415,10 +497,15 @@ export const KeywordsSection = ({
         {/* Column 2: Search */}
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input placeholder="Buscar keywords..." value={searchTerm} onChange={e => {
-          onSearchTermChange(e.target.value);
-          setCurrentPage(1);
-        }} className="pl-10" />
+          <Input 
+            placeholder="Buscar keywords..." 
+            value={searchTerm} 
+            onChange={e => {
+              onSearchTermChange(e.target.value);
+              setCurrentPage(1);
+            }} 
+            className="pl-10" 
+          />
         </div>
 
         {/* Column 3: Sort */}
@@ -427,14 +514,16 @@ export const KeywordsSection = ({
             <SelectValue placeholder="Ordenar..." />
           </SelectTrigger>
           <SelectContent className="bg-popover border-border z-50">
-            {SORT_OPTIONS.map(opt => <SelectItem key={`${opt.field}-${opt.order}`} value={`${opt.field}-${opt.order}`}>
+            {SORT_OPTIONS.map(opt => (
+              <SelectItem key={`${opt.field}-${opt.order}`} value={`${opt.field}-${opt.order}`}>
                 {opt.label}
-              </SelectItem>)}
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
       </div>
 
-      {/* Toolbar + Results count - above table */}
+      {/* Toolbar + Results count */}
       <div className="flex items-center justify-between">
         <div className="text-sm text-muted-foreground">
           {filteredKeywords.length} de {keywords.length} keywords
@@ -443,237 +532,274 @@ export const KeywordsSection = ({
         <div className="flex items-center gap-2">
           {/* View Toggle */}
           <div className="flex items-center rounded-md border border-border">
-            <Button variant={viewMode === 'table' ? 'secondary' : 'ghost'} size="sm" className="rounded-r-none" onClick={() => handleViewModeChange('table')}>
+            <Button 
+              variant={viewMode === 'table' ? 'secondary' : 'ghost'} 
+              size="sm" 
+              className="rounded-r-none" 
+              onClick={() => handleViewModeChange('table')}
+            >
               <LayoutList className="w-4 h-4" />
             </Button>
-            <Button variant={viewMode === 'cards' ? 'secondary' : 'ghost'} size="sm" className="rounded-l-none" onClick={() => handleViewModeChange('cards')}>
+            <Button 
+              variant={viewMode === 'cards' ? 'secondary' : 'ghost'} 
+              size="sm" 
+              className="rounded-l-none" 
+              onClick={() => handleViewModeChange('cards')}
+            >
               <LayoutGrid className="w-4 h-4" />
             </Button>
           </div>
           <BulkCopyTools keywords={filteredKeywords} selectedIds={selectedIds} />
-          <VariantDetector keywords={keywords} onGroupVariants={(groupId, keywordIds) => {
-          keywordIds.forEach(id => {
-            const kw = keywords.find(k => k.id === id);
-            if (kw) {
-              onUpdate(id, {
-                notes: kw.notes ? `${kw.notes} [Variante: ${groupId}]` : `[Variante: ${groupId}]`
+          <VariantDetector 
+            keywords={keywords} 
+            onGroupVariants={(groupId, keywordIds) => {
+              keywordIds.forEach(id => {
+                const kw = keywords.find(k => k.id === id);
+                if (kw) {
+                  onUpdate(id, {
+                    notes: kw.notes ? `${kw.notes} [Variante: ${groupId}]` : `[Variante: ${groupId}]`
+                  });
+                }
               });
-            }
-          });
-          toast({
-            title: `${keywordIds.length} keywords agrupadas como variantes`
-          });
-        }} onSeparateVariants={keywordIds => {
-          toast({
-            title: 'Variantes separadas'
-          });
-        }} />
-          <Button data-tour="bulk-import" variant="outline" size="sm" onClick={() => setIsBulkImportOpen(true)} className="gap-2">
+              toast({ title: `${keywordIds.length} keywords agrupadas como variantes` });
+            }} 
+            onSeparateVariants={keywordIds => {
+              toast({ title: 'Variantes separadas' });
+            }} 
+          />
+          <Button 
+            data-tour="bulk-import" 
+            variant="outline" 
+            size="sm" 
+            onClick={() => setIsBulkImportOpen(true)} 
+            className="gap-2"
+          >
             <Upload className="w-4 h-4" />
             Importar lote
           </Button>
-          {selectedIds.size > 0 && <Button variant="destructive" size="sm" onClick={handleDeleteSelected} className="gap-2">
+          {selectedIds.size > 0 && (
+            <Button 
+              variant="destructive" 
+              size="sm" 
+              onClick={handleDeleteSelected} 
+              className="gap-2"
+            >
               <Trash2 className="w-4 h-4" />
               Eliminar ({selectedIds.size})
-            </Button>}
+            </Button>
+          )}
         </div>
       </div>
 
       {/* Content - Table or Cards */}
-      {viewMode === 'table' ? <div className="rounded-lg border border-border overflow-hidden">
+      {viewMode === 'table' ? (
+        <div className="rounded-lg border border-border overflow-hidden">
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow className="bg-muted/50 hover:bg-muted/50">
                   <TableHead className="w-[40px]">
-                    <Checkbox checked={selectedIds.size === filteredKeywords.length && filteredKeywords.length > 0} onCheckedChange={toggleSelectAll} />
+                    <Checkbox 
+                      checked={selectedIds.size === filteredKeywords.length && filteredKeywords.length > 0} 
+                      onCheckedChange={toggleSelectAll} 
+                    />
                   </TableHead>
                   <TableHead className="cursor-pointer hover:text-foreground" onClick={() => handleSort('keyword')}>
-                    <div className="flex items-center gap-1">Keyword <ArrowUpDown className="w-3 h-3" /></div>
+                    <div className="flex items-center gap-1">
+                      Keyword 
+                      <ArrowUpDown className="w-3 h-3" />
+                    </div>
                   </TableHead>
-                  <TableHead className="cursor-pointer hover:text-foreground w-[100px]" onClick={() => handleSort('searchVolume')}>
+                  <TableHead className="cursor-pointer hover:text-foreground w-[120px]" onClick={() => handleSort('searchVolume')}>
                     <div className="flex items-center gap-1">
                       Volumen
                       <ArrowUpDown className="w-3 h-3" />
+                      <InfoTooltip content="Volumen de búsquedas mensuales estimado. Basado en datos de herramientas externas o estimaciones de Amazon." />
                     </div>
                   </TableHead>
-                  <TableHead className="cursor-pointer hover:text-foreground w-[120px]" onClick={() => handleSort('competitors')}>
+                  <TableHead className="cursor-pointer hover:text-foreground w-[140px]" onClick={() => handleSort('competitors')}>
                     <div className="flex items-center gap-1">
                       Competidores
                       <ArrowUpDown className="w-3 h-3" />
-                      <InfoTooltip content="Número de resultados en Amazon" />
+                      <InfoTooltip content="Resultados Amazon para esta búsqueda (competencia directa). Menos de 3000 se considera favorable." />
                     </div>
                   </TableHead>
                   <TableHead className="cursor-pointer hover:text-foreground w-[130px]" onClick={() => handleSort('marketScore')}>
-                    <div className="flex items-center gap-1 mx-0 px-[11px]">
-                      MarketScore
-                      <ArrowUpDown className="w-3 h-3" />
-                      <InfoTooltip content="Score de mercado 0-100. Click para ver desglose." />
-                    </div>
-                  </TableHead>
-                  <TableHead className="cursor-pointer hover:text-foreground w-[100px]" onClick={() => handleSort('status')}>
-                    <div className="flex items-center gap-1">Estado <ArrowUpDown className="w-3 h-3" /></div>
-                  </TableHead>
-                  <TableHead className="w-[50px] text-center">
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <div className="flex flex-col items-center gap-0.5 cursor-help">
-                          <span className="text-[10px]">✓</span>
-                          <span className="text-[9px] leading-tight text-muted-foreground">Clara</span>
-                        </div>
-                      </TooltipTrigger>
-                      <TooltipContent>Keyword se entiende por sí sola (+2)</TooltipContent>
-                    </Tooltip>
-                  </TableHead>
-                  <TableHead className="w-[50px] text-center">
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <div className="flex flex-col items-center gap-0.5 cursor-help">
-                          <span className="text-[10px]">📚</span>
-                          <span className="text-[9px] leading-tight text-muted-foreground">Libros</span>
-                        </div>
-                      </TooltipTrigger>
-                      <TooltipContent>≥3 libros vendiendo (+2)</TooltipContent>
-                    </Tooltip>
-                  </TableHead>
-                  <TableHead className="w-[50px] text-center">
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <div className="flex flex-col items-center gap-0.5 cursor-help">
-                          <span className="text-[10px]">🎯</span>
-                          <span className="text-[9px] leading-tight text-muted-foreground">Intent</span>
-                        </div>
-                      </TooltipTrigger>
-                      <TooltipContent>Top refleja intención (+2)</TooltipContent>
-                    </Tooltip>
-                  </TableHead>
-                  <TableHead className="w-[150px]">
                     <div className="flex items-center gap-1">
-                      Campaña
-                      <InfoTooltip content="SP, SB, SBV, SD" />
+                      Market Score
+                      <ArrowUpDown className="w-3 h-3" />
+                      <InfoTooltip content="Puntuación 0-100 basada en: configuración de mercado, demanda (estructura), competencia (señales) y penalización por fuente de tráfico. Click en la celda para ver desglose." />
                     </div>
                   </TableHead>
-                  <TableHead className="w-[80px]">Acciones</TableHead>
+                  <TableHead className="cursor-pointer hover:text-foreground w-[120px]" onClick={() => handleSort('status')}>
+                    <div className="flex items-center gap-1">
+                      Estado 
+                      <ArrowUpDown className="w-3 h-3" />
+                      <InfoTooltip content="Pendiente: sin validar. Válida: keyword aprobada para uso. Descartada: no apta para este libro." />
+                    </div>
+                  </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {paginatedKeywords.length === 0 ? <TableRow>
-                    <TableCell colSpan={12} className="text-center py-8 text-muted-foreground">
-                      {keywords.length === 0 ? 'No hay keywords. Añade tu primera keyword o importa en lote.' : 'No se encontraron keywords con los filtros aplicados.'}
+                {paginatedKeywords.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                      {keywords.length === 0 
+                        ? 'No hay keywords. Añade tu primera keyword o importa en lote.' 
+                        : 'No se encontraron keywords con los filtros aplicados.'
+                      }
                     </TableCell>
-                  </TableRow> : paginatedKeywords.map(keyword => {
-              const score = getKeywordMarketScore(keyword);
-              const incomplete = isMarketDataIncomplete(keyword);
-              return <TableRow key={keyword.id} className={cn('transition-colors cursor-pointer', getRowScoreClass(score))} onClick={() => setValidationKeyword(keyword)}>
+                  </TableRow>
+                ) : (
+                  paginatedKeywords.map(keyword => {
+                    const score = getKeywordMarketScore(keyword);
+                    const incomplete = isMarketDataIncomplete(keyword);
+                    const statusInfo = getStatusBadge(keyword.status || 'pending');
+                    
+                    return (
+                      <TableRow 
+                        key={keyword.id} 
+                        className={cn('transition-colors', getRowScoreClass(score))}
+                      >
                         <TableCell onClick={e => e.stopPropagation()}>
-                          <Checkbox checked={selectedIds.has(keyword.id)} onCheckedChange={() => toggleSelect(keyword.id)} />
-                        </TableCell>
-                        <TableCell onClick={e => e.stopPropagation()}>
-                          <InlineEditableCell value={keyword.keyword} onSave={value => handleUpdateWithHistory(keyword.id, {
-                    keyword: String(value)
-                  })} placeholder="Keyword..." className="font-medium" />
-                        </TableCell>
-                        <TableCell onClick={e => e.stopPropagation()}>
-                          <InlineEditableCell value={keyword.searchVolume} onSave={value => handleUpdateWithHistory(keyword.id, {
-                    searchVolume: Number(value)
-                  })} type="number" min={0} formatter={v => Number(v).toLocaleString()} />
-                        </TableCell>
-                        <TableCell onClick={e => e.stopPropagation()}>
-                          <InlineEditableCell value={keyword.competitors || 0} onSave={value => handleUpdateWithHistory(keyword.id, {
-                    competitors: Number(value)
-                  })} type="number" min={0} formatter={v => Number(v).toLocaleString()} />
+                          <Checkbox 
+                            checked={selectedIds.has(keyword.id)} 
+                            onCheckedChange={() => toggleSelect(keyword.id)} 
+                          />
                         </TableCell>
                         <TableCell>
-                          <MarketScoreCell marketData={keyword.marketData} score={score} isIncomplete={incomplete} onValidate={() => setValidationKeyword(keyword)} />
-                        </TableCell>
-                        <TableCell onClick={e => e.stopPropagation()}>
-                          <InlineSelectBadge value={keyword.status || 'pending'} options={KEYWORD_STATUS_OPTIONS.map(s => ({
-                    value: s.value,
-                    label: s.label,
-                    color: s.color
-                  }))} onChange={value => handleUpdateWithHistory(keyword.id, {
-                    status: value as KeywordStatus,
-                    statusManuallySet: true
-                  })} />
-                        </TableCell>
-                        <TableCell className="text-center" onClick={e => e.stopPropagation()}>
-                          <Checkbox checked={keyword.marketStructure?.selfContained ?? false} onCheckedChange={checked => handleUpdateWithHistory(keyword.id, {
-                    marketStructure: {
-                      ...keyword.marketStructure,
-                      selfContained: checked === true
-                    }
-                  })} />
-                        </TableCell>
-                        <TableCell className="text-center" onClick={e => e.stopPropagation()}>
-                          <Checkbox checked={keyword.marketStructure?.booksSellingWell ?? false} onCheckedChange={checked => handleUpdateWithHistory(keyword.id, {
-                    marketStructure: {
-                      ...keyword.marketStructure,
-                      booksSellingWell: checked === true
-                    }
-                  })} />
-                        </TableCell>
-                        <TableCell className="text-center" onClick={e => e.stopPropagation()}>
-                          <Checkbox checked={keyword.marketStructure?.topMatchesIntent ?? false} onCheckedChange={checked => handleUpdateWithHistory(keyword.id, {
-                    marketStructure: {
-                      ...keyword.marketStructure,
-                      topMatchesIntent: checked === true
-                    }
-                  })} />
-                        </TableCell>
-                        <TableCell onClick={e => e.stopPropagation()}>
-                          <InlineCampaignTypeSelect value={keyword.campaignTypes} onChange={types => handleUpdateWithHistory(keyword.id, {
-                    campaignTypes: types
-                  })} />
-                        </TableCell>
-                        <TableCell onClick={e => e.stopPropagation()}>
-                          <div className="flex items-center gap-1">
+                          <div className="flex items-center gap-2">
+                            {/* Primary action: Open detail panel */}
                             <Tooltip>
                               <TooltipTrigger asChild>
-                                <Button variant="ghost" size="sm" onClick={() => setValidationKeyword(keyword)} className="text-muted-foreground hover:text-primary">
-                                  <PanelRightOpen className="w-4 h-4" />
+                                <Button 
+                                  variant="ghost" 
+                                  size="sm" 
+                                  onClick={() => setValidationKeyword(keyword)}
+                                  className="h-7 w-7 p-0 bg-primary/10 hover:bg-primary/20 text-primary"
+                                >
+                                  <Eye className="w-4 h-4" />
                                 </Button>
                               </TooltipTrigger>
                               <TooltipContent>Abrir ficha de keyword</TooltipContent>
                             </Tooltip>
-                            {keyword.history && keyword.history.length > 0 && <Button variant="ghost" size="sm" onClick={() => setHistoryKeyword(keyword)} className="text-muted-foreground hover:text-primary" title="Ver historial">
-                                <History className="w-4 h-4" />
-                              </Button>}
-                            <Button variant="ghost" size="sm" onClick={() => onDelete(keyword.id)} className="text-muted-foreground hover:text-destructive">
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
+                            <span 
+                              className="font-medium cursor-pointer hover:text-primary transition-colors"
+                              onClick={() => setValidationKeyword(keyword)}
+                            >
+                              {keyword.keyword}
+                            </span>
                           </div>
                         </TableCell>
-                      </TableRow>;
-            })}
+                        <TableCell className="tabular-nums">
+                          {(keyword.searchVolume || 0).toLocaleString()}
+                        </TableCell>
+                        <TableCell className="tabular-nums">
+                          {(keyword.competitors || 0).toLocaleString()}
+                        </TableCell>
+                        <TableCell>
+                          <MarketScoreCell 
+                            marketData={keyword.marketData} 
+                            score={score} 
+                            isIncomplete={incomplete} 
+                            onValidate={() => setValidationKeyword(keyword)} 
+                          />
+                        </TableCell>
+                        <TableCell onClick={e => e.stopPropagation()}>
+                          <InlineSelectBadge 
+                            value={keyword.status || 'pending'} 
+                            options={KEYWORD_STATUS_OPTIONS.map(s => ({
+                              value: s.value,
+                              label: s.label,
+                              color: s.color
+                            }))} 
+                            onChange={value => handleUpdateWithHistory(keyword.id, {
+                              status: value as KeywordStatus,
+                              statusManuallySet: true
+                            })} 
+                          />
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })
+                )}
               </TableBody>
             </Table>
           </div>
-        </div> : (/* Card View */
-    <KeywordCardView keywords={paginatedKeywords} selectedIds={selectedIds} onToggleSelect={toggleSelect} onUpdate={handleUpdateWithHistory} onDelete={onDelete} onViewHistory={keyword => setHistoryKeyword(keyword)} />)}
+        </div>
+      ) : (
+        <KeywordCardView 
+          keywords={paginatedKeywords} 
+          selectedIds={selectedIds} 
+          onToggleSelect={toggleSelect} 
+          onUpdate={handleUpdateWithHistory} 
+          onDelete={onDelete} 
+          onViewHistory={keyword => setHistoryKeyword(keyword)} 
+        />
+      )}
 
       {/* Pagination */}
-      {totalPages > 1 && <div className="flex items-center justify-between">
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between">
           <p className="text-sm text-muted-foreground">Página {currentPage} de {totalPages}</p>
           <div className="flex gap-2">
-            <Button variant="outline" size="sm" onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1}>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={() => setCurrentPage(p => Math.max(1, p - 1))} 
+              disabled={currentPage === 1}
+            >
               Anterior
             </Button>
-            <Button variant="outline" size="sm" onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages}>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} 
+              disabled={currentPage === totalPages}
+            >
               Siguiente
             </Button>
           </div>
-        </div>}
+        </div>
+      )}
 
       {/* Bulk Import Modal */}
-      <BulkKeywordImport isOpen={isBulkImportOpen} onClose={() => setIsBulkImportOpen(false)} onImport={handleBulkImport} marketplaceId={marketplaceId} bookInfo={bookInfo} existingKeywords={keywords.map(k => k.keyword)} />
+      <BulkKeywordImport 
+        isOpen={isBulkImportOpen} 
+        onClose={() => setIsBulkImportOpen(false)} 
+        onImport={handleBulkImport} 
+        marketplaceId={marketplaceId} 
+        bookInfo={bookInfo} 
+        existingKeywords={keywords.map(k => k.keyword)} 
+      />
 
       {/* History Modal */}
-      <KeywordHistoryModal keyword={historyKeyword} isOpen={!!historyKeyword} onClose={() => setHistoryKeyword(null)} />
+      <KeywordHistoryModal 
+        keyword={historyKeyword} 
+        isOpen={!!historyKeyword} 
+        onClose={() => setHistoryKeyword(null)} 
+      />
 
       {/* Keyword Detail Panel */}
-      <KeywordDetailPanel keyword={validationKeyword} isOpen={!!validationKeyword} onClose={() => setValidationKeyword(null)} onSave={handleKeywordDetailSave} marketplaceId={marketplaceId} />
+      <KeywordDetailPanel 
+        keyword={validationKeyword} 
+        isOpen={!!validationKeyword} 
+        onClose={() => setValidationKeyword(null)} 
+        onSave={handleKeywordDetailSave} 
+        marketplaceId={marketplaceId} 
+      />
       
       {/* New Keyword Wizard */}
-      <NewKeywordWizard open={isWizardOpen} onOpenChange={setIsWizardOpen} onComplete={handleWizardComplete} marketplaceId={marketplaceId} bookInfo={bookInfo} existingKeywords={keywords} initialKeyword={wizardInitialKeyword} onOpenExistingKeyword={handleOpenExistingKeyword} />
-    </div>;
+      <NewKeywordWizard 
+        open={isWizardOpen} 
+        onOpenChange={setIsWizardOpen} 
+        onComplete={handleWizardComplete} 
+        marketplaceId={marketplaceId} 
+        bookInfo={bookInfo} 
+        existingKeywords={keywords} 
+        initialKeyword={wizardInitialKeyword} 
+        onOpenExistingKeyword={handleOpenExistingKeyword} 
+      />
+    </div>
+  );
 };
