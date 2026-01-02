@@ -695,7 +695,15 @@ export const KeywordsSection = ({
                           {(keyword.searchVolume || 0).toLocaleString()}
                         </TableCell>
                         <TableCell className="tabular-nums">
-                          {(keyword.competitors || 0).toLocaleString()}
+                          <div className="flex items-center gap-2">
+                            <span className={cn(
+                              "w-2 h-2 rounded-full flex-shrink-0",
+                              (keyword.competitors || 0) < 3000 
+                                ? "bg-green-500" 
+                                : "bg-red-500"
+                            )} />
+                            {(keyword.competitors || 0).toLocaleString()}
+                          </div>
                         </TableCell>
                         <TableCell>
                           <MarketScoreCell 
