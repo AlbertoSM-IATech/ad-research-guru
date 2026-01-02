@@ -4,6 +4,8 @@ import type { AdvancedFiltersState } from '@/components/advertising/AdvancedFilt
 import type { QuickFilter } from '@/lib/keyword-filters';
 import type { SortField, SortOrder } from '@/lib/keyword-sorting';
 
+export type FunctionalView = 'editorial' | 'ads';
+
 export interface KeywordUIState {
   filters: AdvancedFiltersState;
   quickFilter: QuickFilter;
@@ -11,6 +13,7 @@ export interface KeywordUIState {
   sortField: SortField;
   sortOrder: SortOrder;
   viewMode: 'table' | 'cards';
+  functionalView: FunctionalView;
 }
 
 const STORAGE_VERSION = 'v1';
@@ -40,6 +43,7 @@ function getDefaultState(): KeywordUIState {
     sortField: 'marketScore',
     sortOrder: 'desc',
     viewMode: 'table',
+    functionalView: 'editorial',
   };
 }
 
@@ -157,6 +161,14 @@ export function useKeywordUIPersistence(marketplaceId: string, bookId?: string) 
     });
   }, [persistState]);
   
+  const updateFunctionalView = useCallback((functionalView: FunctionalView) => {
+    setState(prev => {
+      const newState = { ...prev, functionalView };
+      persistState(newState);
+      return newState;
+    });
+  }, [persistState]);
+  
   const resetAll = useCallback(() => {
     const defaultState = getDefaultState();
     setState(defaultState);
@@ -180,6 +192,7 @@ export function useKeywordUIPersistence(marketplaceId: string, bookId?: string) 
     updateSearchTerm,
     updateSort,
     updateViewMode,
+    updateFunctionalView,
     resetAll,
   };
 }

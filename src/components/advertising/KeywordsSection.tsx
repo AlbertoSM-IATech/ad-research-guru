@@ -25,7 +25,7 @@ import { createKeywordDefaults } from '@/lib/keyword-helpers';
 import { getAutoStatusFromScore } from '@/lib/keyword-builder';
 import { sortKeywords, getKeywordMarketScore, isMarketDataIncomplete, SORT_OPTIONS, type SortField, type SortOrder } from '@/lib/keyword-sorting';
 import { applyKeywordFilters, applyQuickFilter, type QuickFilter } from '@/lib/keyword-filters';
-import { useKeywordUIPersistence } from '@/hooks/useKeywordUIPersistence';
+import { useKeywordUIPersistence, type FunctionalView } from '@/hooks/useKeywordUIPersistence';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 
@@ -48,7 +48,6 @@ interface KeywordsSectionProps {
 }
 
 type ViewMode = 'table' | 'cards';
-type FunctionalView = 'editorial' | 'ads';
 
 const ITEMS_PER_PAGE = 20;
 
@@ -76,7 +75,8 @@ export const KeywordsSection = ({
     updateFilters,
     updateQuickFilter,
     updateSort,
-    updateViewMode
+    updateViewMode,
+    updateFunctionalView
   } = useKeywordUIPersistence(marketplaceId);
 
   // Local state synced with persistence
@@ -95,7 +95,7 @@ export const KeywordsSection = ({
   const [advancedFiltersExpanded, setAdvancedFiltersExpanded] = useState(false);
   
   // Functional view state (Editorial vs Ads)
-  const [functionalView, setFunctionalView] = useState<FunctionalView>('editorial');
+  const [functionalView, setFunctionalView] = useState<FunctionalView>(persistedState.functionalView || 'editorial');
 
   // Sync persisted state when hydrated
   useEffect(() => {
@@ -105,6 +105,7 @@ export const KeywordsSection = ({
       setSortField(persistedState.sortField);
       setSortOrder(persistedState.sortOrder);
       setViewMode(persistedState.viewMode);
+      setFunctionalView(persistedState.functionalView || 'editorial');
     }
   }, [isHydrated, persistedState]);
 
@@ -404,7 +405,10 @@ export const KeywordsSection = ({
             <Button
               variant={functionalView === 'editorial' ? 'default' : 'ghost'}
               size="sm"
-              onClick={() => setFunctionalView('editorial')}
+              onClick={() => {
+                setFunctionalView('editorial');
+                updateFunctionalView('editorial');
+              }}
               className={cn(
                 "gap-2 transition-all",
                 functionalView === 'editorial' && "bg-primary text-primary-foreground"
@@ -416,7 +420,10 @@ export const KeywordsSection = ({
             <Button
               variant={functionalView === 'ads' ? 'default' : 'ghost'}
               size="sm"
-              onClick={() => setFunctionalView('ads')}
+              onClick={() => {
+                setFunctionalView('ads');
+                updateFunctionalView('ads');
+              }}
               className={cn(
                 "gap-2 transition-all",
                 functionalView === 'ads' && "bg-primary text-primary-foreground"
