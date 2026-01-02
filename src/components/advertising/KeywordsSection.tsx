@@ -28,7 +28,6 @@ import { applyKeywordFilters, applyQuickFilter, type QuickFilter } from '@/lib/k
 import { useKeywordUIPersistence, type FunctionalView } from '@/hooks/useKeywordUIPersistence';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
-
 interface KeywordsSectionProps {
   keywords: Keyword[];
   onAdd: (keyword: Omit<Keyword, 'id' | 'createdAt' | 'updatedAt'> | Keyword) => void;
@@ -46,11 +45,8 @@ interface KeywordsSectionProps {
   searchTerm: string;
   onSearchTermChange: (term: string) => void;
 }
-
 type ViewMode = 'table' | 'cards';
-
 const ITEMS_PER_PAGE = 20;
-
 export const KeywordsSection = ({
   keywords,
   onAdd,
@@ -66,7 +62,9 @@ export const KeywordsSection = ({
   searchTerm,
   onSearchTermChange
 }: KeywordsSectionProps) => {
-  const { toast } = useToast();
+  const {
+    toast
+  } = useToast();
 
   // Use persistence hook for UI state
   const {
@@ -93,7 +91,7 @@ export const KeywordsSection = ({
   const [wizardInitialKeyword, setWizardInitialKeyword] = useState('');
   const [validationKeyword, setValidationKeyword] = useState<Keyword | null>(null);
   const [advancedFiltersExpanded, setAdvancedFiltersExpanded] = useState(false);
-  
+
   // Functional view state (Editorial vs Ads)
   const [functionalView, setFunctionalView] = useState<FunctionalView>(persistedState.functionalView || 'editorial');
 
@@ -141,7 +139,6 @@ export const KeywordsSection = ({
     setWizardInitialKeyword('');
     setIsWizardOpen(true);
   };
-
   const handleSort = (field: SortField) => {
     let newOrder: SortOrder;
     if (sortField === field) {
@@ -153,19 +150,16 @@ export const KeywordsSection = ({
     setSortOrder(newOrder);
     updateSort(field, newOrder);
   };
-
   const handleSortOptionChange = (value: string) => {
     const [field, order] = value.split('-') as [SortField, SortOrder];
     setSortField(field);
     setSortOrder(order);
     updateSort(field, order);
   };
-
   const handleViewModeChange = (mode: ViewMode) => {
     setViewMode(mode);
     updateViewMode(mode);
   };
-
   const toggleSelectAll = () => {
     if (selectedIds.size === filteredKeywords.length) {
       onSelectedIdsChange(new Set());
@@ -173,7 +167,6 @@ export const KeywordsSection = ({
       onSelectedIdsChange(new Set(filteredKeywords.map(k => k.id)));
     }
   };
-
   const toggleSelect = (id: string) => {
     const newSet = new Set(selectedIds);
     if (newSet.has(id)) {
@@ -183,15 +176,15 @@ export const KeywordsSection = ({
     }
     onSelectedIdsChange(newSet);
   };
-
   const handleDeleteSelected = () => {
     if (selectedIds.size === 0) return;
     const count = selectedIds.size;
     onDeleteBulk(Array.from(selectedIds));
     onSelectedIdsChange(new Set());
-    toast({ title: `${count} keywords eliminadas` });
+    toast({
+      title: `${count} keywords eliminadas`
+    });
   };
-
   const handleBulkImport = (newKeywords: Array<Omit<Keyword, 'id' | 'createdAt' | 'updatedAt'>>) => {
     const classifiedKeywords = newKeywords.map(k => ({
       ...k,
@@ -200,21 +193,26 @@ export const KeywordsSection = ({
       state: k.state || 'pending' as KeywordState
     }));
     onAddBulk(classifiedKeywords);
-    toast({ title: `${classifiedKeywords.length} keywords añadidas` });
+    toast({
+      title: `${classifiedKeywords.length} keywords añadidas`
+    });
   };
-
   const handleBulkChangeCampaignType = (types: CampaignType[]) => {
-    onUpdateBulk(Array.from(selectedIds), { campaignTypes: types });
+    onUpdateBulk(Array.from(selectedIds), {
+      campaignTypes: types
+    });
     onSelectedIdsChange(new Set());
   };
-
   const handleBulkChangeState = (state: KeywordState) => {
-    onUpdateBulk(Array.from(selectedIds), { state });
+    onUpdateBulk(Array.from(selectedIds), {
+      state
+    });
     onSelectedIdsChange(new Set());
   };
-
   const handleBulkChangeRelevance = (relevance: RelevanceLevel) => {
-    onUpdateBulk(Array.from(selectedIds), { relevance });
+    onUpdateBulk(Array.from(selectedIds), {
+      relevance
+    });
     onSelectedIdsChange(new Set());
   };
 
@@ -249,18 +247,18 @@ export const KeywordsSection = ({
     });
 
     // Auto-update status if not manually set and market data changed
-    let finalUpdates = { ...updates };
+    let finalUpdates = {
+      ...updates
+    };
     const marketDataFields = ['searchVolume', 'competitors', 'price', 'royalties'];
     const isMarketDataUpdate = marketDataFields.some(f => updates[f as keyof typeof updates] !== undefined);
     const isMarketStructureUpdate = updates.marketStructure !== undefined;
-
     if ((isMarketDataUpdate || isMarketStructureUpdate) && !keyword.statusManuallySet) {
       const newSearchVolume = updates.searchVolume ?? keyword.searchVolume;
       const newCompetitors = updates.competitors ?? keyword.competitors;
       const newPrice = updates.price ?? keyword.price;
       const newRoyalties = updates.royalties ?? keyword.royalties;
       const marketData = keyword.marketData ?? getDefaultMarketData();
-
       const newMarketStructure = {
         selfContained: updates.marketStructure?.selfContained ?? keyword.marketStructure?.selfContained ?? false,
         amazonSuggestion: updates.marketStructure?.amazonSuggestion ?? keyword.marketStructure?.amazonSuggestion ?? false,
@@ -269,7 +267,6 @@ export const KeywordsSection = ({
         topMatchesIntent: updates.marketStructure?.topMatchesIntent ?? keyword.marketStructure?.topMatchesIntent ?? false,
         variantsPotential: updates.marketStructure?.variantsPotential ?? keyword.marketStructure?.variantsPotential ?? false
       };
-
       const newMarketScore = calculateMarketScore({
         searchVolume: newSearchVolume,
         competitors: newCompetitors,
@@ -277,11 +274,9 @@ export const KeywordsSection = ({
         royalties: newRoyalties,
         trafficSource: marketData.trafficSource
       }, marketplaceId, newMarketStructure).total;
-
       finalUpdates.marketScore = newMarketScore;
       finalUpdates.status = getAutoStatusFromScore(newMarketScore);
     }
-
     if (historyEntries.length > 0) {
       onUpdate(id, {
         ...finalUpdates,
@@ -339,9 +334,7 @@ export const KeywordsSection = ({
     let result = keywords;
 
     // Apply functional view purpose filter
-    const purposeFilter = functionalView === 'editorial' 
-      ? ['editorial', 'both'] 
-      : ['ads', 'both'];
+    const purposeFilter = functionalView === 'editorial' ? ['editorial', 'both'] : ['ads', 'both'];
     result = result.filter(k => purposeFilter.includes(k.purpose));
 
     // Apply quick filter first if active
@@ -363,7 +356,6 @@ export const KeywordsSection = ({
       intent: filters.intent,
       state: filters.state
     });
-
     return sortKeywords(result, sortField, sortOrder);
   }, [keywords, searchTerm, filters, quickFilter, sortField, sortOrder, functionalView]);
 
@@ -375,7 +367,6 @@ export const KeywordsSection = ({
       stableOnSelectedIdsChange(nextSelected);
     }
   }, [filteredKeywords, selectedIds, stableOnSelectedIdsChange]);
-
   const totalPages = Math.ceil(filteredKeywords.length / ITEMS_PER_PAGE);
   const paginatedKeywords = filteredKeywords.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
 
@@ -392,9 +383,7 @@ export const KeywordsSection = ({
     const option = KEYWORD_STATUS_OPTIONS.find(s => s.value === status);
     return option || KEYWORD_STATUS_OPTIONS[0];
   };
-
-  return (
-    <div data-tour="keywords-section" className="space-y-6 animate-fade-in">
+  return <div data-tour="keywords-section" className="space-y-6 animate-fade-in">
       {/* Functional View Toggle */}
       <div className="flex flex-col gap-4">
         <div className="flex items-center justify-between">
@@ -402,33 +391,17 @@ export const KeywordsSection = ({
           
           {/* View Toggle: Editorial / Ads */}
           <div className="flex items-center gap-2 p-1 bg-muted rounded-lg">
-            <Button
-              variant={functionalView === 'editorial' ? 'default' : 'ghost'}
-              size="sm"
-              onClick={() => {
-                setFunctionalView('editorial');
-                updateFunctionalView('editorial');
-              }}
-              className={cn(
-                "gap-2 transition-all",
-                functionalView === 'editorial' && "bg-primary text-primary-foreground"
-              )}
-            >
+            <Button variant={functionalView === 'editorial' ? 'default' : 'ghost'} size="sm" onClick={() => {
+            setFunctionalView('editorial');
+            updateFunctionalView('editorial');
+          }} className={cn("gap-2 transition-all", functionalView === 'editorial' && "bg-primary text-primary-foreground")}>
               <BookOpen className="w-4 h-4" />
               Estudio de Nicho
             </Button>
-            <Button
-              variant={functionalView === 'ads' ? 'default' : 'ghost'}
-              size="sm"
-              onClick={() => {
-                setFunctionalView('ads');
-                updateFunctionalView('ads');
-              }}
-              className={cn(
-                "gap-2 transition-all",
-                functionalView === 'ads' && "bg-primary text-primary-foreground"
-              )}
-            >
+            <Button variant={functionalView === 'ads' ? 'default' : 'ghost'} size="sm" onClick={() => {
+            setFunctionalView('ads');
+            updateFunctionalView('ads');
+          }} className={cn("gap-2 transition-all", functionalView === 'ads' && "bg-primary text-primary-foreground")}>
               <Megaphone className="w-4 h-4" />
               Gestión de Ads
             </Button>
@@ -436,66 +409,30 @@ export const KeywordsSection = ({
         </div>
         
         {/* Contextual message */}
-        <div className={cn(
-          "flex items-center gap-2 px-4 py-2 rounded-lg text-sm",
-          functionalView === 'editorial' 
-            ? "bg-blue-500/10 text-blue-700 dark:text-blue-300 border border-blue-500/20"
-            : "bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-500/20"
-        )}>
+        <div className={cn("flex items-center gap-2 px-4 py-2 rounded-lg text-sm", functionalView === 'editorial' ? "bg-blue-500/10 text-blue-700 dark:text-blue-300 border border-blue-500/20" : "bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-500/20")}>
           <Info className="w-4 h-4 flex-shrink-0" />
-          {functionalView === 'editorial' 
-            ? "Esta vista está pensada para decisiones editoriales, no para inversión publicitaria."
-            : "Esta vista está pensada para decisiones de inversión en Ads."
-          }
+          {functionalView === 'editorial' ? "Esta vista está pensada para decisiones editoriales, no para inversión publicitaria." : "Esta vista está pensada para decisiones de inversión en Ads."}
         </div>
       </div>
 
       {/* Bulk Actions Toolbar */}
-      <BulkActionsToolbar 
-        selectedCount={selectedIds.size} 
-        onChangeCampaignType={handleBulkChangeCampaignType} 
-        onChangeState={handleBulkChangeState} 
-        onChangeRelevance={handleBulkChangeRelevance} 
-        onDelete={handleDeleteSelected} 
-      />
+      <BulkActionsToolbar selectedCount={selectedIds.size} onChangeCampaignType={handleBulkChangeCampaignType} onChangeState={handleBulkChangeState} onChangeRelevance={handleBulkChangeRelevance} onDelete={handleDeleteSelected} />
 
       {/* Quick Filters + Advanced Filters trigger */}
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <QuickFiltersBar 
-          activeFilter={quickFilter} 
-          onFilterChange={handleQuickFilterChange} 
-          counts={quickFilterCounts} 
-        />
-        <AdvancedFilters 
-          filters={filters} 
-          onFiltersChange={handleAdvancedFiltersChange} 
-          renderTriggerOnly 
-          isExpanded={advancedFiltersExpanded} 
-          onToggleExpanded={() => setAdvancedFiltersExpanded(!advancedFiltersExpanded)} 
-        />
+        <QuickFiltersBar activeFilter={quickFilter} onFilterChange={handleQuickFilterChange} counts={quickFilterCounts} />
+        <AdvancedFilters filters={filters} onFiltersChange={handleAdvancedFiltersChange} renderTriggerOnly isExpanded={advancedFiltersExpanded} onToggleExpanded={() => setAdvancedFiltersExpanded(!advancedFiltersExpanded)} />
       </div>
 
       {/* Advanced Filters Content */}
-      {advancedFiltersExpanded && (
-        <AdvancedFiltersContent filters={filters} onFiltersChange={handleAdvancedFiltersChange} />
-      )}
+      {advancedFiltersExpanded && <AdvancedFiltersContent filters={filters} onFiltersChange={handleAdvancedFiltersChange} />}
 
       {/* Quick Add, Search & Sort */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3 items-center">
         {/* Column 1: Quick Add */}
         <div className="flex gap-2">
-          <Input 
-            placeholder="Escribe una keyword..." 
-            value={quickAddKeyword} 
-            onChange={e => setQuickAddKeyword(e.target.value)} 
-            onKeyDown={e => e.key === 'Enter' && handleQuickAdd()} 
-            className="flex-1" 
-          />
-          <Button 
-            onClick={quickAddKeyword.trim() ? handleQuickAdd : handleOpenNewKeywordWizard} 
-            size="sm" 
-            className="gap-1 bg-primary hover:bg-primary/90 whitespace-nowrap"
-          >
+          <Input placeholder="Escribe una keyword..." value={quickAddKeyword} onChange={e => setQuickAddKeyword(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleQuickAdd()} className="flex-1" />
+          <Button onClick={quickAddKeyword.trim() ? handleQuickAdd : handleOpenNewKeywordWizard} size="sm" className="gap-1 bg-primary hover:bg-primary/90 whitespace-nowrap">
             <Plus className="w-4 h-4" />
             {quickAddKeyword.trim() ? 'Añadir' : 'Nueva'}
           </Button>
@@ -504,15 +441,10 @@ export const KeywordsSection = ({
         {/* Column 2: Search */}
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input 
-            placeholder="Buscar keywords..." 
-            value={searchTerm} 
-            onChange={e => {
-              onSearchTermChange(e.target.value);
-              setCurrentPage(1);
-            }} 
-            className="pl-10" 
-          />
+          <Input placeholder="Buscar keywords..." value={searchTerm} onChange={e => {
+          onSearchTermChange(e.target.value);
+          setCurrentPage(1);
+        }} className="pl-10" />
         </div>
 
         {/* Column 3: Sort */}
@@ -521,11 +453,9 @@ export const KeywordsSection = ({
             <SelectValue placeholder="Ordenar..." />
           </SelectTrigger>
           <SelectContent className="bg-popover border-border z-50">
-            {SORT_OPTIONS.map(opt => (
-              <SelectItem key={`${opt.field}-${opt.order}`} value={`${opt.field}-${opt.order}`}>
+            {SORT_OPTIONS.map(opt => <SelectItem key={`${opt.field}-${opt.order}`} value={`${opt.field}-${opt.order}`}>
                 {opt.label}
-              </SelectItem>
-            ))}
+              </SelectItem>)}
           </SelectContent>
         </Select>
       </div>
@@ -539,77 +469,50 @@ export const KeywordsSection = ({
         <div className="flex items-center gap-2">
           {/* View Toggle */}
           <div className="flex items-center rounded-md border border-border">
-            <Button 
-              variant={viewMode === 'table' ? 'secondary' : 'ghost'} 
-              size="sm" 
-              className="rounded-r-none" 
-              onClick={() => handleViewModeChange('table')}
-            >
+            <Button variant={viewMode === 'table' ? 'secondary' : 'ghost'} size="sm" className="rounded-r-none" onClick={() => handleViewModeChange('table')}>
               <LayoutList className="w-4 h-4" />
             </Button>
-            <Button 
-              variant={viewMode === 'cards' ? 'secondary' : 'ghost'} 
-              size="sm" 
-              className="rounded-l-none" 
-              onClick={() => handleViewModeChange('cards')}
-            >
+            <Button variant={viewMode === 'cards' ? 'secondary' : 'ghost'} size="sm" className="rounded-l-none" onClick={() => handleViewModeChange('cards')}>
               <LayoutGrid className="w-4 h-4" />
             </Button>
           </div>
           <BulkCopyTools keywords={filteredKeywords} selectedIds={selectedIds} />
-          <VariantDetector 
-            keywords={keywords} 
-            onGroupVariants={(groupId, keywordIds) => {
-              keywordIds.forEach(id => {
-                const kw = keywords.find(k => k.id === id);
-                if (kw) {
-                  onUpdate(id, {
-                    notes: kw.notes ? `${kw.notes} [Variante: ${groupId}]` : `[Variante: ${groupId}]`
-                  });
-                }
+          <VariantDetector keywords={keywords} onGroupVariants={(groupId, keywordIds) => {
+          keywordIds.forEach(id => {
+            const kw = keywords.find(k => k.id === id);
+            if (kw) {
+              onUpdate(id, {
+                notes: kw.notes ? `${kw.notes} [Variante: ${groupId}]` : `[Variante: ${groupId}]`
               });
-              toast({ title: `${keywordIds.length} keywords agrupadas como variantes` });
-            }} 
-            onSeparateVariants={keywordIds => {
-              toast({ title: 'Variantes separadas' });
-            }} 
-          />
-          <Button 
-            data-tour="bulk-import" 
-            variant="outline" 
-            size="sm" 
-            onClick={() => setIsBulkImportOpen(true)} 
-            className="gap-2"
-          >
+            }
+          });
+          toast({
+            title: `${keywordIds.length} keywords agrupadas como variantes`
+          });
+        }} onSeparateVariants={keywordIds => {
+          toast({
+            title: 'Variantes separadas'
+          });
+        }} />
+          <Button data-tour="bulk-import" variant="outline" size="sm" onClick={() => setIsBulkImportOpen(true)} className="gap-2">
             <Upload className="w-4 h-4" />
             Importar lote
           </Button>
-          {selectedIds.size > 0 && (
-            <Button 
-              variant="destructive" 
-              size="sm" 
-              onClick={handleDeleteSelected} 
-              className="gap-2"
-            >
+          {selectedIds.size > 0 && <Button variant="destructive" size="sm" onClick={handleDeleteSelected} className="gap-2">
               <Trash2 className="w-4 h-4" />
               Eliminar ({selectedIds.size})
-            </Button>
-          )}
+            </Button>}
         </div>
       </div>
 
       {/* Content - Table or Cards */}
-      {viewMode === 'table' ? (
-        <div className="rounded-lg border border-border overflow-hidden">
+      {viewMode === 'table' ? <div className="rounded-lg border border-border overflow-hidden">
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow className="bg-muted/50 hover:bg-muted/50">
                   <TableHead className="w-[40px]">
-                    <Checkbox 
-                      checked={selectedIds.size === filteredKeywords.length && filteredKeywords.length > 0} 
-                      onCheckedChange={toggleSelectAll} 
-                    />
+                    <Checkbox checked={selectedIds.size === filteredKeywords.length && filteredKeywords.length > 0} onCheckedChange={toggleSelectAll} />
                   </TableHead>
                   <TableHead className="cursor-pointer hover:text-foreground" onClick={() => handleSort('keyword')}>
                     <div className="flex items-center gap-1">
@@ -632,8 +535,8 @@ export const KeywordsSection = ({
                     </div>
                   </TableHead>
                   <TableHead className="cursor-pointer hover:text-foreground w-[130px]" onClick={() => handleSort('marketScore')}>
-                    <div className="flex items-center gap-1">
-                      Market Score
+                    <div className="gap-1 px-[39px] mx-0 py-[5px] flex-row flex items-center justify-start">
+                      Puntuación_Global       
                       <ArrowUpDown className="w-3 h-3" />
                       <InfoTooltip content="Puntuación 0-100 basada en: configuración de mercado, demanda (estructura), competencia (señales) y penalización por fuente de tráfico. Click en la celda para ver desglose." />
                     </div>
@@ -648,52 +551,30 @@ export const KeywordsSection = ({
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {paginatedKeywords.length === 0 ? (
-                  <TableRow>
+                {paginatedKeywords.length === 0 ? <TableRow>
                     <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
-                      {keywords.length === 0 
-                        ? 'No hay keywords. Añade tu primera keyword o importa en lote.' 
-                        : 'No se encontraron keywords con los filtros aplicados.'
-                      }
+                      {keywords.length === 0 ? 'No hay keywords. Añade tu primera keyword o importa en lote.' : 'No se encontraron keywords con los filtros aplicados.'}
                     </TableCell>
-                  </TableRow>
-                ) : (
-                  paginatedKeywords.map(keyword => {
-                    const score = getKeywordMarketScore(keyword);
-                    const incomplete = isMarketDataIncomplete(keyword);
-                    const statusInfo = getStatusBadge(keyword.status || 'pending');
-                    
-                    return (
-                      <TableRow 
-                        key={keyword.id} 
-                        className={cn('transition-colors', getRowScoreClass(score))}
-                      >
+                  </TableRow> : paginatedKeywords.map(keyword => {
+              const score = getKeywordMarketScore(keyword);
+              const incomplete = isMarketDataIncomplete(keyword);
+              const statusInfo = getStatusBadge(keyword.status || 'pending');
+              return <TableRow key={keyword.id} className={cn('transition-colors', getRowScoreClass(score))}>
                         <TableCell onClick={e => e.stopPropagation()}>
-                          <Checkbox 
-                            checked={selectedIds.has(keyword.id)} 
-                            onCheckedChange={() => toggleSelect(keyword.id)} 
-                          />
+                          <Checkbox checked={selectedIds.has(keyword.id)} onCheckedChange={() => toggleSelect(keyword.id)} />
                         </TableCell>
                         <TableCell>
                           <div className="flex items-center gap-2">
                             {/* Primary action: Open detail panel */}
                             <Tooltip>
                               <TooltipTrigger asChild>
-                                <Button 
-                                  variant="ghost" 
-                                  size="sm" 
-                                  onClick={() => setValidationKeyword(keyword)}
-                                  className="h-7 w-7 p-0 bg-primary/10 hover:bg-primary/20 text-primary"
-                                >
+                                <Button variant="ghost" size="sm" onClick={() => setValidationKeyword(keyword)} className="h-7 w-7 p-0 bg-primary/10 hover:bg-primary/20 text-primary">
                                   <Eye className="w-4 h-4" />
                                 </Button>
                               </TooltipTrigger>
                               <TooltipContent>Abrir ficha de keyword</TooltipContent>
                             </Tooltip>
-                            <span 
-                              className="font-medium cursor-pointer hover:text-primary transition-colors"
-                              onClick={() => setValidationKeyword(keyword)}
-                            >
+                            <span className="font-medium cursor-pointer hover:text-primary transition-colors" onClick={() => setValidationKeyword(keyword)}>
                               {keyword.keyword}
                             </span>
                           </div>
@@ -703,118 +584,53 @@ export const KeywordsSection = ({
                         </TableCell>
                         <TableCell className="tabular-nums">
                           <div className="flex items-center gap-2">
-                            <span className={cn(
-                              "w-2 h-2 rounded-full flex-shrink-0",
-                              (keyword.competitors || 0) < 3000 
-                                ? "bg-green-500" 
-                                : "bg-red-500"
-                            )} />
+                            <span className={cn("w-2 h-2 rounded-full flex-shrink-0", (keyword.competitors || 0) < 3000 ? "bg-green-500" : "bg-red-500")} />
                             {(keyword.competitors || 0).toLocaleString()}
                           </div>
                         </TableCell>
                         <TableCell>
-                          <MarketScoreCell 
-                            marketData={keyword.marketData} 
-                            score={score} 
-                            isIncomplete={incomplete} 
-                            onValidate={() => setValidationKeyword(keyword)} 
-                          />
+                          <MarketScoreCell marketData={keyword.marketData} score={score} isIncomplete={incomplete} onValidate={() => setValidationKeyword(keyword)} />
                         </TableCell>
                         <TableCell onClick={e => e.stopPropagation()}>
-                          <InlineSelectBadge 
-                            value={keyword.status || 'pending'} 
-                            options={KEYWORD_STATUS_OPTIONS.map(s => ({
-                              value: s.value,
-                              label: s.label,
-                              color: s.color
-                            }))} 
-                            onChange={value => handleUpdateWithHistory(keyword.id, {
-                              status: value as KeywordStatus,
-                              statusManuallySet: true
-                            })} 
-                          />
+                          <InlineSelectBadge value={keyword.status || 'pending'} options={KEYWORD_STATUS_OPTIONS.map(s => ({
+                    value: s.value,
+                    label: s.label,
+                    color: s.color
+                  }))} onChange={value => handleUpdateWithHistory(keyword.id, {
+                    status: value as KeywordStatus,
+                    statusManuallySet: true
+                  })} />
                         </TableCell>
-                      </TableRow>
-                    );
-                  })
-                )}
+                      </TableRow>;
+            })}
               </TableBody>
             </Table>
           </div>
-        </div>
-      ) : (
-        <KeywordCardView 
-          keywords={paginatedKeywords} 
-          selectedIds={selectedIds} 
-          onToggleSelect={toggleSelect} 
-          onUpdate={handleUpdateWithHistory} 
-          onDelete={onDelete} 
-          onViewHistory={keyword => setHistoryKeyword(keyword)} 
-        />
-      )}
+        </div> : <KeywordCardView keywords={paginatedKeywords} selectedIds={selectedIds} onToggleSelect={toggleSelect} onUpdate={handleUpdateWithHistory} onDelete={onDelete} onViewHistory={keyword => setHistoryKeyword(keyword)} />}
 
       {/* Pagination */}
-      {totalPages > 1 && (
-        <div className="flex items-center justify-between">
+      {totalPages > 1 && <div className="flex items-center justify-between">
           <p className="text-sm text-muted-foreground">Página {currentPage} de {totalPages}</p>
           <div className="flex gap-2">
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={() => setCurrentPage(p => Math.max(1, p - 1))} 
-              disabled={currentPage === 1}
-            >
+            <Button variant="outline" size="sm" onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1}>
               Anterior
             </Button>
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} 
-              disabled={currentPage === totalPages}
-            >
+            <Button variant="outline" size="sm" onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages}>
               Siguiente
             </Button>
           </div>
-        </div>
-      )}
+        </div>}
 
       {/* Bulk Import Modal */}
-      <BulkKeywordImport 
-        isOpen={isBulkImportOpen} 
-        onClose={() => setIsBulkImportOpen(false)} 
-        onImport={handleBulkImport} 
-        marketplaceId={marketplaceId} 
-        bookInfo={bookInfo} 
-        existingKeywords={keywords.map(k => k.keyword)} 
-      />
+      <BulkKeywordImport isOpen={isBulkImportOpen} onClose={() => setIsBulkImportOpen(false)} onImport={handleBulkImport} marketplaceId={marketplaceId} bookInfo={bookInfo} existingKeywords={keywords.map(k => k.keyword)} />
 
       {/* History Modal */}
-      <KeywordHistoryModal 
-        keyword={historyKeyword} 
-        isOpen={!!historyKeyword} 
-        onClose={() => setHistoryKeyword(null)} 
-      />
+      <KeywordHistoryModal keyword={historyKeyword} isOpen={!!historyKeyword} onClose={() => setHistoryKeyword(null)} />
 
       {/* Keyword Detail Panel */}
-      <KeywordDetailPanel 
-        keyword={validationKeyword} 
-        isOpen={!!validationKeyword} 
-        onClose={() => setValidationKeyword(null)} 
-        onSave={handleKeywordDetailSave} 
-        marketplaceId={marketplaceId} 
-      />
+      <KeywordDetailPanel keyword={validationKeyword} isOpen={!!validationKeyword} onClose={() => setValidationKeyword(null)} onSave={handleKeywordDetailSave} marketplaceId={marketplaceId} />
       
       {/* New Keyword Wizard */}
-      <NewKeywordWizard 
-        open={isWizardOpen} 
-        onOpenChange={setIsWizardOpen} 
-        onComplete={handleWizardComplete} 
-        marketplaceId={marketplaceId} 
-        bookInfo={bookInfo} 
-        existingKeywords={keywords} 
-        initialKeyword={wizardInitialKeyword} 
-        onOpenExistingKeyword={handleOpenExistingKeyword} 
-      />
-    </div>
-  );
+      <NewKeywordWizard open={isWizardOpen} onOpenChange={setIsWizardOpen} onComplete={handleWizardComplete} marketplaceId={marketplaceId} bookInfo={bookInfo} existingKeywords={keywords} initialKeyword={wizardInitialKeyword} onOpenExistingKeyword={handleOpenExistingKeyword} />
+    </div>;
 };
