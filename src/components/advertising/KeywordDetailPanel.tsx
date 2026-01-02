@@ -1,10 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-} from '@/components/ui/sheet';
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -12,48 +7,13 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Separator } from '@/components/ui/separator';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@/components/ui/tooltip';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import { Info, Save, RotateCcw, Sparkles } from 'lucide-react';
 import type { Keyword } from '@/types/advertising';
 import { getAutoStatusFromScore } from '@/lib/keyword-builder';
-import {
-  type MarketData,
-  type MarketStructure,
-  type CatalogSignals,
-  type EditorialData,
-  type TrafficSource,
-  type KeywordStatus,
-  type BooksOver200ReviewsRange,
-  calculateMarketScore,
-  calculateEditorialScore,
-  getDefaultMarketData,
-  getDefaultEditorialData,
-  getDefaultMarketStructure,
-  getDefaultCatalogSignals,
-  getMarketScoreInfo,
-  getBooksOver200ReviewsPoints,
-  TRAFFIC_SOURCE_OPTIONS,
-  KEYWORD_STATUS_OPTIONS,
-  MARKET_STRUCTURE_CHECKS,
-  CATALOG_SIGNALS_CHECKS,
-  EDITORIAL_CHECKS,
-  BOOKS_OVER_200_REVIEWS_OPTIONS,
-  BOOKS_OVER_200_REVIEWS_FIELD,
-} from '@/lib/market-score';
-
+import { type MarketData, type MarketStructure, type CatalogSignals, type EditorialData, type TrafficSource, type KeywordStatus, type BooksOver200ReviewsRange, calculateMarketScore, calculateEditorialScore, getDefaultMarketData, getDefaultEditorialData, getDefaultMarketStructure, getDefaultCatalogSignals, getMarketScoreInfo, getBooksOver200ReviewsPoints, TRAFFIC_SOURCE_OPTIONS, KEYWORD_STATUS_OPTIONS, MARKET_STRUCTURE_CHECKS, CATALOG_SIGNALS_CHECKS, EDITORIAL_CHECKS, BOOKS_OVER_200_REVIEWS_OPTIONS, BOOKS_OVER_200_REVIEWS_FIELD } from '@/lib/market-score';
 interface KeywordDetailPanelProps {
   keyword: Keyword | null;
   isOpen: boolean;
@@ -61,13 +21,12 @@ interface KeywordDetailPanelProps {
   onSave: (keywordId: string, updates: Partial<Keyword>) => void;
   marketplaceId?: string;
 }
-
-export const KeywordDetailPanel = ({ 
-  keyword, 
-  isOpen, 
-  onClose, 
+export const KeywordDetailPanel = ({
+  keyword,
+  isOpen,
+  onClose,
   onSave,
-  marketplaceId = 'us',
+  marketplaceId = 'us'
 }: KeywordDetailPanelProps) => {
   // Market Data state
   const [searchVolume, setSearchVolume] = useState(0);
@@ -75,13 +34,13 @@ export const KeywordDetailPanel = ({
   const [price, setPrice] = useState(9.99);
   const [royalties, setRoyalties] = useState(2.00);
   const [trafficSource, setTrafficSource] = useState<TrafficSource>('amazon');
-  
+
   // Market Structure state (12 pts block - 6 checks x 2pts)
   const [marketStructureChecks, setMarketStructureChecks] = useState<MarketStructure>(getDefaultMarketStructure());
-  
+
   // Catalog Signals state (12 pts block)
   const [catalogSignalsChecks, setCatalogSignalsChecks] = useState<CatalogSignals>(getDefaultCatalogSignals());
-  
+
   // Editorial Data state (5 checks - do NOT affect Market Score)
   const [editorialChecks, setEditorialChecks] = useState<Record<string, boolean>>({});
   const [editorialNotes, setEditorialNotes] = useState('');
@@ -99,7 +58,7 @@ export const KeywordDetailPanel = ({
       setPrice(keyword.price || md.price);
       setRoyalties(keyword.royalties || md.royalties);
       setTrafficSource(md.trafficSource);
-      
+
       // Market Structure data (6 checks)
       const ms = keyword.marketStructure ?? getDefaultMarketStructure();
       setMarketStructureChecks({
@@ -108,17 +67,17 @@ export const KeywordDetailPanel = ({
         booksSellingWell: ms.booksSellingWell ?? false,
         indieAuthorsSelling: ms.indieAuthorsSelling ?? false,
         topMatchesIntent: ms.topMatchesIntent ?? false,
-        variantsPotential: ms.variantsPotential ?? false,
+        variantsPotential: ms.variantsPotential ?? false
       });
-      
+
       // Catalog Signals data
       const cs = keyword.catalogSignals ?? getDefaultCatalogSignals();
       setCatalogSignalsChecks({
         booksOver200ReviewsRange: cs.booksOver200ReviewsRange ?? null,
         hasProfitableBooks: cs.hasProfitableBooks ?? false,
-        hasBooksUnder100Reviews: cs.hasBooksUnder100Reviews ?? false,
+        hasBooksUnder100Reviews: cs.hasBooksUnder100Reviews ?? false
       });
-      
+
       // Editorial data - load from keyword editorialData
       const ed = keyword.editorialData ?? getDefaultEditorialData();
       const checks: Record<string, boolean> = {};
@@ -129,7 +88,7 @@ export const KeywordDetailPanel = ({
       if (ed.checklist.personalInterest === true) checks.personalInterest = true;
       setEditorialChecks(checks);
       setEditorialNotes(ed.notes);
-      
+
       // Status & notes
       setStatus(keyword.status || 'pending');
       setStatusManuallySet(keyword.statusManuallySet || false);
@@ -143,27 +102,22 @@ export const KeywordDetailPanel = ({
     competitors,
     price,
     royalties,
-    trafficSource,
+    trafficSource
   }), [searchVolume, competitors, price, royalties, trafficSource]);
-
-  const scoreBreakdown = useMemo(() => 
-    calculateMarketScore(marketData, marketplaceId, marketStructureChecks, catalogSignalsChecks), 
-    [marketData, marketplaceId, marketStructureChecks, catalogSignalsChecks]
-  );
+  const scoreBreakdown = useMemo(() => calculateMarketScore(marketData, marketplaceId, marketStructureChecks, catalogSignalsChecks), [marketData, marketplaceId, marketStructureChecks, catalogSignalsChecks]);
   const scoreInfo = useMemo(() => getMarketScoreInfo(scoreBreakdown.total), [scoreBreakdown.total]);
 
   // Calculate Editorial Score from checks
   const editorialData: EditorialData = useMemo(() => ({
-    checklist: { 
-      makesSenseAsBook: editorialChecks.makesSenseAsBook ?? null, 
+    checklist: {
+      makesSenseAsBook: editorialChecks.makesSenseAsBook ?? null,
       canCreateThisBook: editorialChecks.canCreateThisBook ?? null,
-      canDoItBetter: editorialChecks.canDoItBetter ?? null, 
-      canDifferentiate: editorialChecks.canDifferentiate ?? null, 
-      personalInterest: editorialChecks.personalInterest ?? null 
+      canDoItBetter: editorialChecks.canDoItBetter ?? null,
+      canDifferentiate: editorialChecks.canDifferentiate ?? null,
+      personalInterest: editorialChecks.personalInterest ?? null
     },
-    notes: editorialNotes,
+    notes: editorialNotes
   }), [editorialChecks, editorialNotes]);
-
   const editorialScore = useMemo(() => calculateEditorialScore(editorialData), [editorialData]);
 
   // Auto-update status based on score if not manually set
@@ -172,10 +126,9 @@ export const KeywordDetailPanel = ({
   // Save handler
   const handleSave = () => {
     if (!keyword) return;
-    
+
     // Determine final status: if manually set, keep it; otherwise use auto
     const finalStatus = statusManuallySet ? status : autoStatus;
-    
     const updates: Partial<Keyword> = {
       searchVolume,
       competitors,
@@ -189,9 +142,8 @@ export const KeywordDetailPanel = ({
       editorialScore,
       status: finalStatus,
       statusManuallySet,
-      notes,
+      notes
     };
-    
     onSave(keyword.id, updates);
     onClose();
   };
@@ -217,7 +169,7 @@ export const KeywordDetailPanel = ({
     setPrice(keyword.price || md.price);
     setRoyalties(keyword.royalties || md.royalties);
     setTrafficSource(md.trafficSource);
-    
+
     // Reset market structure
     const ms = keyword.marketStructure ?? getDefaultMarketStructure();
     setMarketStructureChecks({
@@ -226,17 +178,16 @@ export const KeywordDetailPanel = ({
       booksSellingWell: ms.booksSellingWell ?? false,
       indieAuthorsSelling: ms.indieAuthorsSelling ?? false,
       topMatchesIntent: ms.topMatchesIntent ?? false,
-      variantsPotential: ms.variantsPotential ?? false,
+      variantsPotential: ms.variantsPotential ?? false
     });
-    
+
     // Reset catalog signals
     const cs = keyword.catalogSignals ?? getDefaultCatalogSignals();
     setCatalogSignalsChecks({
       booksOver200ReviewsRange: cs.booksOver200ReviewsRange ?? null,
       hasProfitableBooks: cs.hasProfitableBooks ?? false,
-      hasBooksUnder100Reviews: cs.hasBooksUnder100Reviews ?? false,
+      hasBooksUnder100Reviews: cs.hasBooksUnder100Reviews ?? false
     });
-    
     const ed = keyword.editorialData ?? getDefaultEditorialData();
     const checks: Record<string, boolean> = {};
     if (ed.checklist.makesSenseAsBook === true) checks.makesSenseAsBook = true;
@@ -246,23 +197,18 @@ export const KeywordDetailPanel = ({
     if (ed.checklist.personalInterest === true) checks.personalInterest = true;
     setEditorialChecks(checks);
     setEditorialNotes(ed.notes);
-    
     setStatus(keyword.status || 'pending');
     setStatusManuallySet(keyword.statusManuallySet || false);
     setNotes(keyword.notes || '');
   };
-
   if (!keyword) return null;
-
   const getScoreBarColor = (score: number) => {
     if (score >= 70) return 'bg-green-500';
     if (score >= 50) return 'bg-blue-500';
     if (score >= 30) return 'bg-yellow-500';
     return 'bg-red-500';
   };
-
-  return (
-    <Sheet open={isOpen} onOpenChange={(open) => !open && onClose()}>
+  return <Sheet open={isOpen} onOpenChange={open => !open && onClose()}>
       <SheetContent className="w-full sm:max-w-xl overflow-y-auto">
         <SheetHeader>
           <SheetTitle className="text-lg font-semibold truncate">
@@ -275,7 +221,7 @@ export const KeywordDetailPanel = ({
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
-                Market Score
+                Market Score (KW/Nicho) 
               </h3>
               <Badge className={cn('text-lg px-3 py-1', scoreInfo.bgColor, scoreInfo.color)}>
                 {scoreBreakdown.total}
@@ -285,10 +231,9 @@ export const KeywordDetailPanel = ({
             {/* Score Bar */}
             <div className="space-y-2">
               <div className="h-3 bg-muted rounded-full overflow-hidden">
-                <div 
-                  className={cn('h-full transition-all duration-300', getScoreBarColor(scoreBreakdown.total))}
-                  style={{ width: `${scoreBreakdown.total}%` }}
-                />
+                <div className={cn('h-full transition-all duration-300', getScoreBarColor(scoreBreakdown.total))} style={{
+                width: `${scoreBreakdown.total}%`
+              }} />
               </div>
               <div className="flex justify-between text-xs text-muted-foreground">
                 <span>0</span>
@@ -332,12 +277,10 @@ export const KeywordDetailPanel = ({
                       <span>Señales catálogo</span>
                       <span className="font-mono">{scoreBreakdown.catalogSignals.points}/{scoreBreakdown.catalogSignals.max}</span>
                     </div>
-                    {scoreBreakdown.penalties.points !== 0 && (
-                      <div className="flex justify-between text-red-500">
+                    {scoreBreakdown.penalties.points !== 0 && <div className="flex justify-between text-red-500">
                         <span>Penalizaciones</span>
                         <span className="font-mono">{scoreBreakdown.penalties.points}</span>
-                      </div>
-                    )}
+                      </div>}
                   </div>
                 </TooltipContent>
               </Tooltip>
@@ -368,13 +311,7 @@ export const KeywordDetailPanel = ({
                     </Tooltip>
                   </TooltipProvider>
                 </div>
-                <Input
-                  id="volume"
-                  type="number"
-                  min={0}
-                  value={searchVolume}
-                  onChange={(e) => setSearchVolume(Number(e.target.value))}
-                />
+                <Input id="volume" type="number" min={0} value={searchVolume} onChange={e => setSearchVolume(Number(e.target.value))} />
               </div>
               
               {/* Competidores */}
@@ -392,13 +329,7 @@ export const KeywordDetailPanel = ({
                     </Tooltip>
                   </TooltipProvider>
                 </div>
-                <Input
-                  id="competitors"
-                  type="number"
-                  min={0}
-                  value={competitors}
-                  onChange={(e) => setCompetitors(Number(e.target.value))}
-                />
+                <Input id="competitors" type="number" min={0} value={competitors} onChange={e => setCompetitors(Number(e.target.value))} />
               </div>
               
               {/* Precio */}
@@ -416,14 +347,7 @@ export const KeywordDetailPanel = ({
                     </Tooltip>
                   </TooltipProvider>
                 </div>
-                <Input
-                  id="price"
-                  type="number"
-                  min={0}
-                  step={0.01}
-                  value={price}
-                  onChange={(e) => setPrice(Number(e.target.value))}
-                />
+                <Input id="price" type="number" min={0} step={0.01} value={price} onChange={e => setPrice(Number(e.target.value))} />
               </div>
               
               {/* Regalías */}
@@ -441,14 +365,7 @@ export const KeywordDetailPanel = ({
                     </Tooltip>
                   </TooltipProvider>
                 </div>
-                <Input
-                  id="royalties"
-                  type="number"
-                  min={0}
-                  step={0.01}
-                  value={royalties}
-                  onChange={(e) => setRoyalties(Number(e.target.value))}
-                />
+                <Input id="royalties" type="number" min={0} step={0.01} value={royalties} onChange={e => setRoyalties(Number(e.target.value))} />
               </div>
             </div>
             
@@ -467,21 +384,17 @@ export const KeywordDetailPanel = ({
                   </Tooltip>
                 </TooltipProvider>
               </div>
-              <Select value={trafficSource} onValueChange={(v) => setTrafficSource(v as TrafficSource)}>
+              <Select value={trafficSource} onValueChange={v => setTrafficSource(v as TrafficSource)}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {TRAFFIC_SOURCE_OPTIONS.map((opt) => (
-                    <SelectItem key={opt.value} value={opt.value}>
+                  {TRAFFIC_SOURCE_OPTIONS.map(opt => <SelectItem key={opt.value} value={opt.value}>
                       <div className="flex items-center gap-2">
                         <Badge variant="outline" className={opt.color}>{opt.label}</Badge>
-                        {opt.penalty !== 0 && (
-                          <span className="text-xs text-muted-foreground">({opt.penalty})</span>
-                        )}
+                        {opt.penalty !== 0 && <span className="text-xs text-muted-foreground">({opt.penalty})</span>}
                       </div>
-                    </SelectItem>
-                  ))}
+                    </SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
@@ -501,17 +414,12 @@ export const KeywordDetailPanel = ({
             </div>
             
             <div className="grid grid-cols-2 gap-2">
-              {MARKET_STRUCTURE_CHECKS.map((check) => (
-                <div key={check.id} className="flex items-center justify-between p-2 rounded bg-muted/30">
+              {MARKET_STRUCTURE_CHECKS.map(check => <div key={check.id} className="flex items-center justify-between p-2 rounded bg-muted/30">
                   <div className="flex items-center gap-2">
-                    <Checkbox
-                      id={check.id}
-                      checked={marketStructureChecks[check.id as keyof MarketStructure] ?? false}
-                      onCheckedChange={(checked) => setMarketStructureChecks({
-                        ...marketStructureChecks,
-                        [check.id]: checked === true,
-                      })}
-                    />
+                    <Checkbox id={check.id} checked={marketStructureChecks[check.id as keyof MarketStructure] ?? false} onCheckedChange={checked => setMarketStructureChecks({
+                  ...marketStructureChecks,
+                  [check.id]: checked === true
+                })} />
                     <TooltipProvider>
                       <Tooltip>
                         <TooltipTrigger asChild>
@@ -526,8 +434,7 @@ export const KeywordDetailPanel = ({
                     </TooltipProvider>
                   </div>
                   <span className="text-[10px] text-green-600 dark:text-green-400">+{check.points}</span>
-                </div>
-              ))}
+                </div>)}
             </div>
           </div>
 
@@ -561,22 +468,17 @@ export const KeywordDetailPanel = ({
                   </TooltipProvider>
                 </div>
                 <div className="flex items-center justify-between gap-4">
-                  <Select
-                    value={catalogSignalsChecks.booksOver200ReviewsRange ?? ''}
-                    onValueChange={(value) => setCatalogSignalsChecks({
-                      ...catalogSignalsChecks,
-                      booksOver200ReviewsRange: (value || null) as BooksOver200ReviewsRange,
-                    })}
-                  >
+                  <Select value={catalogSignalsChecks.booksOver200ReviewsRange ?? ''} onValueChange={value => setCatalogSignalsChecks({
+                  ...catalogSignalsChecks,
+                  booksOver200ReviewsRange: (value || null) as BooksOver200ReviewsRange
+                })}>
                     <SelectTrigger className="w-40 h-8 text-sm">
                       <SelectValue placeholder="Seleccionar..." />
                     </SelectTrigger>
                     <SelectContent>
-                      {BOOKS_OVER_200_REVIEWS_OPTIONS.map((option) => (
-                        <SelectItem key={option.value} value={option.value}>
+                      {BOOKS_OVER_200_REVIEWS_OPTIONS.map(option => <SelectItem key={option.value} value={option.value}>
                           {option.label}
-                        </SelectItem>
-                      ))}
+                        </SelectItem>)}
                     </SelectContent>
                   </Select>
                   <span className="text-xs text-green-600 dark:text-green-400">
@@ -588,11 +490,7 @@ export const KeywordDetailPanel = ({
               {/* Métrica automática: Menos de 3000 resultados */}
               <div className="flex items-center justify-between p-2 rounded bg-muted/30 opacity-75">
                 <div className="flex items-center gap-2">
-                  <Checkbox
-                    id="autoLowCompetition"
-                    checked={(competitors ?? 0) < 3000}
-                    disabled
-                  />
+                  <Checkbox id="autoLowCompetition" checked={(competitors ?? 0) < 3000} disabled />
                   <TooltipProvider>
                     <Tooltip>
                       <TooltipTrigger asChild>
@@ -611,17 +509,12 @@ export const KeywordDetailPanel = ({
               </div>
               
               {/* Checks booleanos restantes (solo los NO autoCalculados) */}
-              {CATALOG_SIGNALS_CHECKS.filter(check => !(check as any).autoCalculated).map((check) => (
-                <div key={check.id} className="flex items-center justify-between p-2 rounded bg-muted/30">
+              {CATALOG_SIGNALS_CHECKS.filter(check => !(check as any).autoCalculated).map(check => <div key={check.id} className="flex items-center justify-between p-2 rounded bg-muted/30">
                   <div className="flex items-center gap-2">
-                    <Checkbox
-                      id={check.id}
-                      checked={(catalogSignalsChecks[check.id as keyof CatalogSignals] as boolean) ?? false}
-                      onCheckedChange={(checked) => setCatalogSignalsChecks({
-                        ...catalogSignalsChecks,
-                        [check.id]: checked === true,
-                      })}
-                    />
+                    <Checkbox id={check.id} checked={catalogSignalsChecks[check.id as keyof CatalogSignals] as boolean ?? false} onCheckedChange={checked => setCatalogSignalsChecks({
+                  ...catalogSignalsChecks,
+                  [check.id]: checked === true
+                })} />
                     <TooltipProvider>
                       <Tooltip>
                         <TooltipTrigger asChild>
@@ -636,8 +529,7 @@ export const KeywordDetailPanel = ({
                     </TooltipProvider>
                   </div>
                   <span className="text-xs text-green-600 dark:text-green-400">+{check.points}</span>
-                </div>
-              ))}
+                </div>)}
             </div>
           </div>
 
@@ -659,32 +551,20 @@ export const KeywordDetailPanel = ({
             </p>
             
             <div className="space-y-2">
-              {EDITORIAL_CHECKS.map((check) => (
-                <div key={check.id} className="flex items-center space-x-3 p-2 rounded bg-muted/30">
-                  <Checkbox
-                    id={check.id}
-                    checked={editorialChecks[check.id] === true}
-                    onCheckedChange={(checked) => setEditorialChecks({
-                      ...editorialChecks,
-                      [check.id]: checked === true,
-                    })}
-                  />
+              {EDITORIAL_CHECKS.map(check => <div key={check.id} className="flex items-center space-x-3 p-2 rounded bg-muted/30">
+                  <Checkbox id={check.id} checked={editorialChecks[check.id] === true} onCheckedChange={checked => setEditorialChecks({
+                ...editorialChecks,
+                [check.id]: checked === true
+              })} />
                   <Label htmlFor={check.id} className="cursor-pointer text-sm">
                     {check.label}
                   </Label>
-                </div>
-              ))}
+                </div>)}
             </div>
             
             <div className="space-y-2">
               <Label htmlFor="editorialNotes">Notas editoriales</Label>
-              <Textarea
-                id="editorialNotes"
-                value={editorialNotes}
-                onChange={(e) => setEditorialNotes(e.target.value)}
-                placeholder="Observaciones para decisión editorial..."
-                rows={3}
-              />
+              <Textarea id="editorialNotes" value={editorialNotes} onChange={e => setEditorialNotes(e.target.value)} placeholder="Observaciones para decisión editorial..." rows={3} />
             </div>
           </div>
 
@@ -698,46 +578,29 @@ export const KeywordDetailPanel = ({
             
             <div className="space-y-2">
               <Label htmlFor="notes">Notas generales</Label>
-              <Textarea
-                id="notes"
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                placeholder="Notas adicionales sobre esta keyword..."
-                rows={3}
-              />
+              <Textarea id="notes" value={notes} onChange={e => setNotes(e.target.value)} placeholder="Notas adicionales sobre esta keyword..." rows={3} />
             </div>
             
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <Label>Estado</Label>
-                {statusManuallySet && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={handleResetToAutoStatus}
-                    className="text-xs text-muted-foreground gap-1"
-                  >
+                {statusManuallySet && <Button variant="ghost" size="sm" onClick={handleResetToAutoStatus} className="text-xs text-muted-foreground gap-1">
                     <Sparkles className="w-3 h-3" />
                     Volver a automático
-                  </Button>
-                )}
+                  </Button>}
               </div>
               <Select value={status} onValueChange={handleStatusChange}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {KEYWORD_STATUS_OPTIONS.map((opt) => (
-                    <SelectItem key={opt.value} value={opt.value}>
+                  {KEYWORD_STATUS_OPTIONS.map(opt => <SelectItem key={opt.value} value={opt.value}>
                       <Badge variant="outline" className={opt.color}>{opt.label}</Badge>
-                    </SelectItem>
-                  ))}
+                    </SelectItem>)}
                 </SelectContent>
               </Select>
               <p className="text-xs text-muted-foreground">
-                {statusManuallySet 
-                  ? 'Estado establecido manualmente.' 
-                  : `Estado automático basado en Market Score (${autoStatus}).`}
+                {statusManuallySet ? 'Estado establecido manualmente.' : `Estado automático basado en Market Score (${autoStatus}).`}
               </p>
             </div>
           </div>
@@ -755,6 +618,5 @@ export const KeywordDetailPanel = ({
           </Button>
         </div>
       </SheetContent>
-    </Sheet>
-  );
+    </Sheet>;
 };
