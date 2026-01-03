@@ -5,6 +5,7 @@ import type {
   AdvertisingCategory, 
   BookInfo,
   CampaignPlan,
+  BookEconomy,
 } from '@/types/advertising';
 
 const STORAGE_VERSION = 2;
@@ -18,11 +19,18 @@ export function getAdResearchStorageKey(bookId?: string): string {
 
 const DEBOUNCE_MS = 400;
 
+// Default book economy
+export const DEFAULT_BOOK_ECONOMY: BookEconomy = {
+  precioLibro: 0,
+  regaliasPorVenta: 0,
+};
+
 export interface PersistedStateV1 {
   version: 2;
   selectedMarketplace: string;
   activeTab: 'keywords' | 'asins' | 'categories';
   bookInfo: BookInfo;
+  bookEconomy: BookEconomy;
   keywordsByMarket: Record<string, Keyword[]>;
   asinsByMarket: Record<string, TargetASIN[]>;
   categoriesByMarket: Record<string, AdvertisingCategory[]>;
@@ -150,6 +158,7 @@ export interface UsePersistenceOptions {
   selectedMarketplace: string;
   activeTab: 'keywords' | 'asins' | 'categories';
   bookInfo: BookInfo;
+  bookEconomy: BookEconomy;
   keywordsByMarket: Record<string, Keyword[]>;
   asinsByMarket: Record<string, TargetASIN[]>;
   categoriesByMarket: Record<string, AdvertisingCategory[]>;
@@ -195,6 +204,7 @@ export function usePersistence(
       selectedMarketplace: stateRef.current.selectedMarketplace,
       activeTab: stateRef.current.activeTab,
       bookInfo: stateRef.current.bookInfo,
+      bookEconomy: stateRef.current.bookEconomy,
       keywordsByMarket: stateRef.current.keywordsByMarket,
       asinsByMarket: stateRef.current.asinsByMarket,
       categoriesByMarket: stateRef.current.categoriesByMarket,
@@ -218,6 +228,7 @@ export function usePersistence(
         selectedMarketplace: state.selectedMarketplace,
         activeTab: state.activeTab,
         bookInfo: state.bookInfo,
+        bookEconomy: state.bookEconomy,
         keywordsByMarket: state.keywordsByMarket,
         asinsByMarket: state.asinsByMarket,
         categoriesByMarket: state.categoriesByMarket,
@@ -238,6 +249,7 @@ export function usePersistence(
     state.selectedMarketplace,
     state.activeTab,
     state.bookInfo,
+    state.bookEconomy,
     state.keywordsByMarket,
     state.asinsByMarket,
     state.categoriesByMarket,
