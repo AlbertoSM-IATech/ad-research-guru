@@ -7,27 +7,40 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Separator } from '@/components/ui/separator';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
-import { Info, Save, RotateCcw, Sparkles } from 'lucide-react';
-import type { Keyword } from '@/types/advertising';
+import { Info, Save, RotateCcw, Sparkles, BookOpen, Megaphone, Maximize2, Minimize2 } from 'lucide-react';
+import type { Keyword, BookEconomy, AdsData } from '@/types/advertising';
 import { getAutoStatusFromScore } from '@/lib/keyword-builder';
 import { type MarketData, type MarketStructure, type CatalogSignals, type EditorialData, type TrafficSource, type KeywordStatus, type BooksOver200ReviewsRange, calculateMarketScore, calculateEditorialScore, getDefaultMarketData, getDefaultEditorialData, getDefaultMarketStructure, getDefaultCatalogSignals, getMarketScoreInfo, getBooksOver200ReviewsPoints, TRAFFIC_SOURCE_OPTIONS, KEYWORD_STATUS_OPTIONS, MARKET_STRUCTURE_CHECKS, CATALOG_SIGNALS_CHECKS, EDITORIAL_CHECKS, BOOKS_OVER_200_REVIEWS_OPTIONS, BOOKS_OVER_200_REVIEWS_FIELD } from '@/lib/market-score';
+import { AcosEquilibrioSection } from './AcosEquilibrioSection';
+import { DEFAULT_BOOK_ECONOMY } from '@/hooks/useLocalPersistence';
+
 interface KeywordDetailPanelProps {
   keyword: Keyword | null;
   isOpen: boolean;
   onClose: () => void;
   onSave: (keywordId: string, updates: Partial<Keyword>) => void;
   marketplaceId?: string;
+  defaultTab?: 'nicho' | 'ads';
+  bookEconomy?: BookEconomy;
 }
+
 export const KeywordDetailPanel = ({
   keyword,
   isOpen,
   onClose,
   onSave,
-  marketplaceId = 'us'
+  marketplaceId = 'us',
+  defaultTab = 'nicho',
+  bookEconomy = DEFAULT_BOOK_ECONOMY,
 }: KeywordDetailPanelProps) => {
+  // Panel state
+  const [isExpanded, setIsExpanded] = useState(false);
+  const [activeTab, setActiveTab] = useState<'nicho' | 'ads'>(defaultTab);
+  
   // Market Data state
   const [searchVolume, setSearchVolume] = useState(0);
   const [competitors, setCompetitors] = useState(0);
@@ -47,6 +60,16 @@ export const KeywordDetailPanel = ({
   const [status, setStatus] = useState<KeywordStatus>('pending');
   const [statusManuallySet, setStatusManuallySet] = useState(false);
   const [notes, setNotes] = useState('');
+  
+  // Ads Data state
+  const [adsData, setAdsData] = useState<AdsData | undefined>(undefined);
+
+  // Reset tab when opening with defaultTab
+  useEffect(() => {
+    if (isOpen) {
+      setActiveTab(defaultTab);
+    }
+  }, [isOpen, defaultTab]);
 
   // Load keyword data when opening
   useEffect(() => {

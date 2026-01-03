@@ -23,15 +23,16 @@ import { AIAssistantDrawer } from './ai/AIAssistantDrawer';
 import { HeaderOverflowMenu } from './HeaderOverflowMenu';
 import { MarketConfigModal } from './MarketConfigModal';
 import { BackupImportModal } from './BackupImportModal';
+import { BookEconomyPanel } from './BookEconomyPanel';
 import { isAIDemoMode, toggleAIDemoMode } from '@/lib/ai-demo-service';
-import { loadPersistedState, usePersistence, getLastSyncAt, getAdResearchStorageKey, clearBookStorage } from '@/hooks/useLocalPersistence';
+import { loadPersistedState, usePersistence, getLastSyncAt, getAdResearchStorageKey, clearBookStorage, DEFAULT_BOOK_ECONOMY } from '@/hooks/useLocalPersistence';
 import { type BackupSummary } from './BackupImportModal';
 import { toast } from 'sonner';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { ChevronDown, TrendingUp } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { type Keyword, type TargetASIN, type AdvertisingCategory, type BookInfo, type CampaignPlan } from '@/types/advertising';
+import { type Keyword, type TargetASIN, type AdvertisingCategory, type BookInfo, type CampaignPlan, type BookEconomy } from '@/types/advertising';
 import { generateDemoKeywords, generateDemoASINs, generateDemoCategories } from '@/lib/demo-data-generator';
 import { createKeywordDefaults } from '@/lib/keyword-helpers';
 
@@ -149,6 +150,7 @@ export const AdvertisingResearch = ({
     description: '',
     categories: []
   });
+  const [bookEconomy, setBookEconomy] = useState<BookEconomy>(DEFAULT_BOOK_ECONOMY);
   const [keywordsByMarket, setKeywordsByMarket] = useState<Record<string, Keyword[]>>({});
   const [asinsByMarket, setAsinsByMarket] = useState<Record<string, TargetASIN[]>>({});
   const [categoriesByMarket, setCategoriesByMarket] = useState<Record<string, AdvertisingCategory[]>>({});
@@ -164,6 +166,7 @@ export const AdvertisingResearch = ({
       setSelectedMarketplace(persisted.selectedMarketplace);
       setActiveTab(persisted.activeTab);
       setBookInfo(persisted.bookInfo);
+      setBookEconomy(persisted.bookEconomy ?? DEFAULT_BOOK_ECONOMY);
       setKeywordsByMarket(persisted.keywordsByMarket);
       setAsinsByMarket(persisted.asinsByMarket);
       setCategoriesByMarket(persisted.categoriesByMarket);
@@ -205,7 +208,7 @@ export const AdvertisingResearch = ({
 
     // Increment pending changes count
     setPendingChangesCount(prev => prev + 1);
-  }, [hasHydrated, selectedMarketplace, activeTab, bookInfo, keywordsByMarket, asinsByMarket, categoriesByMarket, campaignPlansByMarket, showInsights]);
+  }, [hasHydrated, selectedMarketplace, activeTab, bookInfo, bookEconomy, keywordsByMarket, asinsByMarket, categoriesByMarket, campaignPlansByMarket, showInsights]);
 
   // ============= WARN BEFORE LEAVING WITH PENDING CHANGES =============
   useEffect(() => {
@@ -238,6 +241,7 @@ export const AdvertisingResearch = ({
     selectedMarketplace,
     activeTab,
     bookInfo,
+    bookEconomy,
     keywordsByMarket,
     asinsByMarket,
     categoriesByMarket,
@@ -915,8 +919,29 @@ export const AdvertisingResearch = ({
               </TabsTrigger>
             </TabsList>
 
-            <TabsContent value="keywords" className="mt-4">
-              <KeywordsSection keywords={globalFilter === 'all' || globalFilter === 'keywords' ? filteredKeywords : []} onAdd={handleAddKeyword} onAddBulk={handleAddBulkKeywords} onUpdate={handleUpdateKeyword} onDelete={handleDeleteKeyword} onDeleteBulk={handleDeleteBulkKeywords} onUpdateBulk={handleUpdateBulkKeywords} marketplaceId={selectedMarketplace} bookInfo={bookInfo} selectedIds={selection.keywords} onSelectedIdsChange={ids => setTabSelection('keywords', ids)} searchTerm={globalSearchTerm} onSearchTermChange={setGlobalSearchTerm} />
+            <TabsContent value="keywords" className="mt-4 space-y-4">
+              {/* Book Economy Panel - visible in Keywords tab */}
+              <BookEconomyPanel 
+                bookEconomy={bookEconomy} 
+                onBookEconomyChange={setBookEconomy} 
+              />
+              
+              <KeywordsSection 
+                keywords={globalFilter === 'all' || globalFilter === 'keywords' ? filteredKeywords : []} 
+                onAdd={handleAddKeyword} 
+                onAddBulk={handleAddBulkKeywords} 
+                onUpdate={handleUpdateKeyword} 
+                onDelete={handleDeleteKeyword} 
+                onDeleteBulk={handleDeleteBulkKeywords} 
+                onUpdateBulk={handleUpdateBulkKeywords} 
+                marketplaceId={selectedMarketplace} 
+                bookInfo={bookInfo} 
+                bookEconomy={bookEconomy}
+                selectedIds={selection.keywords} 
+                onSelectedIdsChange={ids => setTabSelection('keywords', ids)} 
+                searchTerm={globalSearchTerm} 
+                onSearchTermChange={setGlobalSearchTerm} 
+              />
             </TabsContent>
             <TabsContent value="asins" className="mt-4">
               <ASINSection asins={globalFilter === 'all' || globalFilter === 'asins' ? filteredASINs : []} keywords={currentKeywords} bookTitle={bookInfo.title} onAdd={handleAddASIN} onAddBulk={handleAddBulkASINs} onUpdate={handleUpdateASIN} onDelete={handleDeleteASIN} onDeleteBulk={handleDeleteBulkASINs} marketplaceId={selectedMarketplace} selectedIds={selection.asins} onSelectedIdsChange={ids => setTabSelection('asins', ids)} />

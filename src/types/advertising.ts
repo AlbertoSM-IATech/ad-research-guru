@@ -63,6 +63,33 @@ import type {
 // Re-export for convenience
 export type { MarketData, EditorialData, KeywordStatus, KeywordPurpose, MarketStructure, CatalogSignals };
 
+// ============ ADS DATA (per keyword, optional) ============
+export type AdsFase = 'lanzamiento' | 'dominio' | 'beneficio';
+
+export interface AdsData {
+  clicks?: number;        // int >= 0, acumulados
+  gasto?: number;         // >= 0, acumulado
+  cpcActual?: number;     // >= 0, CPC actual manual
+  pedidos?: number;       // int >= 0, acumulados
+  ventas?: number;        // >= 0, ventas atribuibles acumuladas
+  faseActual?: AdsFase;
+  guiaLanzamiento?: number; // %
+  guiaDominio?: number;     // %
+  guiaBeneficio?: number;   // %
+}
+
+// ============ BOOK ECONOMY (global per book) ============
+export interface BookEconomy {
+  precioLibro: number;       // >= 0
+  regaliasPorVenta: number;  // >= 0
+}
+
+export const ADS_FASE_OPTIONS: { value: AdsFase; label: string }[] = [
+  { value: 'lanzamiento', label: 'Lanzamiento' },
+  { value: 'dominio', label: 'Dominio' },
+  { value: 'beneficio', label: 'Beneficio' },
+];
+
 export interface Keyword {
   id: string;
   keyword: string;
@@ -107,6 +134,9 @@ export interface Keyword {
   history?: HistoryEntry[];
   estimatedBudget?: number;
   campaignPlanId?: string;
+  
+  // ============ ADS DATA (optional, manual) ============
+  adsData?: AdsData;
 }
 
 export interface TargetASIN {
