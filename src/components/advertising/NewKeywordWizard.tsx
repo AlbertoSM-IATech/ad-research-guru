@@ -38,9 +38,19 @@ import {
   ClipboardCheck,
   Info,
   Settings,
+  Megaphone,
+  SkipForward,
 } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import type { Keyword, BookInfo, IntentType } from '@/types/advertising';
+import type { Keyword, BookInfo, IntentType, AdsData, AdsFase, BookEconomy } from '@/types/advertising';
+import { ADS_FASE_OPTIONS } from '@/types/advertising';
+import {
+  calcularAcosActualPorcentaje,
+  calcularAcosSiguienteClickPorcentaje,
+  calcularConversionPorcentaje,
+  formatearPorcentaje,
+} from '@/lib/acosEquilibrio';
+import { DEFAULT_BOOK_ECONOMY } from '@/hooks/useLocalPersistence';
 import { INTENT_TYPES, classifyIntent, MARKETPLACES } from '@/types/advertising';
 import {
   KEYWORD_PURPOSE_OPTIONS,
@@ -133,13 +143,14 @@ interface NewKeywordWizardProps {
   onOpenExistingKeyword?: (keyword: Keyword) => void;
 }
 
-type WizardStep = 1 | 2 | 3 | 4;
+type WizardStep = 1 | 2 | 3 | 4 | 5;
 
 const STEPS = [
   { number: 1, title: 'Básico', icon: FileText },
   { number: 2, title: 'Mercado', icon: BarChart3 },
   { number: 3, title: 'Editorial', icon: Lightbulb },
-  { number: 4, title: 'Resumen', icon: ClipboardCheck },
+  { number: 4, title: 'Ads', icon: Megaphone },
+  { number: 5, title: 'Resumen', icon: ClipboardCheck },
 ] as const;
 
 // Tooltip component wrapper
@@ -186,6 +197,15 @@ export function NewKeywordWizard({
   const [configModalOpen, setConfigModalOpen] = useState(false);
   const [configVersion, setConfigVersion] = useState(0);
   
+  // ============ ADS DATA STATE (STEP 4) ============
+  const [adsData, setAdsData] = useState<AdsData | undefined>(undefined);
+  const [adsClicks, setAdsClicks] = useState<string>('');
+  const [adsGasto, setAdsGasto] = useState<string>('');
+  const [adsCpc, setAdsCpc] = useState<string>('');
+  const [adsPedidos, setAdsPedidos] = useState<string>('');
+  const [adsVentas, setAdsVentas] = useState<string>('');
+  const [adsFase, setAdsFase] = useState<AdsFase | undefined>(undefined);
+  
   // ============ RESET FUNCTION ============
   const resetWizard = useCallback(() => {
     setCurrentStep(1);
@@ -194,6 +214,13 @@ export function NewKeywordWizard({
     setStep3(getDefaultStep3Data());
     setEditorialChecks({});
     setStatus('pending');
+    setAdsData(undefined);
+    setAdsClicks('');
+    setAdsGasto('');
+    setAdsCpc('');
+    setAdsPedidos('');
+    setAdsVentas('');
+    setAdsFase(undefined);
   }, [marketplaceId]);
   
   // Reset when dialog opens with new initial keyword
@@ -205,6 +232,13 @@ export function NewKeywordWizard({
       setStep3(getDefaultStep3Data());
       setEditorialChecks({});
       setStatus('pending');
+      setAdsData(undefined);
+      setAdsClicks('');
+      setAdsGasto('');
+      setAdsCpc('');
+      setAdsPedidos('');
+      setAdsVentas('');
+      setAdsFase(undefined);
     }
   }, [open, initialKeyword, marketplaceId]);
   
@@ -281,7 +315,7 @@ export function NewKeywordWizard({
   
   // ============ NAVIGATION ============
   const handleNext = () => {
-    if (currentStep < 4) {
+    if (currentStep < 5) {
       setCurrentStep((prev) => (prev + 1) as WizardStep);
     }
   };
@@ -291,6 +325,39 @@ export function NewKeywordWizard({
       setCurrentStep((prev) => (prev - 1) as WizardStep);
     }
   };
+  
+  const handleSkipAdsStep = () => {
+    // Skip from step 4 (Ads) to step 5 (Summary)
+    setCurrentStep(5);
+  };
+  
+  // Build adsData from form fields (only if at least one field is filled)
+  const buildAdsDataFromForm = (): AdsData | undefined => {
+    const hasAnyData = adsClicks || adsGasto || adsCpc || adsPedidos || adsVentas || adsFase;
+    if (!hasAnyData) return undefined;
+    
+    const data: AdsData = {};
+    if (adsClicks) data.clicks = parseInt(adsClicks);
+    if (adsGasto) data.gasto = parseFloat(adsGasto);
+    if (adsCpc) data.cpcActual = parseFloat(adsCpc);
+    if (adsPedidos) data.pedidos = parseInt(adsPedidos);
+    if (adsVentas) data.ventas = parseFloat(adsVentas);
+    if (adsFase) data.faseActual = adsFase;
+    return data;
+  };
+  
+  // Preview calculations for Ads step
+  const previewAcosActual = useMemo(() => {
+    const g = adsGasto ? parseFloat(adsGasto) : undefined;
+    const v = adsVentas ? parseFloat(adsVentas) : undefined;
+    return calcularAcosActualPorcentaje(g, v);
+  }, [adsGasto, adsVentas]);
+  
+  const previewConversion = useMemo(() => {
+    const p = adsPedidos ? parseInt(adsPedidos) : undefined;
+    const c = adsClicks ? parseInt(adsClicks) : undefined;
+    return calcularConversionPorcentaje(p, c);
+  }, [adsPedidos, adsClicks]);
   
   const handleComplete = () => {
     if (hasDuplicate) return;
@@ -311,6 +378,9 @@ export function NewKeywordWizard({
       bookInfo,
     });
     
+    // Build adsData only if user filled something
+    const finalAdsData = buildAdsDataFromForm();
+    
     const now = new Date();
     const completeKeyword: Keyword = {
       ...keywordData,
@@ -318,6 +388,7 @@ export function NewKeywordWizard({
       status: status,
       createdAt: now,
       updatedAt: now,
+      adsData: finalAdsData,
     };
     
     onComplete(completeKeyword);
@@ -806,10 +877,11 @@ export function NewKeywordWizard({
                   <Button 
                     variant="outline" 
                     size="sm"
-                    onClick={() => setCurrentStep(4)}
-                    className="text-xs"
+                    onClick={() => setCurrentStep(5)}
+                    className="text-xs gap-1"
                   >
-                    Crear sin contexto →
+                    <SkipForward className="w-3 h-3" />
+                    Saltar a Resumen
                   </Button>
                 )}
               </div>
@@ -851,8 +923,176 @@ export function NewKeywordWizard({
             </div>
           )}
           
-          {/* ============ STEP 4: RESUMEN ============ */}
+          {/* ============ STEP 4: DATOS DE ADS (Opcional) ============ */}
           {currentStep === 4 && (
+            <div className="space-y-6">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-medium flex items-center gap-2">
+                  <Megaphone className="w-5 h-5" />
+                  Datos de Ads (opcional)
+                </h3>
+                {step1.purpose !== 'ads' && (
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={handleSkipAdsStep}
+                    className="text-xs gap-1"
+                  >
+                    <SkipForward className="w-3 h-3" />
+                    Saltar
+                  </Button>
+                )}
+              </div>
+              
+              <Alert className="border-primary/30 bg-primary/10">
+                <Megaphone className="h-4 w-4 text-primary" />
+                <AlertDescription className="text-foreground">
+                  {step1.purpose === 'ads' 
+                    ? 'Introduce los datos actuales de tus campañas para esta keyword.'
+                    : 'Puedes añadir datos de Ads ahora o hacerlo después desde la ficha de la keyword.'}
+                </AlertDescription>
+              </Alert>
+              
+              <div className="grid grid-cols-2 gap-4">
+                {/* Clicks */}
+                <div className="space-y-2">
+                  <Label htmlFor="wizard-ads-clicks">
+                    Clicks (acumulados)
+                    <FieldTooltip content="Clicks acumulados para calcular la conversión." />
+                  </Label>
+                  <Input
+                    id="wizard-ads-clicks"
+                    type="number"
+                    min={0}
+                    step={1}
+                    value={adsClicks}
+                    onChange={(e) => setAdsClicks(e.target.value)}
+                    placeholder="0"
+                  />
+                </div>
+                
+                {/* Gasto */}
+                <div className="space-y-2">
+                  <Label htmlFor="wizard-ads-gasto">
+                    Gasto (acumulado)
+                    <FieldTooltip content="Gasto acumulado de la keyword." />
+                  </Label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">$</span>
+                    <Input
+                      id="wizard-ads-gasto"
+                      type="number"
+                      min={0}
+                      step={0.01}
+                      value={adsGasto}
+                      onChange={(e) => setAdsGasto(e.target.value)}
+                      placeholder="0.00"
+                      className="pl-7"
+                    />
+                  </div>
+                </div>
+                
+                {/* CPC Actual */}
+                <div className="space-y-2">
+                  <Label htmlFor="wizard-ads-cpc">
+                    CPC (actual)
+                    <FieldTooltip content="CPC actual manual de Amazon Ads." />
+                  </Label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">$</span>
+                    <Input
+                      id="wizard-ads-cpc"
+                      type="number"
+                      min={0}
+                      step={0.01}
+                      value={adsCpc}
+                      onChange={(e) => setAdsCpc(e.target.value)}
+                      placeholder="0.00"
+                      className="pl-7"
+                    />
+                  </div>
+                </div>
+                
+                {/* Pedidos */}
+                <div className="space-y-2">
+                  <Label htmlFor="wizard-ads-pedidos">
+                    Pedidos (acumulados)
+                    <FieldTooltip content="Pedidos atribuibles acumulados." />
+                  </Label>
+                  <Input
+                    id="wizard-ads-pedidos"
+                    type="number"
+                    min={0}
+                    step={1}
+                    value={adsPedidos}
+                    onChange={(e) => setAdsPedidos(e.target.value)}
+                    placeholder="0"
+                  />
+                </div>
+                
+                {/* Ventas */}
+                <div className="space-y-2">
+                  <Label htmlFor="wizard-ads-ventas">
+                    Ventas (acumuladas)
+                    <FieldTooltip content="Ventas atribuibles acumuladas." />
+                  </Label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">$</span>
+                    <Input
+                      id="wizard-ads-ventas"
+                      type="number"
+                      min={0}
+                      step={0.01}
+                      value={adsVentas}
+                      onChange={(e) => setAdsVentas(e.target.value)}
+                      placeholder="0.00"
+                      className="pl-7"
+                    />
+                  </div>
+                </div>
+                
+                {/* Fase Actual */}
+                <div className="space-y-2">
+                  <Label>Fase actual</Label>
+                  <Select
+                    value={adsFase ?? ''}
+                    onValueChange={(value) => setAdsFase(value as AdsFase)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seleccionar..." />
+                    </SelectTrigger>
+                    <SelectContent className="bg-popover border-border">
+                      {ADS_FASE_OPTIONS.map((opt) => (
+                        <SelectItem key={opt.value} value={opt.value}>
+                          {opt.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              
+              {/* Mini-resumen de métricas calculadas */}
+              {(adsGasto || adsVentas || adsClicks || adsPedidos) && (
+                <div className="p-4 rounded-lg border border-border bg-muted/30 space-y-3">
+                  <h4 className="text-sm font-medium text-muted-foreground">Vista previa de métricas</h4>
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">ACOS Actual:</span>
+                      <span className="font-medium">{formatearPorcentaje(previewAcosActual)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Conversión:</span>
+                      <span className="font-medium">{formatearPorcentaje(previewConversion)}</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+          
+          {/* ============ STEP 5: RESUMEN ============ */}
+          {currentStep === 5 && (
             <div className="space-y-6">
               <h3 className="text-lg font-medium">Resumen</h3>
               
@@ -927,6 +1167,64 @@ export function NewKeywordWizard({
                 </div>
               )}
               
+              {/* C: Datos de Ads (if exists) */}
+              {buildAdsDataFromForm() && (
+                <div className="p-4 rounded-lg border border-border bg-muted/30 space-y-3">
+                  <h4 className="font-medium flex items-center gap-2">
+                    <Megaphone className="w-4 h-4" />
+                    Datos de Ads
+                  </h4>
+                  <div className="grid grid-cols-2 gap-2 text-sm">
+                    {adsClicks && (
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Clicks:</span>
+                        <span>{parseInt(adsClicks).toLocaleString()}</span>
+                      </div>
+                    )}
+                    {adsGasto && (
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Gasto:</span>
+                        <span>${parseFloat(adsGasto).toFixed(2)}</span>
+                      </div>
+                    )}
+                    {adsCpc && (
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">CPC:</span>
+                        <span>${parseFloat(adsCpc).toFixed(2)}</span>
+                      </div>
+                    )}
+                    {adsPedidos && (
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Pedidos:</span>
+                        <span>{parseInt(adsPedidos).toLocaleString()}</span>
+                      </div>
+                    )}
+                    {adsVentas && (
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Ventas:</span>
+                        <span>${parseFloat(adsVentas).toFixed(2)}</span>
+                      </div>
+                    )}
+                    {adsFase && (
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Fase:</span>
+                        <span>{ADS_FASE_OPTIONS.find(f => f.value === adsFase)?.label}</span>
+                      </div>
+                    )}
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 text-sm pt-2 border-t border-border">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">ACOS Actual:</span>
+                      <span className="font-medium">{formatearPorcentaje(previewAcosActual)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Conversión:</span>
+                      <span className="font-medium">{formatearPorcentaje(previewConversion)}</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+              
               {/* Metadata */}
               <div className="flex items-center gap-2 flex-wrap">
                 <Badge variant="outline">{KEYWORD_PURPOSE_OPTIONS.find(p => p.value === step1.purpose)?.label}</Badge>
@@ -957,7 +1255,7 @@ export function NewKeywordWizard({
             <Button variant="ghost" onClick={() => handleOpenChange(false)}>
               Cancelar
             </Button>
-            {currentStep < 4 ? (
+            {currentStep < 5 ? (
               <Button onClick={handleNext} disabled={currentStep === 1 && !canProceedStep1} className="gap-2">
                 Siguiente
                 <ArrowRight className="w-4 h-4" />
