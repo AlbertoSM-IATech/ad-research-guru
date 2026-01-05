@@ -18,6 +18,34 @@ export function calcularAcosEquilibrioPorcentaje(
 }
 
 /**
+ * Gasto acumulado (auto-calculado)
+ * gasto = clicks × cpcActual
+ */
+export function calcularGastoAcumulado(
+  clicks: number | undefined,
+  cpcActual: number | undefined
+): number | null {
+  if (clicks === undefined || cpcActual === undefined) {
+    return null;
+  }
+  return clicks * cpcActual;
+}
+
+/**
+ * Ventas acumuladas (auto-calculado)
+ * ventas = pedidos × precioLibro
+ */
+export function calcularVentasAcumuladas(
+  pedidos: number | undefined,
+  precioLibro: number | undefined
+): number | null {
+  if (pedidos === undefined || !precioLibro || precioLibro <= 0) {
+    return null;
+  }
+  return pedidos * precioLibro;
+}
+
+/**
  * ACOS Actual
  * ACOS_actual_% = (gasto / ventas) * 100
  */
@@ -75,39 +103,40 @@ export function calcularConversionPorcentaje(
 }
 
 /**
- * Beneficio actual
- * beneficioAhora = (regaliasPorVenta * pedidos) - gasto
+ * Beneficio actual (corregido)
+ * beneficioAhora = ventas - gasto
  */
 export function calcularBeneficioAhora(
-  regaliasPorVenta: number | undefined,
-  pedidos: number | undefined,
+  ventas: number | undefined,
   gasto: number | undefined
 ): number | null {
-  if (regaliasPorVenta === undefined || pedidos === undefined || gasto === undefined) {
+  if (ventas === undefined || gasto === undefined) {
     return null;
   }
-  return (regaliasPorVenta * pedidos) - gasto;
+  return ventas - gasto;
 }
 
 /**
- * Beneficio si el siguiente click genera 1 compra
- * beneficioSiguienteClick = (regaliasPorVenta * (pedidos + 1)) - (gasto + cpcActual)
+ * Beneficio si el siguiente click genera 1 compra (corregido)
+ * beneficioSiguienteClick = ((pedidos + 1) × precioLibro) - (gasto + cpcActual)
  */
 export function calcularBeneficioSiguienteClick(
-  regaliasPorVenta: number | undefined,
   pedidos: number | undefined,
+  precioLibro: number | undefined,
   gasto: number | undefined,
   cpcActual: number | undefined
 ): number | null {
   if (
-    regaliasPorVenta === undefined ||
     pedidos === undefined ||
+    !precioLibro || precioLibro <= 0 ||
     gasto === undefined ||
     cpcActual === undefined
   ) {
     return null;
   }
-  return (regaliasPorVenta * (pedidos + 1)) - (gasto + cpcActual);
+  const ventasSiguiente = (pedidos + 1) * precioLibro;
+  const gastoSiguiente = gasto + cpcActual;
+  return ventasSiguiente - gastoSiguiente;
 }
 
 /**
@@ -165,21 +194,22 @@ export function determinarAcosBadge(
 
 /**
  * Lista de datos faltantes para mostrar al usuario
+ * Actualizado: ahora solo se requiere clicks, cpcActual, pedidos (gasto y ventas se auto-calculan)
  */
 export function obtenerDatosFaltantes(
   precioLibro: number | undefined,
   regaliasPorVenta: number | undefined,
-  gasto: number | undefined,
-  ventas: number | undefined,
-  cpcActual: number | undefined
+  clicks: number | undefined,
+  cpcActual: number | undefined,
+  pedidos: number | undefined
 ): string[] {
   const faltantes: string[] = [];
   
   if (!precioLibro || precioLibro <= 0) faltantes.push('Precio del libro');
-  if (regaliasPorVenta === undefined) faltantes.push('Regalías');
-  if (gasto === undefined) faltantes.push('Gasto');
-  if (ventas === undefined) faltantes.push('Ventas');
+  if (regaliasPorVenta === undefined || regaliasPorVenta <= 0) faltantes.push('Regalías');
+  if (clicks === undefined) faltantes.push('Clicks');
   if (cpcActual === undefined) faltantes.push('CPC (actual)');
+  if (pedidos === undefined) faltantes.push('Pedidos');
   
   return faltantes;
 }
