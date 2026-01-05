@@ -1,16 +1,17 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Info, TrendingUp, TrendingDown, AlertCircle, CheckCircle2, Target } from 'lucide-react';
+import { Info, TrendingUp, TrendingDown, AlertCircle, CheckCircle2, Target, Calculator } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { AdsData, AdsFase, BookEconomy } from '@/types/advertising';
 import { ADS_FASE_OPTIONS } from '@/types/advertising';
 import {
   calcularAcosEquilibrioPorcentaje,
+  calcularGastoAcumulado,
+  calcularVentasAcumuladas,
   calcularAcosActualPorcentaje,
   calcularAcosSiguienteClickPorcentaje,
   calcularConversionPorcentaje,
@@ -36,12 +37,10 @@ export const AcosEquilibrioSection = ({
   onAdsDataChange,
   isExpanded = false,
 }: AcosEquilibrioSectionProps) => {
-  // Local state for inputs
+  // Local state for RELLENAR inputs (only clicks, cpcActual, pedidos, faseActual)
   const [clicks, setClicks] = useState<string>('');
-  const [gasto, setGasto] = useState<string>('');
   const [cpcActual, setCpcActual] = useState<string>('');
   const [pedidos, setPedidos] = useState<string>('');
-  const [ventas, setVentas] = useState<string>('');
   const [faseActual, setFaseActual] = useState<AdsFase | undefined>(undefined);
   const [guiaLanzamiento, setGuiaLanzamiento] = useState<string>('');
   const [guiaDominio, setGuiaDominio] = useState<string>('');
@@ -51,10 +50,8 @@ export const AcosEquilibrioSection = ({
   useEffect(() => {
     if (adsData) {
       setClicks(adsData.clicks?.toString() ?? '');
-      setGasto(adsData.gasto?.toString() ?? '');
       setCpcActual(adsData.cpcActual?.toString() ?? '');
       setPedidos(adsData.pedidos?.toString() ?? '');
-      setVentas(adsData.ventas?.toString() ?? '');
       setFaseActual(adsData.faseActual);
       setGuiaLanzamiento(adsData.guiaLanzamiento?.toString() ?? '');
       setGuiaDominio(adsData.guiaDominio?.toString() ?? '');
@@ -83,25 +80,36 @@ export const AcosEquilibrioSection = ({
     }
   };
 
-  // Calculations
+  // Auto-calculated values
+  const gastoCalculado = useMemo(() => 
+    calcularGastoAcumulado(adsData?.clicks, adsData?.cpcActual),
+    [adsData?.clicks, adsData?.cpcActual]
+  );
+
+  const ventasCalculadas = useMemo(() => 
+    calcularVentasAcumuladas(adsData?.pedidos, bookEconomy.precioLibro),
+    [adsData?.pedidos, bookEconomy.precioLibro]
+  );
+
+  // ACOS Calculations
   const acosEquilibrio = useMemo(() => 
     calcularAcosEquilibrioPorcentaje(bookEconomy.precioLibro, bookEconomy.regaliasPorVenta),
     [bookEconomy]
   );
 
   const acosActual = useMemo(() => 
-    calcularAcosActualPorcentaje(adsData?.gasto, adsData?.ventas),
-    [adsData?.gasto, adsData?.ventas]
+    calcularAcosActualPorcentaje(gastoCalculado ?? undefined, ventasCalculadas ?? undefined),
+    [gastoCalculado, ventasCalculadas]
   );
 
   const acosSiguiente = useMemo(() => 
     calcularAcosSiguienteClickPorcentaje(
-      adsData?.gasto, 
+      gastoCalculado ?? undefined, 
       adsData?.cpcActual, 
-      adsData?.ventas, 
+      ventasCalculadas ?? undefined, 
       bookEconomy.precioLibro
     ),
-    [adsData?.gasto, adsData?.cpcActual, adsData?.ventas, bookEconomy.precioLibro]
+    [gastoCalculado, adsData?.cpcActual, ventasCalculadas, bookEconomy.precioLibro]
   );
 
   const conversion = useMemo(() => 
@@ -109,19 +117,20 @@ export const AcosEquilibrioSection = ({
     [adsData?.pedidos, adsData?.clicks]
   );
 
+  // Beneficio = Ventas - Gasto (corrected)
   const beneficioAhora = useMemo(() => 
-    calcularBeneficioAhora(bookEconomy.regaliasPorVenta, adsData?.pedidos, adsData?.gasto),
-    [bookEconomy.regaliasPorVenta, adsData?.pedidos, adsData?.gasto]
+    calcularBeneficioAhora(ventasCalculadas ?? undefined, gastoCalculado ?? undefined),
+    [ventasCalculadas, gastoCalculado]
   );
 
   const beneficioSiguiente = useMemo(() => 
     calcularBeneficioSiguienteClick(
-      bookEconomy.regaliasPorVenta, 
-      adsData?.pedidos, 
-      adsData?.gasto, 
+      adsData?.pedidos,
+      bookEconomy.precioLibro,
+      gastoCalculado ?? undefined,
       adsData?.cpcActual
     ),
-    [bookEconomy.regaliasPorVenta, adsData?.pedidos, adsData?.gasto, adsData?.cpcActual]
+    [adsData?.pedidos, bookEconomy.precioLibro, gastoCalculado, adsData?.cpcActual]
   );
 
   const guiasPrecalculadas = useMemo(() => calcularGuiasFase(acosEquilibrio), [acosEquilibrio]);
@@ -135,9 +144,9 @@ export const AcosEquilibrioSection = ({
     obtenerDatosFaltantes(
       bookEconomy.precioLibro, 
       bookEconomy.regaliasPorVenta, 
-      adsData?.gasto, 
-      adsData?.ventas, 
-      adsData?.cpcActual
+      adsData?.clicks, 
+      adsData?.cpcActual,
+      adsData?.pedidos
     ),
     [bookEconomy, adsData]
   );
@@ -223,167 +232,118 @@ export const AcosEquilibrioSection = ({
         </div>
       </div>
 
-      {/* Inputs Grid */}
-      <div className={cn(
-        "grid gap-4",
-        isExpanded ? "grid-cols-2 lg:grid-cols-3" : "grid-cols-2"
-      )}>
-        {/* Clicks */}
-        <div className="space-y-1.5">
-          <Label htmlFor="ads-clicks" className="text-xs flex items-center gap-1">
-            Clicks (acumulados)
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Info className="w-3 h-3 text-muted-foreground cursor-help" />
-                </TooltipTrigger>
-                <TooltipContent>Clicks acumulados (dato manual) para calcular la conversión.</TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          </Label>
-          <Input
-            id="ads-clicks"
-            type="number"
-            min={0}
-            step={1}
-            value={clicks}
-            onChange={(e) => handleNumberChange('clicks', e.target.value, setClicks)}
-            placeholder="0"
-            className="h-9"
-          />
-        </div>
-
-        {/* Gasto */}
-        <div className="space-y-1.5">
-          <Label htmlFor="ads-gasto" className="text-xs flex items-center gap-1">
-            Gasto (acumulado)
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Info className="w-3 h-3 text-muted-foreground cursor-help" />
-                </TooltipTrigger>
-                <TooltipContent>Gasto acumulado de la keyword (dato manual).</TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          </Label>
-          <div className="relative">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">$</span>
+      {/* BLOQUE 1: RELLENAR */}
+      <div className="space-y-3">
+        <h4 className="text-xs font-medium text-muted-foreground uppercase flex items-center gap-2">
+          <Info className="w-3.5 h-3.5" />
+          Rellenar
+        </h4>
+        
+        <div className={cn(
+          "grid gap-4",
+          isExpanded ? "grid-cols-2 lg:grid-cols-4" : "grid-cols-2"
+        )}>
+          {/* Clicks */}
+          <div className="space-y-1.5">
+            <Label htmlFor="ads-clicks" className="text-xs flex items-center gap-1">
+              Clicks (acumulados)
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Info className="w-3 h-3 text-muted-foreground cursor-help" />
+                  </TooltipTrigger>
+                  <TooltipContent>Clicks acumulados (dato manual) para calcular la conversión.</TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </Label>
             <Input
-              id="ads-gasto"
+              id="ads-clicks"
               type="number"
               min={0}
-              step={0.01}
-              value={gasto}
-              onChange={(e) => handleNumberChange('gasto', e.target.value, setGasto)}
-              placeholder="0.00"
-              className="h-9 pl-7"
+              step={1}
+              value={clicks}
+              onChange={(e) => handleNumberChange('clicks', e.target.value, setClicks)}
+              placeholder="0"
+              className="h-9"
             />
           </div>
-        </div>
 
-        {/* CPC Actual */}
-        <div className="space-y-1.5">
-          <Label htmlFor="ads-cpc" className="text-xs flex items-center gap-1">
-            CPC (actual)
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Info className="w-3 h-3 text-muted-foreground cursor-help" />
-                </TooltipTrigger>
-                <TooltipContent>CPC actual manual (Amazon Ads); se usa para simular el coste del siguiente click.</TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          </Label>
-          <div className="relative">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">$</span>
+          {/* CPC Actual */}
+          <div className="space-y-1.5">
+            <Label htmlFor="ads-cpc" className="text-xs flex items-center gap-1">
+              CPC (actual)
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Info className="w-3 h-3 text-muted-foreground cursor-help" />
+                  </TooltipTrigger>
+                  <TooltipContent>CPC actual manual (Amazon Ads); se usa para simular el coste del siguiente click.</TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </Label>
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">$</span>
+              <Input
+                id="ads-cpc"
+                type="number"
+                min={0}
+                step={0.01}
+                value={cpcActual}
+                onChange={(e) => handleNumberChange('cpcActual', e.target.value, setCpcActual)}
+                placeholder="0.00"
+                className="h-9 pl-7"
+              />
+            </div>
+          </div>
+
+          {/* Pedidos */}
+          <div className="space-y-1.5">
+            <Label htmlFor="ads-pedidos" className="text-xs flex items-center gap-1">
+              Pedidos (acumulados)
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Info className="w-3 h-3 text-muted-foreground cursor-help" />
+                  </TooltipTrigger>
+                  <TooltipContent>Pedidos atribuibles acumulados (dato manual).</TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </Label>
             <Input
-              id="ads-cpc"
+              id="ads-pedidos"
               type="number"
               min={0}
-              step={0.01}
-              value={cpcActual}
-              onChange={(e) => handleNumberChange('cpcActual', e.target.value, setCpcActual)}
-              placeholder="0.00"
-              className="h-9 pl-7"
+              step={1}
+              value={pedidos}
+              onChange={(e) => handleNumberChange('pedidos', e.target.value, setPedidos)}
+              placeholder="0"
+              className="h-9"
             />
           </div>
-        </div>
 
-        {/* Pedidos */}
-        <div className="space-y-1.5">
-          <Label htmlFor="ads-pedidos" className="text-xs flex items-center gap-1">
-            Pedidos (acumulados)
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Info className="w-3 h-3 text-muted-foreground cursor-help" />
-                </TooltipTrigger>
-                <TooltipContent>Pedidos atribuibles acumulados (dato manual).</TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          </Label>
-          <Input
-            id="ads-pedidos"
-            type="number"
-            min={0}
-            step={1}
-            value={pedidos}
-            onChange={(e) => handleNumberChange('pedidos', e.target.value, setPedidos)}
-            placeholder="0"
-            className="h-9"
-          />
-        </div>
-
-        {/* Ventas */}
-        <div className="space-y-1.5">
-          <Label htmlFor="ads-ventas" className="text-xs flex items-center gap-1">
-            Ventas (acumuladas)
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Info className="w-3 h-3 text-muted-foreground cursor-help" />
-                </TooltipTrigger>
-                <TooltipContent>Ventas atribuibles acumuladas (dato manual).</TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          </Label>
-          <div className="relative">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">$</span>
-            <Input
-              id="ads-ventas"
-              type="number"
-              min={0}
-              step={0.01}
-              value={ventas}
-              onChange={(e) => handleNumberChange('ventas', e.target.value, setVentas)}
-              placeholder="0.00"
-              className="h-9 pl-7"
-            />
+          {/* Fase Actual */}
+          <div className="space-y-1.5">
+            <Label className="text-xs">Fase actual</Label>
+            <Select
+              value={faseActual ?? ''}
+              onValueChange={(value) => {
+                const fase = value as AdsFase;
+                setFaseActual(fase);
+                updateAdsData('faseActual', fase);
+              }}
+            >
+              <SelectTrigger className="h-9">
+                <SelectValue placeholder="Seleccionar..." />
+              </SelectTrigger>
+              <SelectContent>
+                {ADS_FASE_OPTIONS.map((opt) => (
+                  <SelectItem key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
-        </div>
-
-        {/* Fase Actual */}
-        <div className="space-y-1.5">
-          <Label className="text-xs">Fase actual</Label>
-          <Select
-            value={faseActual ?? ''}
-            onValueChange={(value) => {
-              const fase = value as AdsFase;
-              setFaseActual(fase);
-              updateAdsData('faseActual', fase);
-            }}
-          >
-            <SelectTrigger className="h-9">
-              <SelectValue placeholder="Seleccionar..." />
-            </SelectTrigger>
-            <SelectContent>
-              {ADS_FASE_OPTIONS.map((opt) => (
-                <SelectItem key={opt.value} value={opt.value}>
-                  {opt.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
         </div>
       </div>
 
@@ -450,19 +410,121 @@ export const AcosEquilibrioSection = ({
         </div>
       )}
 
-      {/* Resultados */}
+      {/* BLOQUE 2: RESULTADOS */}
       <div className="space-y-3">
-        <h4 className="text-xs font-medium text-muted-foreground uppercase">Resultados</h4>
+        <h4 className="text-xs font-medium text-muted-foreground uppercase flex items-center gap-2">
+          <Calculator className="w-3.5 h-3.5" />
+          Resultados (auto-calculados)
+        </h4>
         
         <div className={cn(
           "grid gap-3",
-          isExpanded ? "grid-cols-2 lg:grid-cols-3" : "grid-cols-2"
+          isExpanded ? "grid-cols-2 lg:grid-cols-4" : "grid-cols-2"
         )}>
-          {/* ACOS Equilibrio */}
+          {/* Gasto Acumulado (auto-calculado) */}
           <div className="p-3 rounded-lg border border-border bg-background space-y-1">
+            <Label className="text-[10px] text-muted-foreground uppercase flex items-center gap-1">
+              Gasto Acumulado
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Info className="w-2.5 h-2.5 cursor-help" />
+                  </TooltipTrigger>
+                  <TooltipContent>Clicks × CPC</TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </Label>
+            <p className="text-lg font-bold text-foreground">
+              {formatearMoneda(gastoCalculado)}
+            </p>
+            {gastoCalculado !== null && (
+              <p className="text-[10px] text-muted-foreground">
+                = {adsData?.clicks ?? 0} × ${adsData?.cpcActual?.toFixed(2) ?? '0.00'}
+              </p>
+            )}
+          </div>
+
+          {/* Ventas Acumuladas (auto-calculado) */}
+          <div className="p-3 rounded-lg border border-border bg-background space-y-1">
+            <Label className="text-[10px] text-muted-foreground uppercase flex items-center gap-1">
+              Ventas Acumuladas
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Info className="w-2.5 h-2.5 cursor-help" />
+                  </TooltipTrigger>
+                  <TooltipContent>Pedidos × PVP</TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </Label>
+            <p className="text-lg font-bold text-foreground">
+              {formatearMoneda(ventasCalculadas)}
+            </p>
+            {ventasCalculadas !== null && (
+              <p className="text-[10px] text-muted-foreground">
+                = {adsData?.pedidos ?? 0} × ${bookEconomy.precioLibro?.toFixed(2) ?? '0.00'}
+              </p>
+            )}
+          </div>
+
+          {/* Beneficio Ahora */}
+          <div className="p-3 rounded-lg border border-border bg-background space-y-1">
+            <Label className="text-[10px] text-muted-foreground uppercase flex items-center gap-1">
+              Beneficio Ahora
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Info className="w-2.5 h-2.5 cursor-help" />
+                  </TooltipTrigger>
+                  <TooltipContent>Ventas - Gasto</TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </Label>
+            <p className={cn(
+              "text-lg font-bold",
+              beneficioAhora !== null
+                ? beneficioAhora >= 0
+                  ? "text-green-600 dark:text-green-400"
+                  : "text-red-600 dark:text-red-400"
+                : "text-muted-foreground"
+            )}>
+              {formatearMoneda(beneficioAhora)}
+            </p>
+          </div>
+
+          {/* Beneficio Siguiente Click */}
+          <div className="p-3 rounded-lg border border-border bg-background space-y-1">
+            <Label className="text-[10px] text-muted-foreground uppercase flex items-center gap-1">
+              Beneficio Sig. Click
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Info className="w-2.5 h-2.5 cursor-help" />
+                  </TooltipTrigger>
+                  <TooltipContent>(Pedidos+1)×PVP - (Gasto+CPC)</TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </Label>
+            <p className={cn(
+              "text-lg font-bold",
+              beneficioSiguiente !== null
+                ? beneficioSiguiente >= 0
+                  ? "text-green-600 dark:text-green-400"
+                  : "text-amber-600 dark:text-amber-400"
+                : "text-muted-foreground"
+            )}>
+              {formatearMoneda(beneficioSiguiente)}
+            </p>
+          </div>
+
+          {/* ACOS Equilibrio */}
+          <div className="p-3 rounded-lg border-2 border-primary/30 bg-primary/5 space-y-1">
             <Label className="text-[10px] text-muted-foreground uppercase">ACOS Equilibrio (PE)</Label>
-            <p className="text-lg font-bold text-primary">
+            <p className="text-xl font-bold text-primary">
               {formatearPorcentaje(acosEquilibrio)}
+            </p>
+            <p className="text-[10px] text-muted-foreground">
+              Desde Economía del libro
             </p>
           </div>
 
@@ -479,13 +541,18 @@ export const AcosEquilibrioSection = ({
             )}>
               {formatearPorcentaje(acosActual)}
             </p>
+            {acosActual !== null && (
+              <p className="text-[10px] text-muted-foreground">
+                Gasto / Ventas
+              </p>
+            )}
           </div>
 
-          {/* ACOS Siguiente Click */}
-          <div className="p-3 rounded-lg border border-border bg-background space-y-1">
-            <Label className="text-[10px] text-muted-foreground uppercase">ACOS Sig. Click</Label>
+          {/* ACOS Siguiente Click - ÉNFASIS */}
+          <div className="p-3 rounded-lg border-2 border-amber-500/30 bg-amber-500/5 space-y-1">
+            <Label className="text-[10px] text-muted-foreground uppercase">ACOS Sig. Click ⭐</Label>
             <p className={cn(
-              "text-lg font-bold",
+              "text-xl font-bold",
               acosSiguiente !== null && acosEquilibrio !== null
                 ? acosSiguiente <= acosEquilibrio
                   ? "text-green-600 dark:text-green-400"
@@ -494,44 +561,22 @@ export const AcosEquilibrioSection = ({
             )}>
               {formatearPorcentaje(acosSiguiente)}
             </p>
+            <p className="text-[10px] text-muted-foreground">
+              Si 1 click = 1 venta
+            </p>
           </div>
 
-          {/* Conversión */}
-          <div className="p-3 rounded-lg border border-border bg-background space-y-1">
-            <Label className="text-[10px] text-muted-foreground uppercase">Conversión</Label>
-            <p className="text-lg font-bold text-foreground">
+          {/* Conversión - ÉNFASIS */}
+          <div className="p-3 rounded-lg border-2 border-blue-500/30 bg-blue-500/5 space-y-1">
+            <Label className="text-[10px] text-muted-foreground uppercase">Conversión ⭐</Label>
+            <p className="text-xl font-bold text-blue-600 dark:text-blue-400">
               {formatearPorcentaje(conversion)}
             </p>
-          </div>
-
-          {/* Beneficio Ahora */}
-          <div className="p-3 rounded-lg border border-border bg-background space-y-1">
-            <Label className="text-[10px] text-muted-foreground uppercase">Beneficio Ahora</Label>
-            <p className={cn(
-              "text-lg font-bold",
-              beneficioAhora !== null
-                ? beneficioAhora >= 0
-                  ? "text-green-600 dark:text-green-400"
-                  : "text-red-600 dark:text-red-400"
-                : "text-muted-foreground"
-            )}>
-              {formatearMoneda(beneficioAhora)}
-            </p>
-          </div>
-
-          {/* Beneficio Siguiente Click */}
-          <div className="p-3 rounded-lg border border-border bg-background space-y-1">
-            <Label className="text-[10px] text-muted-foreground uppercase">Beneficio Sig. Click</Label>
-            <p className={cn(
-              "text-lg font-bold",
-              beneficioSiguiente !== null
-                ? beneficioSiguiente >= 0
-                  ? "text-green-600 dark:text-green-400"
-                  : "text-amber-600 dark:text-amber-400"
-                : "text-muted-foreground"
-            )}>
-              {formatearMoneda(beneficioSiguiente)}
-            </p>
+            {conversion !== null && (
+              <p className="text-[10px] text-muted-foreground">
+                Pedidos / Clicks
+              </p>
+            )}
           </div>
         </div>
       </div>
