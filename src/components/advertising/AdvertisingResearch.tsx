@@ -938,6 +938,7 @@ export const AdvertisingResearch = ({
                 marketplaceId={selectedMarketplace} 
                 bookInfo={bookInfo} 
                 bookEconomy={bookEconomy}
+                onBookInfoChange={setBookInfo}
                 selectedIds={selection.keywords} 
                 onSelectedIdsChange={ids => setTabSelection('keywords', ids)} 
                 searchTerm={globalSearchTerm} 

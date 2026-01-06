@@ -19,6 +19,7 @@ export interface BookInfo {
   subtitle: string;
   description: string;
   categories: string[];
+  mainKeywordId?: string; // ID of the designated main keyword
 }
 
 // History entry for tracking changes
