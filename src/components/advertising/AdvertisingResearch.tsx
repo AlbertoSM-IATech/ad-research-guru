@@ -23,7 +23,7 @@ import { AIAssistantDrawer } from './ai/AIAssistantDrawer';
 import { HeaderOverflowMenu } from './HeaderOverflowMenu';
 import { MarketConfigModal } from './MarketConfigModal';
 import { BackupImportModal } from './BackupImportModal';
-import { BookEconomyPanel } from './BookEconomyPanel';
+
 import { isAIDemoMode, toggleAIDemoMode } from '@/lib/ai-demo-service';
 import { loadPersistedState, usePersistence, getLastSyncAt, getAdResearchStorageKey, clearBookStorage, DEFAULT_BOOK_ECONOMY } from '@/hooks/useLocalPersistence';
 import { type BackupSummary } from './BackupImportModal';
@@ -743,7 +743,7 @@ export const AdvertisingResearch = ({
       {/* Keyboard Shortcuts */}
       <KeyboardShortcutsManager onSave={handleSave} onSearch={handleFocusSearch} />
       
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <div className="w-full px-3 sm:px-4 lg:px-6 py-6">
         {/* === HEADER === Minimalista y profesional */}
         <header className="mb-6">
           <div className="flex items-center justify-between gap-4 flex-wrap">
@@ -873,7 +873,13 @@ export const AdvertisingResearch = ({
 
         {/* === SECCIÓN 1: CONTEXTO === Controlado por estado, sin DOM hacks */}
         {(isBookPanelOpen || !bookContextComplete) && <section className="mb-6">
-            <BookInfoPanel bookInfo={bookInfo} onChange={setBookInfo} />
+            <BookInfoPanel 
+              bookInfo={bookInfo} 
+              onChange={setBookInfo}
+              bookEconomy={bookEconomy}
+              onBookEconomyChange={setBookEconomy}
+              keywords={currentKeywords}
+            />
           </section>}
         
         {/* Context summary when complete and panel closed - Minimal */}
@@ -920,11 +926,6 @@ export const AdvertisingResearch = ({
             </TabsList>
 
             <TabsContent value="keywords" className="mt-4 space-y-4">
-              {/* Book Economy Panel - visible in Keywords tab */}
-              <BookEconomyPanel 
-                bookEconomy={bookEconomy} 
-                onBookEconomyChange={setBookEconomy} 
-              />
               
               <KeywordsSection 
                 keywords={globalFilter === 'all' || globalFilter === 'keywords' ? filteredKeywords : []} 
