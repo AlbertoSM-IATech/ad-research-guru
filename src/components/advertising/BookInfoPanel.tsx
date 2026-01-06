@@ -1,8 +1,6 @@
-import { Book, Info, DollarSign, Target } from 'lucide-react';
+import { Info, DollarSign, Star, TrendingUp, Users, Target } from 'lucide-react';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { InfoTooltip } from './InfoTooltip';
 import { type BookInfo, type BookEconomy, type Keyword } from '@/types/advertising';
 import {
   Collapsible,
@@ -14,6 +12,9 @@ import { ChevronDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Badge } from '@/components/ui/badge';
+import { calcularGastoAcumulado, calcularVentasAcumuladas, calcularAcosActualPorcentaje, calcularConversionPorcentaje, formatearPorcentaje, formatearMoneda } from '@/lib/acosEquilibrio';
+import { getKeywordMarketScore } from '@/lib/keyword-sorting';
+import { getMarketScoreInfo } from '@/lib/market-score';
 
 interface BookInfoPanelProps {
   bookInfo: BookInfo;
@@ -32,19 +33,43 @@ export const BookInfoPanel = ({
 }: BookInfoPanelProps) => {
   const [isOpen, setIsOpen] = useState(true);
 
-  // Determine main keyword (best Market Score with status 'valid')
+  // Get main keyword by ID
   const mainKeyword = useMemo(() => {
-    const validKeywords = keywords.filter(k => k.status === 'valid');
-    if (validKeywords.length === 0) return null;
-    return validKeywords.reduce((best, current) => 
-      (current.marketScore || 0) > (best.marketScore || 0) ? current : best
-    );
-  }, [keywords]);
+    if (!bookInfo.mainKeywordId) return null;
+    return keywords.find(k => k.id === bookInfo.mainKeywordId) || null;
+  }, [keywords, bookInfo.mainKeywordId]);
 
   // Calculate ACOS equilibrio
   const acosEquilibrio = bookEconomy && bookEconomy.precioLibro > 0
     ? (bookEconomy.regaliasPorVenta / bookEconomy.precioLibro) * 100
     : null;
+
+  // Calculate main keyword metrics
+  const mainKeywordMetrics = useMemo(() => {
+    if (!mainKeyword || !bookEconomy) return null;
+    
+    const ads = mainKeyword.adsData;
+    const score = getKeywordMarketScore(mainKeyword);
+    const scoreInfo = getMarketScoreInfo(score);
+    const gastoCalculado = calcularGastoAcumulado(ads?.clicks, ads?.cpcActual);
+    const ventasCalculadas = calcularVentasAcumuladas(ads?.pedidos, bookEconomy.precioLibro);
+    const acosActual = calcularAcosActualPorcentaje(gastoCalculado ?? undefined, ventasCalculadas ?? undefined);
+    const conversion = calcularConversionPorcentaje(ads?.pedidos, ads?.clicks);
+    
+    return {
+      score,
+      scoreInfo,
+      searchVolume: mainKeyword.searchVolume || 0,
+      competitors: mainKeyword.competitors || 0,
+      clicks: ads?.clicks,
+      cpc: ads?.cpcActual,
+      pedidos: ads?.pedidos,
+      gasto: gastoCalculado,
+      ventas: ventasCalculadas,
+      acosActual,
+      conversion
+    };
+  }, [mainKeyword, bookEconomy]);
 
   const handlePrecioChange = (value: string) => {
     if (!onBookEconomyChange || !bookEconomy) return;
@@ -70,12 +95,12 @@ export const BookInfoPanel = ({
         <CollapsibleTrigger className="w-full px-6 py-4 flex items-center justify-between hover:bg-muted/30 transition-colors">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-              <Book className="w-5 h-5 text-primary" />
+              <Target className="w-5 h-5 text-primary" />
             </div>
             <div className="text-left">
               <h3 className="font-heading font-semibold text-lg">Información</h3>
               <p className="text-sm text-muted-foreground">
-                {bookInfo.title || 'Define el título para clasificar keywords automáticamente'}
+                {mainKeyword ? mainKeyword.keyword : 'Selecciona una KW principal en la tabla (★)'}
               </p>
             </div>
           </div>
@@ -85,32 +110,101 @@ export const BookInfoPanel = ({
         <CollapsibleContent>
           <div className="px-6 pb-6 space-y-5 border-t border-border/50 pt-4">
             
-            {/* KW Principal destacada */}
-            {mainKeyword && (
-              <div className="p-3 bg-primary/5 rounded-lg border border-primary/20">
-                <div className="flex items-center gap-2 mb-2">
-                  <Target className="w-4 h-4 text-primary" />
+            {/* KW Principal con todos los datos */}
+            {mainKeyword && mainKeywordMetrics ? (
+              <div className="p-4 bg-amber-500/5 rounded-lg border border-amber-500/20">
+                <div className="flex items-center gap-2 mb-3">
+                  <Star className="w-4 h-4 text-amber-500 fill-amber-500" />
                   <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
                     KW Principal
                   </Label>
-                  <Badge variant="outline" className="text-xs">
-                    Score: {mainKeyword.marketScore || 0}
+                  <Badge className={cn('text-xs', mainKeywordMetrics.scoreInfo.bgColor, mainKeywordMetrics.scoreInfo.color)}>
+                    Score: {mainKeywordMetrics.score}
                   </Badge>
                 </div>
-                <div className="font-medium text-base">{mainKeyword.keyword}</div>
-                <div className="flex gap-4 mt-1 text-sm text-muted-foreground">
-                  <span>Vol: <strong className="text-foreground">{(mainKeyword.searchVolume || 0).toLocaleString()}</strong></span>
-                  <span>Comp: <strong className={cn(
-                    "text-foreground",
-                    (mainKeyword.competitors || 0) < 3000 ? "text-green-600 dark:text-green-400" : ""
-                  )}>{(mainKeyword.competitors || 0).toLocaleString()}</strong></span>
+                
+                <div className="font-semibold text-lg mb-3">{mainKeyword.keyword}</div>
+                
+                {/* Datos de mercado */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-3">
+                  <div className="p-2 bg-background/50 rounded border border-border/50">
+                    <div className="text-xs text-muted-foreground flex items-center gap-1">
+                      <TrendingUp className="w-3 h-3" />
+                      Volumen
+                    </div>
+                    <div className="font-mono font-medium">{mainKeywordMetrics.searchVolume.toLocaleString()}</div>
+                  </div>
+                  <div className="p-2 bg-background/50 rounded border border-border/50">
+                    <div className="text-xs text-muted-foreground flex items-center gap-1">
+                      <Users className="w-3 h-3" />
+                      Competidores
+                    </div>
+                    <div className={cn(
+                      "font-mono font-medium",
+                      mainKeywordMetrics.competitors < 3000 ? "text-green-600 dark:text-green-400" : ""
+                    )}>
+                      {mainKeywordMetrics.competitors.toLocaleString()}
+                    </div>
+                  </div>
+                  <div className="p-2 bg-background/50 rounded border border-border/50">
+                    <div className="text-xs text-muted-foreground">Clicks</div>
+                    <div className="font-mono font-medium">{mainKeywordMetrics.clicks ?? '—'}</div>
+                  </div>
+                  <div className="p-2 bg-background/50 rounded border border-border/50">
+                    <div className="text-xs text-muted-foreground">CPC</div>
+                    <div className="font-mono font-medium">{mainKeywordMetrics.cpc !== undefined ? `$${mainKeywordMetrics.cpc.toFixed(2)}` : '—'}</div>
+                  </div>
                 </div>
+                
+                {/* Métricas de Ads */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  <div className="p-2 bg-background/50 rounded border border-border/50">
+                    <div className="text-xs text-muted-foreground">Pedidos</div>
+                    <div className="font-mono font-medium">{mainKeywordMetrics.pedidos ?? '—'}</div>
+                  </div>
+                  <div className="p-2 bg-background/50 rounded border border-border/50">
+                    <div className="text-xs text-muted-foreground">Gasto</div>
+                    <div className="font-mono font-medium text-muted-foreground">{formatearMoneda(mainKeywordMetrics.gasto)}</div>
+                  </div>
+                  <div className="p-2 bg-background/50 rounded border border-border/50">
+                    <div className="text-xs text-muted-foreground">Ventas</div>
+                    <div className="font-mono font-medium text-muted-foreground">{formatearMoneda(mainKeywordMetrics.ventas)}</div>
+                  </div>
+                  <div className="p-2 bg-background/50 rounded border border-border/50">
+                    <div className="text-xs text-muted-foreground">ACOS Actual</div>
+                    <div className={cn(
+                      "font-mono font-medium",
+                      mainKeywordMetrics.acosActual !== null && acosEquilibrio !== null
+                        ? mainKeywordMetrics.acosActual <= acosEquilibrio
+                          ? 'text-green-600 dark:text-green-400'
+                          : 'text-red-600 dark:text-red-400'
+                        : 'text-muted-foreground'
+                    )}>
+                      {formatearPorcentaje(mainKeywordMetrics.acosActual)}
+                    </div>
+                  </div>
+                </div>
+                
+                {/* Conversión destacada */}
+                <div className="mt-3 p-2 bg-primary/5 rounded border border-primary/20 flex items-center justify-between">
+                  <span className="text-sm font-medium">Conversión</span>
+                  <span className="font-mono font-semibold text-primary">
+                    {formatearPorcentaje(mainKeywordMetrics.conversion)}
+                  </span>
+                </div>
+              </div>
+            ) : (
+              <div className="p-4 bg-muted/30 rounded-lg border border-dashed border-border text-center">
+                <Star className="w-8 h-8 text-muted-foreground/50 mx-auto mb-2" />
+                <p className="text-sm text-muted-foreground">
+                  Haz clic en ★ en la tabla para designar una keyword como principal
+                </p>
               </div>
             )}
 
             {/* Economía del libro (integrada) */}
             {bookEconomy && onBookEconomyChange && (
-              <div className="p-3 bg-muted/30 rounded-lg border border-border/50">
+              <div className="p-4 bg-muted/30 rounded-lg border border-border/50">
                 <div className="flex items-center gap-2 mb-3">
                   <DollarSign className="w-4 h-4 text-primary" />
                   <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
@@ -192,84 +286,6 @@ export const BookInfoPanel = ({
                 </div>
               </div>
             )}
-
-            {/* Contexto del libro */}
-            <div className="space-y-4">
-              <div className="flex items-center gap-2">
-                <Book className="w-4 h-4 text-muted-foreground" />
-                <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                  Contexto del Libro
-                </Label>
-              </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2">
-                    <Label htmlFor="book-title">Título del libro</Label>
-                    <InfoTooltip content="El título principal de tu libro. Se usa para calcular la relevancia de las keywords." />
-                  </div>
-                  <Input
-                    id="book-title"
-                    value={bookInfo.title}
-                    onChange={(e) => onChange({ ...bookInfo, title: e.target.value })}
-                    placeholder="Ej: Meditación para principiantes"
-                    className="bg-background"
-                  />
-                </div>
-                
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2">
-                    <Label htmlFor="book-subtitle">Subtítulo del libro</Label>
-                    <InfoTooltip content="El subtítulo que aparece en Amazon. Mejora la clasificación de relevancia." />
-                  </div>
-                  <Input
-                    id="book-subtitle"
-                    value={bookInfo.subtitle}
-                    onChange={(e) => onChange({ ...bookInfo, subtitle: e.target.value })}
-                    placeholder="Ej: Guía práctica de mindfulness"
-                    className="bg-background"
-                  />
-                </div>
-              </div>
-              
-              <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <Label htmlFor="book-description">Descripción (opcional)</Label>
-                  <InfoTooltip content="La descripción de tu libro. Se usa para identificar keywords con relevancia baja que aún aparecen en tu descripción." />
-                </div>
-                <Textarea
-                  id="book-description"
-                  value={bookInfo.description}
-                  onChange={(e) => onChange({ ...bookInfo, description: e.target.value })}
-                  placeholder="Pega aquí la descripción de tu libro..."
-                  rows={3}
-                  className="bg-background"
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <Label htmlFor="book-categories">Categorías (una por línea)</Label>
-                  <InfoTooltip content="Las categorías de Amazon donde está tu libro. Ayuda a identificar keywords relevantes del nicho." />
-                </div>
-                <Textarea
-                  id="book-categories"
-                  value={bookInfo.categories.join('\n')}
-                  onChange={(e) => onChange({ ...bookInfo, categories: e.target.value.split('\n').filter(c => c.trim()) })}
-                  placeholder="Libros > Autoayuda&#10;Libros > Salud y bienestar"
-                  rows={2}
-                  className="bg-background font-mono text-sm"
-                />
-              </div>
-            </div>
-            
-            <div className="flex items-start gap-2 p-3 rounded-lg bg-muted/50 text-sm text-muted-foreground">
-              <Info className="w-4 h-4 mt-0.5 shrink-0" />
-              <p>
-                Esta información se usa para clasificar automáticamente la <strong>relevancia</strong> de cada keyword 
-                respecto a tu libro. Las keywords que coincidan con el título serán marcadas como "Muy relevantes".
-              </p>
-            </div>
           </div>
         </CollapsibleContent>
       </Collapsible>

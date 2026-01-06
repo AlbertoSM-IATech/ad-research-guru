@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, useCallback } from 'react';
-import { Plus, Search, Trash2, ArrowUpDown, Upload, LayoutGrid, LayoutList, Eye, BookOpen, Megaphone, Info } from 'lucide-react';
+import { Plus, Search, Trash2, ArrowUpDown, Upload, LayoutGrid, LayoutList, Eye, BookOpen, Megaphone, Info, Star, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -40,6 +40,7 @@ interface KeywordsSectionProps {
   marketplaceId: string;
   bookInfo: BookInfo;
   bookEconomy: BookEconomy;
+  onBookInfoChange: (bookInfo: BookInfo) => void;
   // Lifted selection state
   selectedIds: Set<string>;
   onSelectedIdsChange: (ids: Set<string>) => void;
@@ -60,6 +61,7 @@ export const KeywordsSection = ({
   marketplaceId,
   bookInfo,
   bookEconomy,
+  onBookInfoChange,
   selectedIds,
   onSelectedIdsChange,
   searchTerm,
@@ -527,6 +529,11 @@ export const KeywordsSection = ({
                   <TableHead className="w-[40px]">
                     <Checkbox checked={selectedIds.size === filteredKeywords.length && filteredKeywords.length > 0} onCheckedChange={toggleSelectAll} />
                   </TableHead>
+                  <TableHead className="w-[40px]">
+                    <div className="flex items-center justify-center">
+                      <Star className="w-3.5 h-3.5 text-muted-foreground" />
+                    </div>
+                  </TableHead>
                   <TableHead className="cursor-pointer hover:text-foreground" onClick={() => handleSort('keyword')}>
                     <div className="flex items-center gap-1">
                       Keyword 
@@ -622,7 +629,7 @@ export const KeywordsSection = ({
               </TableHeader>
               <TableBody>
                 {paginatedKeywords.length === 0 ? <TableRow>
-                    <TableCell colSpan={functionalView === 'editorial' ? 6 : 11} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={functionalView === 'editorial' ? 7 : 12} className="text-center py-8 text-muted-foreground">
                       {keywords.length === 0 ? 'No hay keywords. Añade tu primera keyword o importa en lote.' : 'No se encontraron keywords con los filtros aplicados.'}
                     </TableCell>
                   </TableRow> : paginatedKeywords.map(keyword => {
@@ -658,12 +665,52 @@ export const KeywordsSection = ({
                 });
               };
               
-              return <TableRow key={keyword.id} className={cn('transition-colors', functionalView === 'editorial' ? getRowScoreClass(score) : 'hover:bg-muted/30')}>
+              // Check for data inconsistency: clicks < pedidos
+              const hasDataInconsistency = ads?.clicks !== undefined && ads?.pedidos !== undefined && ads.clicks < ads.pedidos;
+              const isMainKeyword = bookInfo.mainKeywordId === keyword.id;
+              
+              // Handle setting as main keyword
+              const handleSetMainKeyword = (e: React.MouseEvent) => {
+                e.stopPropagation();
+                onBookInfoChange({
+                  ...bookInfo,
+                  mainKeywordId: isMainKeyword ? undefined : keyword.id
+                });
+              };
+              
+              return <TableRow key={keyword.id} className={cn('transition-colors', functionalView === 'editorial' ? getRowScoreClass(score) : hasDataInconsistency ? 'bg-amber-500/10 hover:bg-amber-500/15' : 'hover:bg-muted/30')}>
                         <TableCell onClick={e => e.stopPropagation()}>
                           <Checkbox checked={selectedIds.has(keyword.id)} onCheckedChange={() => toggleSelect(keyword.id)} />
                         </TableCell>
+                        <TableCell onClick={e => e.stopPropagation()}>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={handleSetMainKeyword}
+                            className={cn(
+                              "h-7 w-7 p-0",
+                              isMainKeyword 
+                                ? "bg-amber-500/20 text-amber-600 hover:bg-amber-500/30" 
+                                : "text-muted-foreground hover:text-amber-600 hover:bg-amber-500/10"
+                            )}
+                          >
+                            <Star className={cn("w-4 h-4", isMainKeyword && "fill-current")} />
+                          </Button>
+                        </TableCell>
                         <TableCell>
                           <div className="flex items-center gap-2">
+                            {/* Data inconsistency warning */}
+                            {hasDataInconsistency && (
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <AlertTriangle className="w-4 h-4 text-amber-500 flex-shrink-0" />
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p className="font-medium">Datos inconsistentes</p>
+                                  <p className="text-xs text-muted-foreground">Clicks ({ads?.clicks}) &lt; Pedidos ({ads?.pedidos})</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            )}
                             {/* Primary action: Open detail panel */}
                             <Tooltip>
                               <TooltipTrigger asChild>
@@ -673,7 +720,10 @@ export const KeywordsSection = ({
                               </TooltipTrigger>
                               <TooltipContent>Abrir ficha de keyword</TooltipContent>
                             </Tooltip>
-                            <span className="font-medium cursor-pointer hover:text-primary transition-colors" onClick={() => setValidationKeyword(keyword)}>
+                            <span className={cn(
+                              "font-medium cursor-pointer hover:text-primary transition-colors",
+                              isMainKeyword && "text-amber-600 dark:text-amber-400"
+                            )} onClick={() => setValidationKeyword(keyword)}>
                               {keyword.keyword}
                             </span>
                           </div>
