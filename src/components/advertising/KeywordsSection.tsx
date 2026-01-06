@@ -110,6 +110,16 @@ export const KeywordsSection = ({
     }
   }, [isHydrated, persistedState]);
 
+  // Sync validationKeyword with updated keywords (for inline edits sync)
+  useEffect(() => {
+    if (validationKeyword) {
+      const updatedKeyword = keywords.find(k => k.id === validationKeyword.id);
+      if (updatedKeyword && updatedKeyword !== validationKeyword) {
+        setValidationKeyword(updatedKeyword);
+      }
+    }
+  }, [keywords, validationKeyword]);
+
   // Memoize callback to avoid infinite loops
   const stableOnSelectedIdsChange = useCallback(onSelectedIdsChange, [onSelectedIdsChange]);
 
@@ -558,59 +568,52 @@ export const KeywordsSection = ({
                     </>
                   ) : (
                     <>
-                      <TableHead className="cursor-pointer hover:text-foreground w-[80px]" onClick={() => handleSort('clicks')}>
+                      <TableHead className="w-[70px]">
+                        <div className="flex items-center gap-1">
+                          ACOS PE
+                          <InfoTooltip content="ACOS Punto de Equilibrio. Si ACOS actual supera este valor, pierdes dinero." />
+                        </div>
+                      </TableHead>
+                      <TableHead className="cursor-pointer hover:text-foreground w-[70px]" onClick={() => handleSort('clicks')}>
                         <div className="flex items-center gap-1">
                           Clicks
                           <ArrowUpDown className="w-3 h-3" />
-                          <InfoTooltip content="Clicks acumulados (dato manual)." />
                         </div>
                       </TableHead>
-                      <TableHead className="cursor-pointer hover:text-foreground w-[80px]" onClick={() => handleSort('cpc')}>
+                      <TableHead className="cursor-pointer hover:text-foreground w-[70px]" onClick={() => handleSort('cpc')}>
                         <div className="flex items-center gap-1">
                           CPC
                           <ArrowUpDown className="w-3 h-3" />
-                          <InfoTooltip content="CPC actual manual de Amazon Ads." />
                         </div>
                       </TableHead>
-                      <TableHead className="cursor-pointer hover:text-foreground w-[80px]" onClick={() => handleSort('pedidos')}>
+                      <TableHead className="cursor-pointer hover:text-foreground w-[70px]" onClick={() => handleSort('pedidos')}>
                         <div className="flex items-center gap-1">
                           Pedidos
                           <ArrowUpDown className="w-3 h-3" />
-                          <InfoTooltip content="Pedidos atribuibles acumulados." />
                         </div>
                       </TableHead>
-                      <TableHead className="cursor-pointer hover:text-foreground w-[80px]" onClick={() => handleSort('gasto')}>
+                      <TableHead className="cursor-pointer hover:text-foreground w-[70px]" onClick={() => handleSort('gasto')}>
                         <div className="flex items-center gap-1">
                           Gasto
                           <ArrowUpDown className="w-3 h-3" />
-                          <InfoTooltip content="Gasto = Clicks × CPC (auto-calculado)." />
                         </div>
                       </TableHead>
-                      <TableHead className="cursor-pointer hover:text-foreground w-[80px]" onClick={() => handleSort('ventas')}>
+                      <TableHead className="cursor-pointer hover:text-foreground w-[70px]" onClick={() => handleSort('ventas')}>
                         <div className="flex items-center gap-1">
                           Ventas
                           <ArrowUpDown className="w-3 h-3" />
-                          <InfoTooltip content="Ventas = Pedidos × PVP (auto-calculado)." />
                         </div>
                       </TableHead>
-                      <TableHead className="cursor-pointer hover:text-foreground w-[90px]" onClick={() => handleSort('acosActual')}>
+                      <TableHead className="cursor-pointer hover:text-foreground w-[80px]" onClick={() => handleSort('acosActual')}>
                         <div className="flex items-center gap-1">
-                          ACOS Act.
+                          ACOS
                           <ArrowUpDown className="w-3 h-3" />
-                          <InfoTooltip content="ACOS Actual = (Gasto / Ventas) × 100" />
                         </div>
                       </TableHead>
-                      <TableHead className="w-[90px]">
-                        <div className="flex items-center gap-1">
-                          ACOS Sig.
-                          <InfoTooltip content="ACOS si el siguiente click genera 1 venta." />
-                        </div>
-                      </TableHead>
-                      <TableHead className="cursor-pointer hover:text-foreground w-[80px]" onClick={() => handleSort('conversion')}>
+                      <TableHead className="cursor-pointer hover:text-foreground w-[70px]" onClick={() => handleSort('conversion')}>
                         <div className="flex items-center gap-1">
                           Conv.
                           <ArrowUpDown className="w-3 h-3" />
-                          <InfoTooltip content="Conversión = (Pedidos / Clicks) × 100" />
                         </div>
                       </TableHead>
                     </>
@@ -619,7 +622,7 @@ export const KeywordsSection = ({
               </TableHeader>
               <TableBody>
                 {paginatedKeywords.length === 0 ? <TableRow>
-                    <TableCell colSpan={functionalView === 'editorial' ? 6 : 12} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={functionalView === 'editorial' ? 6 : 11} className="text-center py-8 text-muted-foreground">
                       {keywords.length === 0 ? 'No hay keywords. Añade tu primera keyword o importa en lote.' : 'No se encontraron keywords con los filtros aplicados.'}
                     </TableCell>
                   </TableRow> : paginatedKeywords.map(keyword => {
@@ -704,6 +707,10 @@ export const KeywordsSection = ({
                           </>
                         ) : (
                           <>
+                            {/* ACOS Equilibrio (PE) - Read only reference */}
+                            <TableCell className="tabular-nums text-xs font-medium text-primary">
+                              {acosEquilibrio !== null ? `${acosEquilibrio.toFixed(1)}%` : '—'}
+                            </TableCell>
                             {/* Clicks - Inline editable */}
                             <TableCell onClick={e => e.stopPropagation()}>
                               <Input
@@ -712,24 +719,21 @@ export const KeywordsSection = ({
                                 step={1}
                                 value={ads?.clicks ?? ''}
                                 onChange={(e) => handleInlineAdsUpdate('clicks', e.target.value)}
-                                className="h-7 w-16 text-xs tabular-nums"
+                                className="h-7 w-14 text-xs tabular-nums"
                                 placeholder="—"
                               />
                             </TableCell>
                             {/* CPC - Inline editable */}
                             <TableCell onClick={e => e.stopPropagation()}>
-                              <div className="relative">
-                                <span className="absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground text-xs">$</span>
-                                <Input
-                                  type="number"
-                                  min={0}
-                                  step={0.01}
-                                  value={ads?.cpcActual ?? ''}
-                                  onChange={(e) => handleInlineAdsUpdate('cpcActual', e.target.value)}
-                                  className="h-7 w-20 text-xs tabular-nums pl-5"
-                                  placeholder="—"
-                                />
-                              </div>
+                              <Input
+                                type="number"
+                                min={0}
+                                step={0.01}
+                                value={ads?.cpcActual ?? ''}
+                                onChange={(e) => handleInlineAdsUpdate('cpcActual', e.target.value)}
+                                className="h-7 w-14 text-xs tabular-nums"
+                                placeholder="—"
+                              />
                             </TableCell>
                             {/* Pedidos - Inline editable */}
                             <TableCell onClick={e => e.stopPropagation()}>
@@ -739,20 +743,20 @@ export const KeywordsSection = ({
                                 step={1}
                                 value={ads?.pedidos ?? ''}
                                 onChange={(e) => handleInlineAdsUpdate('pedidos', e.target.value)}
-                                className="h-7 w-16 text-xs tabular-nums"
+                                className="h-7 w-14 text-xs tabular-nums"
                                 placeholder="—"
                               />
                             </TableCell>
                             {/* Gasto - Auto-calculated (read-only) */}
-                            <TableCell className="tabular-nums text-sm text-muted-foreground">
+                            <TableCell className="tabular-nums text-xs text-muted-foreground">
                               {formatearMoneda(gastoCalculado)}
                             </TableCell>
                             {/* Ventas - Auto-calculated (read-only) */}
-                            <TableCell className="tabular-nums text-sm text-muted-foreground">
+                            <TableCell className="tabular-nums text-xs text-muted-foreground">
                               {formatearMoneda(ventasCalculadas)}
                             </TableCell>
                             {/* ACOS Actual */}
-                            <TableCell className="tabular-nums text-sm">
+                            <TableCell className="tabular-nums text-xs">
                               <span className={cn(
                                 acosActual !== null && acosEquilibrio !== null
                                   ? acosActual <= acosEquilibrio
@@ -763,20 +767,8 @@ export const KeywordsSection = ({
                                 {formatearPorcentaje(acosActual)}
                               </span>
                             </TableCell>
-                            {/* ACOS Siguiente Click */}
-                            <TableCell className="tabular-nums text-sm">
-                              <span className={cn(
-                                acosSiguiente !== null && acosEquilibrio !== null
-                                  ? acosSiguiente <= acosEquilibrio
-                                    ? 'text-green-600 dark:text-green-400'
-                                    : 'text-amber-600 dark:text-amber-400'
-                                  : 'text-muted-foreground'
-                              )}>
-                                {formatearPorcentaje(acosSiguiente)}
-                              </span>
-                            </TableCell>
                             {/* Conversión */}
-                            <TableCell className="tabular-nums text-sm text-muted-foreground">
+                            <TableCell className="tabular-nums text-xs text-muted-foreground">
                               {formatearPorcentaje(conversion)}
                             </TableCell>
                           </>
