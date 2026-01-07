@@ -154,6 +154,8 @@ export interface TargetASIN {
   amazonUrl?: string;
   threatScore?: number; // 0-100
   sharedKeywords?: number; // count of keywords in common
+  // Links field for storing URLs
+  links?: string[];
 }
 
 export interface AdvertisingCategory {

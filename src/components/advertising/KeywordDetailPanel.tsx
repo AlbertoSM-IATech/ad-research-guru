@@ -257,46 +257,42 @@ export const KeywordDetailPanel = ({
         "w-full overflow-y-auto transition-all duration-300",
         isExpanded ? "sm:max-w-4xl" : "sm:max-w-xl"
       )}>
-          <SheetHeader className="flex flex-col gap-2 pr-8">
-            <div className="flex flex-row items-center justify-between">
-              <SheetTitle className="text-lg font-semibold truncate flex-1">
-                {keywordText || keyword.keyword}
-              </SheetTitle>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setIsExpanded(!isExpanded)}
-                className="gap-1 text-xs"
-              >
-            variant="ghost"
-            size="sm"
-            onClick={() => setIsExpanded(!isExpanded)}
-            className="gap-1 text-xs"
-          >
-            {isExpanded ? (
-              <>
-                <Minimize2 className="w-4 h-4" />
-                Contraer
-              </>
-            ) : (
-              <>
-                <Maximize2 className="w-4 h-4" />
-                Expandir
-              </>
-            )}
-            </div>
+        <SheetHeader className="flex flex-col gap-2 pr-8">
+          <div className="flex flex-row items-center justify-between">
+            <SheetTitle className="text-lg font-semibold truncate flex-1">
+              {keywordText || keyword.keyword}
+            </SheetTitle>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setIsExpanded(!isExpanded)}
+              className="gap-1 text-xs"
+            >
+              {isExpanded ? (
+                <>
+                  <Minimize2 className="w-4 h-4" />
+                  Contraer
+                </>
+              ) : (
+                <>
+                  <Maximize2 className="w-4 h-4" />
+                  Expandir
+                </>
+              )}
+            </Button>
+          </div>
 
-            {/* Edit keyword */}
-            <div className="space-y-2">
-              <Label htmlFor="keywordText">Keyword</Label>
-              <Input
-                id="keywordText"
-                value={keywordText}
-                onChange={(e) => setKeywordText(e.target.value)}
-                placeholder="Escribe la keyword…"
-              />
-            </div>
-          </SheetHeader>
+          {/* Edit keyword */}
+          <div className="space-y-2">
+            <Label htmlFor="keywordText">Keyword</Label>
+            <Input
+              id="keywordText"
+              value={keywordText}
+              onChange={(e) => setKeywordText(e.target.value)}
+              placeholder="Escribe la keyword…"
+            />
+          </div>
+        </SheetHeader>
 
         {/* Tabs Nicho / Ads */}
         <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'nicho' | 'ads')} className="mt-4">

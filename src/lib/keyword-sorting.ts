@@ -19,7 +19,8 @@ export type SortField =
   | 'ventas'
   | 'pedidos'
   | 'acosActual'
-  | 'conversion';
+  | 'conversion'
+  | 'beneficio';
   
 export type SortOrder = 'asc' | 'desc';
 
@@ -57,6 +58,8 @@ export const SORT_OPTIONS: SortOption[] = [
   { field: 'acosActual', order: 'desc', label: 'ACOS Actual (mayor primero)' },
   { field: 'conversion', order: 'desc', label: 'Conversión (mayor primero)' },
   { field: 'conversion', order: 'asc', label: 'Conversión (menor primero)' },
+  { field: 'beneficio', order: 'desc', label: 'Beneficio (mayor primero)' },
+  { field: 'beneficio', order: 'asc', label: 'Beneficio (menor primero)' },
 ];
 
 // Get the market score for a keyword (uses cached value or calculates)
@@ -90,31 +93,37 @@ export function isMarketDataIncomplete(keyword: Keyword): boolean {
 }
 
 // Helper to get calculated ads values for sorting
-function getAdsValue(keyword: Keyword, field: 'gasto' | 'ventas' | 'acosActual' | 'conversion', precioLibro?: number): number {
+function getAdsValue(keyword: Keyword, field: 'gasto' | 'ventas' | 'acosActual' | 'conversion' | 'beneficio', precioLibro?: number): number {
   const ads = keyword.adsData;
-  if (!ads) return -1;
+  if (!ads) return -Infinity;
   
   switch (field) {
     case 'gasto': {
       const gasto = calcularGastoAcumulado(ads.clicks, ads.cpcActual);
-      return gasto ?? -1;
+      return gasto ?? -Infinity;
     }
     case 'ventas': {
       const ventas = calcularVentasAcumuladas(ads.pedidos, precioLibro);
-      return ventas ?? -1;
+      return ventas ?? -Infinity;
     }
     case 'acosActual': {
       const gasto = calcularGastoAcumulado(ads.clicks, ads.cpcActual);
       const ventas = calcularVentasAcumuladas(ads.pedidos, precioLibro);
       const acos = calcularAcosActualPorcentaje(gasto ?? undefined, ventas ?? undefined);
-      return acos ?? -1;
+      return acos ?? -Infinity;
     }
     case 'conversion': {
       const conv = calcularConversionPorcentaje(ads.pedidos, ads.clicks);
-      return conv ?? -1;
+      return conv ?? -Infinity;
+    }
+    case 'beneficio': {
+      const gasto = calcularGastoAcumulado(ads.clicks, ads.cpcActual);
+      const ventas = calcularVentasAcumuladas(ads.pedidos, precioLibro);
+      if (gasto === null || ventas === null) return -Infinity;
+      return ventas - gasto;
     }
     default:
-      return -1;
+      return -Infinity;
   }
 }
 
@@ -212,6 +221,10 @@ export function sortKeywords(
         
       case 'conversion':
         comparison = getAdsValue(a, 'conversion', precioLibro) - getAdsValue(b, 'conversion', precioLibro);
+        break;
+        
+      case 'beneficio':
+        comparison = getAdsValue(a, 'beneficio', precioLibro) - getAdsValue(b, 'beneficio', precioLibro);
         break;
         
       default:
