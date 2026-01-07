@@ -60,6 +60,9 @@ export const KeywordDetailPanel = ({
   const [status, setStatus] = useState<KeywordStatus>('pending');
   const [statusManuallySet, setStatusManuallySet] = useState(false);
   const [notes, setNotes] = useState('');
+
+  // Keyword text (editable)
+  const [keywordText, setKeywordText] = useState('');
   
   // Ads Data state
   const [adsData, setAdsData] = useState<AdsData | undefined>(undefined);
@@ -74,6 +77,9 @@ export const KeywordDetailPanel = ({
   // Load keyword data when opening
   useEffect(() => {
     if (keyword && isOpen) {
+      // Keyword text
+      setKeywordText(keyword.keyword || '');
+
       // Market data
       const md = keyword.marketData ?? getDefaultMarketData();
       setSearchVolume(keyword.searchVolume || md.searchVolume);
@@ -116,7 +122,7 @@ export const KeywordDetailPanel = ({
       setStatus(keyword.status || 'pending');
       setStatusManuallySet(keyword.statusManuallySet || false);
       setNotes(keyword.notes || '');
-      
+
       // Ads data
       setAdsData(keyword.adsData);
     }
@@ -156,6 +162,7 @@ export const KeywordDetailPanel = ({
     // Determine final status: if manually set, keep it; otherwise use auto
     const finalStatus = statusManuallySet ? status : autoStatus;
     const updates: Partial<Keyword> = {
+      keyword: keywordText.trim() || keyword.keyword,
       searchVolume,
       competitors,
       price,
@@ -250,11 +257,17 @@ export const KeywordDetailPanel = ({
         "w-full overflow-y-auto transition-all duration-300",
         isExpanded ? "sm:max-w-4xl" : "sm:max-w-xl"
       )}>
-        <SheetHeader className="flex flex-row items-center justify-between pr-8">
-          <SheetTitle className="text-lg font-semibold truncate flex-1">
-            {keyword.keyword}
-          </SheetTitle>
-          <Button
+          <SheetHeader className="flex flex-col gap-2 pr-8">
+            <div className="flex flex-row items-center justify-between">
+              <SheetTitle className="text-lg font-semibold truncate flex-1">
+                {keywordText || keyword.keyword}
+              </SheetTitle>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setIsExpanded(!isExpanded)}
+                className="gap-1 text-xs"
+              >
             variant="ghost"
             size="sm"
             onClick={() => setIsExpanded(!isExpanded)}
@@ -271,8 +284,19 @@ export const KeywordDetailPanel = ({
                 Expandir
               </>
             )}
-          </Button>
-        </SheetHeader>
+            </div>
+
+            {/* Edit keyword */}
+            <div className="space-y-2">
+              <Label htmlFor="keywordText">Keyword</Label>
+              <Input
+                id="keywordText"
+                value={keywordText}
+                onChange={(e) => setKeywordText(e.target.value)}
+                placeholder="Escribe la keyword…"
+              />
+            </div>
+          </SheetHeader>
 
         {/* Tabs Nicho / Ads */}
         <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'nicho' | 'ads')} className="mt-4">

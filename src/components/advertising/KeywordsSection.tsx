@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { InfoTooltip } from './InfoTooltip';
 import { InlineSelectBadge } from './InlineSelectBadge';
+import { InlineEditableCell } from './InlineEditableCell';
 import { BulkKeywordImport } from './BulkKeywordImport';
 import { BulkCopyTools } from './BulkCopyTools';
 import { BulkActionsToolbar } from './BulkActionsToolbar';
@@ -720,22 +721,54 @@ export const KeywordsSection = ({
                               </TooltipTrigger>
                               <TooltipContent>Abrir ficha de keyword</TooltipContent>
                             </Tooltip>
-                            <span className={cn(
-                              "font-medium cursor-pointer hover:text-primary transition-colors",
+                            <div className={cn(
                               isMainKeyword && "text-amber-600 dark:text-amber-400"
-                            )} onClick={() => setValidationKeyword(keyword)}>
-                              {keyword.keyword}
-                            </span>
+                            )}>
+                              <InlineEditableCell
+                                value={keyword.keyword}
+                                onSave={(value) => handleUpdateWithHistory(keyword.id, { keyword: String(value) })}
+                                placeholder="Keyword..."
+                                className={cn(
+                                  "font-medium",
+                                  isMainKeyword && "text-amber-600 dark:text-amber-400"
+                                )}
+                              />
+                            </div>
                           </div>
                         </TableCell>
-                        <TableCell className="tabular-nums text-sm">
-                          {(keyword.searchVolume || 0).toLocaleString()}
+                        <TableCell className="tabular-nums text-sm" onClick={e => e.stopPropagation()}>
+                          {functionalView === 'editorial' ? (
+                            <InlineEditableCell
+                              value={keyword.searchVolume || 0}
+                              type="number"
+                              min={0}
+                              onSave={(value) => handleUpdateWithHistory(keyword.id, { searchVolume: Number(value) })}
+                              formatter={(v) => Number(v || 0).toLocaleString()}
+                              className="text-sm"
+                            />
+                          ) : (
+                            (keyword.searchVolume || 0).toLocaleString()
+                          )}
                         </TableCell>
-                        <TableCell className="tabular-nums text-sm">
-                          <div className="flex items-center gap-2">
-                            <span className={cn("w-2 h-2 rounded-full flex-shrink-0", (keyword.competitors || 0) < 3000 ? "bg-green-500" : "bg-red-500")} />
-                            {(keyword.competitors || 0).toLocaleString()}
-                          </div>
+                        <TableCell className="tabular-nums text-sm" onClick={e => e.stopPropagation()}>
+                          {functionalView === 'editorial' ? (
+                            <div className="flex items-center gap-2">
+                              <span className={cn("w-2 h-2 rounded-full flex-shrink-0", (keyword.competitors || 0) < 3000 ? "bg-green-500" : "bg-red-500")} />
+                              <InlineEditableCell
+                                value={keyword.competitors || 0}
+                                type="number"
+                                min={0}
+                                onSave={(value) => handleUpdateWithHistory(keyword.id, { competitors: Number(value) })}
+                                formatter={(v) => Number(v || 0).toLocaleString()}
+                                className="text-sm"
+                              />
+                            </div>
+                          ) : (
+                            <div className="flex items-center gap-2">
+                              <span className={cn("w-2 h-2 rounded-full flex-shrink-0", (keyword.competitors || 0) < 3000 ? "bg-green-500" : "bg-red-500")} />
+                              {(keyword.competitors || 0).toLocaleString()}
+                            </div>
+                          )}
                         </TableCell>
                         
                         {/* Columnas específicas por vista */}
