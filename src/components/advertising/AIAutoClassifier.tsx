@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Sparkles, Loader2, Check, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -140,9 +140,12 @@ Responde SOLO con un JSON array válido.`,
   };
 
   // Effect to parse when response changes and loading stops
-  if (!isLoading && response && results.length === 0) {
-    parseResults();
-  }
+  useEffect(() => {
+    if (!isLoading && response && results.length === 0) {
+      parseResults();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isLoading, response]);
 
   const handleApplyResults = () => {
     if (results.length === 0) return;
