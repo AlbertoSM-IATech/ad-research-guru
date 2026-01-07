@@ -75,7 +75,7 @@ export const CompetitiveAnalysisPanel = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[900px] max-h-[90vh] overflow-y-auto bg-card border-border">
+      <DialogContent className="w-[90vw] max-w-none max-h-[90vh] overflow-y-auto bg-card border-border">
         <DialogHeader>
           <DialogTitle className="font-heading flex items-center gap-2">
             <Target className="w-5 h-5" />

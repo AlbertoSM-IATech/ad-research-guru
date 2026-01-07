@@ -20,6 +20,7 @@ import { VariantDetector } from './VariantDetector';
 import { KeywordDetailPanel } from './KeywordDetailPanel';
 import { MarketScoreCell } from './MarketScoreCell';
 import { NewKeywordWizard } from './NewKeywordWizard';
+import { KeywordExportCSV } from './KeywordExportCSV';
 import { type Keyword, type CampaignType, type CompetitionLevel, type RelevanceLevel, type IntentType, type KeywordState, type BookInfo, type BookEconomy, type HistoryEntry, RELEVANCE_LEVELS, INTENT_TYPES, KEYWORD_STATES, calculateRelevance, classifyIntent } from '@/types/advertising';
 import { calculateMarketScore, getDefaultMarketData, KEYWORD_STATUS_OPTIONS, type KeywordStatus } from '@/lib/market-score';
 import { createKeywordDefaults } from '@/lib/keyword-helpers';
@@ -493,6 +494,7 @@ export const KeywordsSection = ({
             </Button>
           </div>
           <BulkCopyTools keywords={filteredKeywords} selectedIds={selectedIds} />
+          <KeywordExportCSV keywords={filteredKeywords} bookEconomy={bookEconomy} selectedIds={selectedIds} />
           <VariantDetector keywords={keywords} onGroupVariants={(groupId, keywordIds) => {
           keywordIds.forEach(id => {
             const kw = keywords.find(k => k.id === id);
@@ -624,13 +626,20 @@ export const KeywordsSection = ({
                           <ArrowUpDown className="w-3 h-3" />
                         </div>
                       </TableHead>
+                      <TableHead className="cursor-pointer hover:text-foreground w-[80px]" onClick={() => handleSort('beneficio')}>
+                        <div className="flex items-center gap-1">
+                          Beneficio
+                          <ArrowUpDown className="w-3 h-3" />
+                          <InfoTooltip content="Ventas - Gasto. Muestra la rentabilidad de cada keyword." />
+                        </div>
+                      </TableHead>
                     </>
                   )}
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {paginatedKeywords.length === 0 ? <TableRow>
-                    <TableCell colSpan={functionalView === 'editorial' ? 7 : 12} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={functionalView === 'editorial' ? 7 : 13} className="text-center py-8 text-muted-foreground">
                       {keywords.length === 0 ? 'No hay keywords. Añade tu primera keyword o importa en lote.' : 'No se encontraron keywords con los filtros aplicados.'}
                     </TableCell>
                   </TableRow> : paginatedKeywords.map(keyword => {
@@ -853,6 +862,20 @@ export const KeywordsSection = ({
                             {/* Conversión */}
                             <TableCell className="tabular-nums text-xs text-muted-foreground">
                               {formatearPorcentaje(conversion)}
+                            </TableCell>
+                            {/* Beneficio */}
+                            <TableCell className="tabular-nums text-xs">
+                              {(() => {
+                                const beneficio = gastoCalculado !== null && ventasCalculadas !== null
+                                  ? ventasCalculadas - gastoCalculado
+                                  : null;
+                                if (beneficio === null) return '—';
+                                return (
+                                  <span className={beneficio >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}>
+                                    {formatearMoneda(beneficio)}
+                                  </span>
+                                );
+                              })()}
                             </TableCell>
                           </>
                         )}

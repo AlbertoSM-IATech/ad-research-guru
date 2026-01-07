@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Plus, Trash2, Target, Search, Upload, Swords } from 'lucide-react';
+import { Plus, Trash2, Target, Search, Upload, Swords, Eye } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import {
   Table,
   TableBody,
@@ -17,6 +18,7 @@ import { InlineCampaignTypeSelect } from './InlineCampaignTypeSelect';
 import { BulkASINImport } from './BulkASINImport';
 import { BulkASINCopyTools } from './BulkASINCopyTools';
 import { CompetitiveAnalysisPanel } from './CompetitiveAnalysisPanel';
+import { ASINDetailPanel } from './ASINDetailPanel';
 import { type TargetASIN, type CampaignType, type Keyword } from '@/types/advertising';
 import { useToast } from '@/hooks/use-toast';
 
@@ -53,6 +55,7 @@ export const ASINSection = ({
   const [quickAddASIN, setQuickAddASIN] = useState('');
   const [showBulkImport, setShowBulkImport] = useState(false);
   const [showCompetitiveAnalysis, setShowCompetitiveAnalysis] = useState(false);
+  const [selectedASIN, setSelectedASIN] = useState<TargetASIN | null>(null);
 
   // Memoize callback to avoid infinite loops
   const stableOnSelectedIdsChange = useCallback(onSelectedIdsChange, [onSelectedIdsChange]);
@@ -148,6 +151,16 @@ export const ASINSection = ({
       stableOnSelectedIdsChange(nextSelected);
     }
   }, [filteredASINs, selectedIds, stableOnSelectedIdsChange]);
+
+  // Sync selectedASIN with asins updates
+  useEffect(() => {
+    if (selectedASIN) {
+      const updatedASIN = asins.find(a => a.id === selectedASIN.id);
+      if (updatedASIN && updatedASIN !== selectedASIN) {
+        setSelectedASIN(updatedASIN);
+      }
+    }
+  }, [asins, selectedASIN]);
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -286,12 +299,27 @@ export const ASINSection = ({
                     />
                   </TableCell>
                   <TableCell>
-                    <InlineEditableCell
-                      value={asin.asin}
-                      onSave={(value) => handleASINUpdate(asin.id, value)}
-                      placeholder="ASIN..."
-                      className="font-mono font-medium"
-                    />
+                    <div className="flex items-center gap-2">
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setSelectedASIN(asin)}
+                            className="h-7 w-7 p-0 bg-primary/10 hover:bg-primary/20 text-primary"
+                          >
+                            <Eye className="w-4 h-4" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Abrir ficha de ASIN</TooltipContent>
+                      </Tooltip>
+                      <InlineEditableCell
+                        value={asin.asin}
+                        onSave={(value) => handleASINUpdate(asin.id, value)}
+                        placeholder="ASIN..."
+                        className="font-mono font-medium"
+                      />
+                    </div>
                   </TableCell>
                   <TableCell>
                     <InlineEditableCell
@@ -352,6 +380,19 @@ export const ASINSection = ({
         bookTitle={bookTitle}
         isOpen={showCompetitiveAnalysis}
         onClose={() => setShowCompetitiveAnalysis(false)}
+      />
+
+      {/* ASIN Detail Panel */}
+      <ASINDetailPanel
+        asin={selectedASIN}
+        isOpen={!!selectedASIN}
+        onClose={() => setSelectedASIN(null)}
+        onSave={(id, updates) => {
+          onUpdate(id, updates);
+          setSelectedASIN(null);
+          toast({ title: 'ASIN guardado' });
+        }}
+        marketplaceId={marketplaceId}
       />
     </div>
   );
