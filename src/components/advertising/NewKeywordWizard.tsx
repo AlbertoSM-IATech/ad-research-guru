@@ -87,8 +87,8 @@ import { cn } from '@/lib/utils';
 const FIELD_TOOLTIPS = {
   searchVolume: 'Búsquedas mensuales estimadas en Amazon. Afecta demanda y potencial de Ads.',
   competitors: 'Resultados en Amazon para esta keyword. Menos suele ser mejor.',
-  price: 'Precio medio observado en los top resultados. Se usa para estimar margen y viabilidad. <9.99 penaliza.',
-  royalties: 'Regalías estimadas por venta. A mayor regalía, más margen para invertir en Ads.',
+  price: 'Precio medio de los libros competidores en los top resultados. Sirve para tener una referencia de los precios del nicho y decidir tu PVP.',
+  royalties: 'Regalías medias aproximadas de la competencia. Sirve para saber si merece la pena entrar en este nicho.',
   trafficSource: 'Fuente principal del tráfico. Penaliza si depende de marca personal/rrss.',
   purpose: 'Para qué usarás la keyword: decidir libros, campañas de Ads, o ambas.',
   intent: 'Sirve para clasificar la keyword (estrategia). No afecta al Market Score. Ej: compra vs informativa.',
@@ -495,31 +495,6 @@ export function NewKeywordWizard({
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>
-                    Propósito
-                    <FieldTooltip content={PURPOSE_TOOLTIPS[step1.purpose] || FIELD_TOOLTIPS.purpose} />
-                  </Label>
-                  <Select
-                    value={step1.purpose}
-                    onValueChange={(value) => setStep1({ ...step1, purpose: value as KeywordPurpose })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent className="bg-popover border-border">
-                      {KEYWORD_PURPOSE_OPTIONS.map((opt) => (
-                        <SelectItem key={opt.value} value={opt.value}>
-                          <div className="flex flex-col">
-                            <span>{opt.label}</span>
-                            <span className="text-xs text-muted-foreground">{opt.description}</span>
-                          </div>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                
-                <div className="space-y-2">
-                  <Label>
                     Estado
                     <FieldTooltip content={FIELD_TOOLTIPS.status} />
                   </Label>
@@ -541,35 +516,6 @@ export function NewKeywordWizard({
                     </SelectContent>
                   </Select>
                 </div>
-              </div>
-              
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>
-                    Intención
-                    <FieldTooltip content={FIELD_TOOLTIPS.intent} />
-                  </Label>
-                  <Select
-                    value={step1.intent ?? detectedIntent ?? ''}
-                    onValueChange={(value) => setStep1({ ...step1, intent: value as IntentType })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Auto-detectar..." />
-                    </SelectTrigger>
-                    <SelectContent className="bg-popover border-border">
-                      {INTENT_TYPES.map((intent) => (
-                        <SelectItem key={intent.value} value={intent.value}>
-                          <span>{intent.label}</span>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  {detectedIntent && !step1.intent && (
-                    <p className="text-xs text-muted-foreground">
-                      Auto-detectada: {INTENT_TYPES.find(i => i.value === detectedIntent)?.label}
-                    </p>
-                  )}
-                </div>
                 
                 <div className="space-y-2">
                   <Label>Marketplace</Label>
@@ -588,10 +534,10 @@ export function NewKeywordWizard({
               <div className="flex items-center justify-between">
                 <h3 className="text-lg font-medium">{getStep2Title(step1.purpose)}</h3>
                 <Button
-                  variant="outline"
+                  variant="default"
                   size="sm"
                   onClick={() => setConfigModalOpen(true)}
-                  className="gap-2"
+                  className="gap-2 bg-primary hover:bg-primary/90"
                 >
                   <Settings className="w-4 h-4" />
                   Configurar mercado
@@ -948,17 +894,17 @@ export function NewKeywordWizard({
                 <Megaphone className="h-4 w-4 text-primary" />
                 <AlertDescription className="text-foreground">
                   {step1.purpose === 'ads' 
-                    ? 'Introduce los datos actuales de tus campañas para esta keyword.'
+                    ? 'Introduce Clicks, CPC y Pedidos. El resto se auto-calcula con los datos de la economía del libro.'
                     : 'Puedes añadir datos de Ads ahora o hacerlo después desde la ficha de la keyword.'}
                 </AlertDescription>
               </Alert>
               
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-3 gap-4">
                 {/* Clicks */}
                 <div className="space-y-2">
                   <Label htmlFor="wizard-ads-clicks">
-                    Clicks (acumulados)
-                    <FieldTooltip content="Clicks acumulados para calcular la conversión." />
+                    Clicks *
+                    <FieldTooltip content="Clicks acumulados para calcular la conversión y el gasto." />
                   </Label>
                   <Input
                     id="wizard-ads-clicks"
@@ -971,32 +917,11 @@ export function NewKeywordWizard({
                   />
                 </div>
                 
-                {/* Gasto */}
-                <div className="space-y-2">
-                  <Label htmlFor="wizard-ads-gasto">
-                    Gasto (acumulado)
-                    <FieldTooltip content="Gasto acumulado de la keyword." />
-                  </Label>
-                  <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">$</span>
-                    <Input
-                      id="wizard-ads-gasto"
-                      type="number"
-                      min={0}
-                      step={0.01}
-                      value={adsGasto}
-                      onChange={(e) => setAdsGasto(e.target.value)}
-                      placeholder="0.00"
-                      className="pl-7"
-                    />
-                  </div>
-                </div>
-                
                 {/* CPC Actual */}
                 <div className="space-y-2">
                   <Label htmlFor="wizard-ads-cpc">
-                    CPC (actual)
-                    <FieldTooltip content="CPC actual manual de Amazon Ads." />
+                    CPC ($) *
+                    <FieldTooltip content="CPC actual de Amazon Ads. Se usa para calcular el gasto." />
                   </Label>
                   <div className="relative">
                     <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">$</span>
@@ -1016,8 +941,8 @@ export function NewKeywordWizard({
                 {/* Pedidos */}
                 <div className="space-y-2">
                   <Label htmlFor="wizard-ads-pedidos">
-                    Pedidos (acumulados)
-                    <FieldTooltip content="Pedidos atribuibles acumulados." />
+                    Pedidos *
+                    <FieldTooltip content="Pedidos atribuibles. Se usa para calcular ventas y conversión." />
                   </Label>
                   <Input
                     id="wizard-ads-pedidos"
@@ -1029,65 +954,109 @@ export function NewKeywordWizard({
                     placeholder="0"
                   />
                 </div>
-                
-                {/* Ventas */}
-                <div className="space-y-2">
-                  <Label htmlFor="wizard-ads-ventas">
-                    Ventas (acumuladas)
-                    <FieldTooltip content="Ventas atribuibles acumuladas." />
-                  </Label>
-                  <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">$</span>
-                    <Input
-                      id="wizard-ads-ventas"
-                      type="number"
-                      min={0}
-                      step={0.01}
-                      value={adsVentas}
-                      onChange={(e) => setAdsVentas(e.target.value)}
-                      placeholder="0.00"
-                      className="pl-7"
-                    />
-                  </div>
-                </div>
-                
-                {/* Fase Actual */}
-                <div className="space-y-2">
-                  <Label>Fase actual</Label>
-                  <Select
-                    value={adsFase ?? ''}
-                    onValueChange={(value) => setAdsFase(value as AdsFase)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Seleccionar..." />
-                    </SelectTrigger>
-                    <SelectContent className="bg-popover border-border">
-                      {ADS_FASE_OPTIONS.map((opt) => (
-                        <SelectItem key={opt.value} value={opt.value}>
-                          {opt.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
               </div>
               
-              {/* Mini-resumen de métricas calculadas */}
-              {(adsGasto || adsVentas || adsClicks || adsPedidos) && (
-                <div className="p-4 rounded-lg border border-border bg-muted/30 space-y-3">
-                  <h4 className="text-sm font-medium text-muted-foreground">Vista previa de métricas</h4>
-                  <div className="grid grid-cols-2 gap-4 text-sm">
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">ACOS Actual:</span>
+              {/* Auto-calculated metrics preview */}
+              {(adsClicks || adsCpc || adsPedidos) && (
+                <div className="p-4 rounded-lg border border-border bg-muted/30 space-y-4">
+                  <h4 className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                    Métricas auto-calculadas
+                    <span className="text-xs bg-primary/20 text-primary px-2 py-0.5 rounded">Usando economía del libro</span>
+                  </h4>
+                  
+                  {/* Show book economy reference */}
+                  <div className="grid grid-cols-3 gap-3 text-xs p-2 bg-muted/50 rounded">
+                    <div className="text-center">
+                      <span className="text-muted-foreground block">PVP</span>
+                      <span className="font-medium">${DEFAULT_BOOK_ECONOMY.precioLibro.toFixed(2)}</span>
+                    </div>
+                    <div className="text-center">
+                      <span className="text-muted-foreground block">Regalías</span>
+                      <span className="font-medium">${DEFAULT_BOOK_ECONOMY.regaliasPorVenta.toFixed(2)}</span>
+                    </div>
+                    <div className="text-center">
+                      <span className="text-muted-foreground block">ACOS PE</span>
+                      <span className="font-medium text-primary">
+                        {DEFAULT_BOOK_ECONOMY.precioLibro > 0 
+                          ? `${((DEFAULT_BOOK_ECONOMY.regaliasPorVenta / DEFAULT_BOOK_ECONOMY.precioLibro) * 100).toFixed(1)}%`
+                          : '—'}
+                      </span>
+                    </div>
+                  </div>
+                  
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                    {/* Gasto Acumulado (auto) */}
+                    <div className="flex flex-col gap-1 p-2 rounded bg-background">
+                      <span className="text-xs text-muted-foreground">Gasto acumulado</span>
+                      <span className="font-medium tabular-nums">
+                        {adsClicks && adsCpc 
+                          ? `$${(parseFloat(adsClicks) * parseFloat(adsCpc)).toFixed(2)}`
+                          : '—'}
+                      </span>
+                    </div>
+                    
+                    {/* Ventas Acumuladas (auto) */}
+                    <div className="flex flex-col gap-1 p-2 rounded bg-background">
+                      <span className="text-xs text-muted-foreground">Ventas acumuladas</span>
+                      <span className="font-medium tabular-nums">
+                        {adsPedidos 
+                          ? `$${(parseFloat(adsPedidos) * DEFAULT_BOOK_ECONOMY.precioLibro).toFixed(2)}`
+                          : '—'}
+                      </span>
+                    </div>
+                    
+                    {/* Beneficio (auto) */}
+                    <div className="flex flex-col gap-1 p-2 rounded bg-background">
+                      <span className="text-xs text-muted-foreground">Beneficio ahora</span>
+                      {(() => {
+                        const gasto = adsClicks && adsCpc ? parseFloat(adsClicks) * parseFloat(adsCpc) : null;
+                        const ventas = adsPedidos ? parseFloat(adsPedidos) * DEFAULT_BOOK_ECONOMY.precioLibro : null;
+                        const beneficio = gasto !== null && ventas !== null ? ventas - gasto : null;
+                        return (
+                          <span className={cn(
+                            "font-medium tabular-nums",
+                            beneficio !== null && beneficio >= 0 ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"
+                          )}>
+                            {beneficio !== null ? `$${beneficio.toFixed(2)}` : '—'}
+                          </span>
+                        );
+                      })()}
+                    </div>
+                    
+                    {/* ACOS Actual */}
+                    <div className="flex flex-col gap-1 p-2 rounded bg-background">
+                      <span className="text-xs text-muted-foreground">ACOS Actual</span>
                       <span className="font-medium">{formatearPorcentaje(previewAcosActual)}</span>
                     </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Conversión:</span>
+                    
+                    {/* Conversión */}
+                    <div className="flex flex-col gap-1 p-2 rounded bg-background">
+                      <span className="text-xs text-muted-foreground">Conversión</span>
                       <span className="font-medium">{formatearPorcentaje(previewConversion)}</span>
                     </div>
                   </div>
                 </div>
               )}
+              
+              {/* Fase Actual */}
+              <div className="space-y-2">
+                <Label>Fase actual (opcional)</Label>
+                <Select
+                  value={adsFase ?? ''}
+                  onValueChange={(value) => setAdsFase(value as AdsFase)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Seleccionar fase..." />
+                  </SelectTrigger>
+                  <SelectContent className="bg-popover border-border">
+                    {ADS_FASE_OPTIONS.map((opt) => (
+                      <SelectItem key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
           )}
           

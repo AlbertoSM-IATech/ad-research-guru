@@ -13,7 +13,7 @@ import { BulkKeywordImport } from './BulkKeywordImport';
 import { BulkCopyTools } from './BulkCopyTools';
 import { BulkActionsToolbar } from './BulkActionsToolbar';
 import { AdvancedFilters, AdvancedFiltersContent, type AdvancedFiltersState } from './AdvancedFilters';
-import { QuickFiltersBar } from './QuickFiltersBar';
+import { AdvancedFiltersAds, AdsFiltersContent, defaultAdsFiltersState, type AdsFiltersState } from './AdvancedFiltersAds';
 import { KeywordCardView } from './KeywordCardView';
 import { KeywordHistoryModal } from './KeywordHistoryModal';
 import { VariantDetector } from './VariantDetector';
@@ -26,7 +26,7 @@ import { calculateMarketScore, getDefaultMarketData, KEYWORD_STATUS_OPTIONS, typ
 import { createKeywordDefaults } from '@/lib/keyword-helpers';
 import { getAutoStatusFromScore } from '@/lib/keyword-builder';
 import { sortKeywords, getKeywordMarketScore, isMarketDataIncomplete, SORT_OPTIONS, type SortField, type SortOrder } from '@/lib/keyword-sorting';
-import { applyKeywordFilters, applyQuickFilter, type QuickFilter } from '@/lib/keyword-filters';
+import { applyKeywordFilters } from '@/lib/keyword-filters';
 import { useKeywordUIPersistence, type FunctionalView } from '@/hooks/useKeywordUIPersistence';
 import { calcularGastoAcumulado, calcularVentasAcumuladas, calcularAcosActualPorcentaje, calcularAcosSiguienteClickPorcentaje, calcularConversionPorcentaje, formatearPorcentaje, formatearMoneda } from '@/lib/acosEquilibrio';
 import { useToast } from '@/hooks/use-toast';
@@ -86,7 +86,7 @@ export const KeywordsSection = ({
 
   // Local state synced with persistence
   const [filters, setFilters] = useState<AdvancedFiltersState>(persistedState.filters);
-  const [quickFilter, setQuickFilter] = useState<QuickFilter>(persistedState.quickFilter);
+  const [adsFilters, setAdsFilters] = useState<AdsFiltersState>(defaultAdsFiltersState);
   const [sortField, setSortField] = useState<SortField>(persistedState.sortField);
   const [sortOrder, setSortOrder] = useState<SortOrder>(persistedState.sortOrder);
   const [viewMode, setViewMode] = useState<ViewMode>(persistedState.viewMode);
@@ -106,7 +106,6 @@ export const KeywordsSection = ({
   useEffect(() => {
     if (isHydrated) {
       setFilters(persistedState.filters);
-      setQuickFilter(persistedState.quickFilter);
       setSortField(persistedState.sortField);
       setSortOrder(persistedState.sortOrder);
       setViewMode(persistedState.viewMode);
@@ -302,49 +301,18 @@ export const KeywordsSection = ({
     } else {
       onUpdate(id, finalUpdates);
     }
-  };
-
-  // Handle quick filter change
-  const handleQuickFilterChange = (filter: QuickFilter) => {
-    setQuickFilter(filter);
-    updateQuickFilter(filter);
-    if (filter !== 'all') {
-      const resetFilters: AdvancedFiltersState = {
-        competition: 'all',
-        campaignType: 'all',
-        minVolume: '',
-        maxVolume: '',
-        maxCompetition: '',
-        relevance: 'all',
-        intent: 'all',
-        state: 'all',
-        purpose: 'all',
-        status: 'all'
-      };
-      setFilters(resetFilters);
-      updateFilters(resetFilters);
-    }
-    setCurrentPage(1);
-  };
-
   // Handle advanced filter change
   const handleAdvancedFiltersChange = (newFilters: AdvancedFiltersState) => {
     setFilters(newFilters);
     updateFilters(newFilters);
-    setQuickFilter('all');
-    updateQuickFilter('all');
     setCurrentPage(1);
   };
 
-  // Calculate quick filter counts
-  const quickFilterCounts = useMemo(() => {
-    return {
-      all: keywords.length,
-      'ready-for-ads': applyQuickFilter(keywords, 'ready-for-ads').length,
-      candidates: applyQuickFilter(keywords, 'candidates').length,
-      discard: applyQuickFilter(keywords, 'discard').length
-    };
-  }, [keywords]);
+  // Handle ADS filter change
+  const handleAdsFiltersChange = (newFilters: AdsFiltersState) => {
+    setAdsFilters(newFilters);
+    setCurrentPage(1);
+  };
 
   // Filter and sort keywords with functional view purpose filtering
   const filteredKeywords = useMemo(() => {
@@ -354,12 +322,7 @@ export const KeywordsSection = ({
     const purposeFilter = functionalView === 'editorial' ? ['editorial', 'both'] : ['ads', 'both'];
     result = result.filter(k => purposeFilter.includes(k.purpose));
 
-    // Apply quick filter first if active
-    if (quickFilter !== 'all') {
-      result = applyQuickFilter(result, quickFilter);
-    }
-
-    // Then apply search and advanced filters
+    // Apply search and advanced filters
     result = applyKeywordFilters(result, {
       searchTerm,
       purpose: filters.purpose,
@@ -373,8 +336,46 @@ export const KeywordsSection = ({
       intent: filters.intent,
       state: filters.state
     });
+
+    // Apply ADS-specific filters when in ads view
+    if (functionalView === 'ads') {
+      result = result.filter(k => {
+        const ads = k.adsData;
+        const gastoCalculado = calcularGastoAcumulado(ads?.clicks, ads?.cpcActual);
+        const ventasCalculadas = calcularVentasAcumuladas(ads?.pedidos, bookEconomy.precioLibro);
+        const beneficio = gastoCalculado !== null && ventasCalculadas !== null ? ventasCalculadas - gastoCalculado : null;
+        const acosActual = calcularAcosActualPorcentaje(gastoCalculado ?? undefined, ventasCalculadas ?? undefined);
+
+        // Rentabilidad filter
+        if (adsFilters.rentabilidad === 'profitable' && (beneficio === null || beneficio < 0)) return false;
+        if (adsFilters.rentabilidad === 'unprofitable' && (beneficio === null || beneficio >= 0)) return false;
+
+        // Clicks range
+        if (adsFilters.minClicks && (ads?.clicks ?? 0) < parseInt(adsFilters.minClicks)) return false;
+        if (adsFilters.maxClicks && (ads?.clicks ?? Infinity) > parseInt(adsFilters.maxClicks)) return false;
+
+        // CPC range
+        if (adsFilters.minCpc && (ads?.cpcActual ?? 0) < parseFloat(adsFilters.minCpc)) return false;
+        if (adsFilters.maxCpc && (ads?.cpcActual ?? Infinity) > parseFloat(adsFilters.maxCpc)) return false;
+
+        // Pedidos range
+        if (adsFilters.minPedidos && (ads?.pedidos ?? 0) < parseInt(adsFilters.minPedidos)) return false;
+        if (adsFilters.maxPedidos && (ads?.pedidos ?? Infinity) > parseInt(adsFilters.maxPedidos)) return false;
+
+        // ACOS range
+        if (adsFilters.minAcos && (acosActual === null || acosActual < parseFloat(adsFilters.minAcos))) return false;
+        if (adsFilters.maxAcos && (acosActual === null || acosActual > parseFloat(adsFilters.maxAcos))) return false;
+
+        // Beneficio range
+        if (adsFilters.minBeneficio && (beneficio === null || beneficio < parseFloat(adsFilters.minBeneficio))) return false;
+        if (adsFilters.maxBeneficio && (beneficio === null || beneficio > parseFloat(adsFilters.maxBeneficio))) return false;
+
+        return true;
+      });
+    }
+
     return sortKeywords(result, sortField, sortOrder, bookEconomy.precioLibro);
-  }, [keywords, searchTerm, filters, quickFilter, sortField, sortOrder, functionalView, bookEconomy.precioLibro]);
+  }, [keywords, searchTerm, filters, adsFilters, sortField, sortOrder, functionalView, bookEconomy.precioLibro]);
 
   // Purge invalid selection IDs when filtered list changes
   useEffect(() => {
@@ -432,17 +433,21 @@ export const KeywordsSection = ({
         </div>
       </div>
 
-      {/* Bulk Actions Toolbar */}
-      <BulkActionsToolbar selectedCount={selectedIds.size} onChangeCampaignType={handleBulkChangeCampaignType} onChangeState={handleBulkChangeState} onChangeRelevance={handleBulkChangeRelevance} onDelete={handleDeleteSelected} />
-
-      {/* Quick Filters + Advanced Filters trigger */}
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <QuickFiltersBar activeFilter={quickFilter} onFilterChange={handleQuickFilterChange} counts={quickFilterCounts} />
-        <AdvancedFilters filters={filters} onFiltersChange={handleAdvancedFiltersChange} renderTriggerOnly isExpanded={advancedFiltersExpanded} onToggleExpanded={() => setAdvancedFiltersExpanded(!advancedFiltersExpanded)} />
+      {/* Advanced Filters - positioned above table with toolbar */}
+      <div className="flex flex-wrap items-center gap-2">
+        {functionalView === 'editorial' ? (
+          <AdvancedFilters filters={filters} onFiltersChange={handleAdvancedFiltersChange} renderTriggerOnly isExpanded={advancedFiltersExpanded} onToggleExpanded={() => setAdvancedFiltersExpanded(!advancedFiltersExpanded)} />
+        ) : (
+          <AdvancedFiltersAds filters={adsFilters} onFiltersChange={handleAdsFiltersChange} renderTriggerOnly isExpanded={advancedFiltersExpanded} onToggleExpanded={() => setAdvancedFiltersExpanded(!advancedFiltersExpanded)} />
+        )}
       </div>
 
       {/* Advanced Filters Content */}
-      {advancedFiltersExpanded && <AdvancedFiltersContent filters={filters} onFiltersChange={handleAdvancedFiltersChange} />}
+      {advancedFiltersExpanded && (
+        functionalView === 'editorial' 
+          ? <AdvancedFiltersContent filters={filters} onFiltersChange={handleAdvancedFiltersChange} />
+          : <AdsFiltersContent filters={adsFilters} onFiltersChange={handleAdsFiltersChange} />
+      )}
 
       {/* Quick Add, Search & Sort */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3 items-center">
