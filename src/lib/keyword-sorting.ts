@@ -1,7 +1,7 @@
 // Centralized keyword sorting logic
 import type { Keyword } from '@/types/advertising';
 import { calculateMarketScore, getDefaultMarketData } from './market-score';
-import { calcularGastoAcumulado, calcularVentasAcumuladas, calcularAcosActualPorcentaje, calcularConversionPorcentaje } from './acosEquilibrio';
+import { calcularGastoAcumulado, calcularVentasAcumuladas, calcularAcosActualPorcentaje, calcularAcosSiguienteClickPorcentaje, calcularConversionPorcentaje } from './acosEquilibrio';
 
 export type SortField = 
   | 'keyword' 
@@ -19,6 +19,7 @@ export type SortField =
   | 'ventas'
   | 'pedidos'
   | 'acosActual'
+  | 'acosSiguiente'
   | 'conversion'
   | 'beneficio';
   
@@ -56,6 +57,8 @@ export const SORT_OPTIONS: SortOption[] = [
   { field: 'pedidos', order: 'asc', label: 'Pedidos (menor primero)' },
   { field: 'acosActual', order: 'asc', label: 'ACOS Actual (menor primero)' },
   { field: 'acosActual', order: 'desc', label: 'ACOS Actual (mayor primero)' },
+  { field: 'acosSiguiente', order: 'asc', label: 'ACOS Sig. Click (menor primero)' },
+  { field: 'acosSiguiente', order: 'desc', label: 'ACOS Sig. Click (mayor primero)' },
   { field: 'conversion', order: 'desc', label: 'Conversión (mayor primero)' },
   { field: 'conversion', order: 'asc', label: 'Conversión (menor primero)' },
   { field: 'beneficio', order: 'desc', label: 'Beneficio (mayor primero)' },
@@ -93,7 +96,7 @@ export function isMarketDataIncomplete(keyword: Keyword): boolean {
 }
 
 // Helper to get calculated ads values for sorting
-function getAdsValue(keyword: Keyword, field: 'gasto' | 'ventas' | 'acosActual' | 'conversion' | 'beneficio', precioLibro?: number): number {
+function getAdsValue(keyword: Keyword, field: 'gasto' | 'ventas' | 'acosActual' | 'acosSiguiente' | 'conversion' | 'beneficio', precioLibro?: number): number {
   const ads = keyword.adsData;
   if (!ads) return -Infinity;
   
@@ -111,6 +114,12 @@ function getAdsValue(keyword: Keyword, field: 'gasto' | 'ventas' | 'acosActual' 
       const ventas = calcularVentasAcumuladas(ads.pedidos, precioLibro);
       const acos = calcularAcosActualPorcentaje(gasto ?? undefined, ventas ?? undefined);
       return acos ?? -Infinity;
+    }
+    case 'acosSiguiente': {
+      const gasto = calcularGastoAcumulado(ads.clicks, ads.cpcActual);
+      const ventas = calcularVentasAcumuladas(ads.pedidos, precioLibro);
+      const acosSig = calcularAcosSiguienteClickPorcentaje(gasto ?? undefined, ads.cpcActual, ventas ?? undefined, precioLibro);
+      return acosSig ?? -Infinity;
     }
     case 'conversion': {
       const conv = calcularConversionPorcentaje(ads.pedidos, ads.clicks);
@@ -217,6 +226,10 @@ export function sortKeywords(
         
       case 'acosActual':
         comparison = getAdsValue(a, 'acosActual', precioLibro) - getAdsValue(b, 'acosActual', precioLibro);
+        break;
+        
+      case 'acosSiguiente':
+        comparison = getAdsValue(a, 'acosSiguiente', precioLibro) - getAdsValue(b, 'acosSiguiente', precioLibro);
         break;
         
       case 'conversion':

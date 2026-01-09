@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, useCallback } from 'react';
-import { Plus, Search, Trash2, ArrowUpDown, Upload, LayoutGrid, LayoutList, Eye, BookOpen, Megaphone, Info, Star, AlertTriangle, RotateCcw } from 'lucide-react';
+import { Plus, Search, Trash2, ArrowUpDown, Upload, LayoutGrid, LayoutList, Eye, BookOpen, Megaphone, Info, Star, AlertTriangle, RotateCcw, GitCompare } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -21,6 +21,7 @@ import { KeywordDetailPanel } from './KeywordDetailPanel';
 import { MarketScoreCell } from './MarketScoreCell';
 import { NewKeywordWizard } from './NewKeywordWizard';
 import { KeywordExportCSV } from './KeywordExportCSV';
+import { KeywordComparisonPanel } from './KeywordComparisonPanel';
 import { ResizableTableHeader } from './ResizableTableHeader';
 import { type Keyword, type CampaignType, type CompetitionLevel, type RelevanceLevel, type IntentType, type KeywordState, type BookInfo, type BookEconomy, type HistoryEntry, RELEVANCE_LEVELS, INTENT_TYPES, KEYWORD_STATES, calculateRelevance, classifyIntent } from '@/types/advertising';
 import { calculateMarketScore, getDefaultMarketData, KEYWORD_STATUS_OPTIONS, type KeywordStatus } from '@/lib/market-score';
@@ -58,6 +59,7 @@ const DEFAULT_ADS_WIDTHS: ColumnWidths = {
   gasto: 70,
   ventas: 70,
   acos: 80,
+  acosSig: 75,
   conversion: 70,
   beneficio: 80,
 };
@@ -128,6 +130,7 @@ export const KeywordsSection = ({
   const [wizardInitialKeyword, setWizardInitialKeyword] = useState('');
   const [validationKeyword, setValidationKeyword] = useState<Keyword | null>(null);
   const [advancedFiltersExpanded, setAdvancedFiltersExpanded] = useState(false);
+  const [isComparisonOpen, setIsComparisonOpen] = useState(false);
 
   // Functional view state (Editorial vs Ads)
   const [functionalView, setFunctionalView] = useState<FunctionalView>(persistedState.functionalView || 'editorial');
@@ -585,6 +588,17 @@ export const KeywordsSection = ({
             <Upload className="w-4 h-4" />
             Importar lote
           </Button>
+          {selectedIds.size === 2 && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button variant="outline" size="sm" onClick={() => setIsComparisonOpen(true)} className="gap-2 border-primary/50 text-primary hover:bg-primary/10">
+                  <GitCompare className="w-4 h-4" />
+                  Comparar
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Comparar las 2 keywords seleccionadas lado a lado</TooltipContent>
+            </Tooltip>
+          )}
           {selectedIds.size > 0 && <Button variant="destructive" size="sm" onClick={handleDeleteSelected} className="gap-2">
               <Trash2 className="w-4 h-4" />
               Eliminar ({selectedIds.size})
@@ -760,6 +774,19 @@ export const KeywordsSection = ({
                         </div>
                       </ResizableTableHeader>
                       <ResizableTableHeader
+                        columnKey="acosSig"
+                        width={columnWidths.acosSig}
+                        onResize={setColumnWidth}
+                        className="cursor-pointer hover:text-foreground"
+                        onClick={() => handleSort('acosSiguiente')}
+                      >
+                        <div className="flex items-center gap-1">
+                          ACOS Sig.
+                          <ArrowUpDown className="w-3 h-3" />
+                          <InfoTooltip content="ACOS si el siguiente click genera 1 venta. Escenario optimista." />
+                        </div>
+                      </ResizableTableHeader>
+                      <ResizableTableHeader
                         columnKey="conversion"
                         width={columnWidths.conversion}
                         onResize={setColumnWidth}
@@ -789,8 +816,8 @@ export const KeywordsSection = ({
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {paginatedKeywords.length === 0 ? <TableRow>
-                    <TableCell colSpan={functionalView === 'editorial' ? 7 : 13} className="text-center py-8 text-muted-foreground">
+              {paginatedKeywords.length === 0 ? <TableRow>
+                    <TableCell colSpan={functionalView === 'editorial' ? 7 : 14} className="text-center py-8 text-muted-foreground">
                       {keywords.length === 0 ? 'No hay keywords. Añade tu primera keyword o importa en lote.' : 'No se encontraron keywords con los filtros aplicados.'}
                     </TableCell>
                   </TableRow> : paginatedKeywords.map(keyword => {
@@ -813,16 +840,26 @@ export const KeywordsSection = ({
                 ? (bookEconomy.regaliasPorVenta / bookEconomy.precioLibro) * 100
                 : null;
               
-              // Inline update handler for ads data
+              // Inline update handler for ads data with auto-click logic
               const handleInlineAdsUpdate = (field: 'clicks' | 'cpcActual' | 'pedidos', value: string) => {
                 const numValue = value === '' ? undefined : parseFloat(value);
                 if (value !== '' && (isNaN(numValue!) || numValue! < 0)) return;
                 
-                onUpdate(keyword.id, {
-                  adsData: {
-                    ...ads,
-                    [field]: numValue,
+                let updatedAdsData = {
+                  ...ads,
+                  [field]: numValue,
+                };
+                
+                // Auto-increment clicks when adding pedidos if clicks < pedidos
+                if (field === 'pedidos' && numValue !== undefined) {
+                  const currentClicks = ads?.clicks ?? 0;
+                  if (currentClicks < numValue) {
+                    updatedAdsData.clicks = numValue;
                   }
+                }
+                
+                onUpdate(keyword.id, {
+                  adsData: updatedAdsData
                 });
               };
               
@@ -1010,6 +1047,18 @@ export const KeywordsSection = ({
                                 {formatearPorcentaje(acosActual)}
                               </span>
                             </TableCell>
+                            {/* ACOS Siguiente Click */}
+                            <TableCell className="tabular-nums text-xs">
+                              <span className={cn(
+                                acosSiguiente !== null && acosEquilibrio !== null
+                                  ? acosSiguiente <= acosEquilibrio
+                                    ? 'text-green-600 dark:text-green-400'
+                                    : 'text-amber-600 dark:text-amber-400'
+                                  : 'text-muted-foreground'
+                              )}>
+                                {formatearPorcentaje(acosSiguiente)}
+                              </span>
+                            </TableCell>
                             {/* Conversión */}
                             <TableCell className="tabular-nums text-xs text-muted-foreground">
                               {formatearPorcentaje(conversion)}
@@ -1069,5 +1118,20 @@ export const KeywordsSection = ({
       
       {/* New Keyword Wizard */}
       <NewKeywordWizard open={isWizardOpen} onOpenChange={setIsWizardOpen} onComplete={handleWizardComplete} marketplaceId={marketplaceId} bookInfo={bookInfo} existingKeywords={keywords} initialKeyword={wizardInitialKeyword} onOpenExistingKeyword={handleOpenExistingKeyword} />
+      
+      {/* Keyword Comparison Panel */}
+      <KeywordComparisonPanel 
+        items={keywords.filter(k => selectedIds.has(k.id)).slice(0, 2)}
+        type="keyword"
+        isOpen={isComparisonOpen}
+        onClose={() => setIsComparisonOpen(false)}
+        onRemove={(id) => {
+          const newSet = new Set(selectedIds);
+          newSet.delete(id);
+          onSelectedIdsChange(newSet);
+          if (newSet.size < 2) setIsComparisonOpen(false);
+        }}
+        bookEconomy={bookEconomy}
+      />
     </div>;
 };
