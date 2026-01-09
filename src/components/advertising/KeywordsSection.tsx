@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, useCallback } from 'react';
-import { Plus, Search, Trash2, ArrowUpDown, Upload, LayoutGrid, LayoutList, Eye, BookOpen, Megaphone, Info, Star, AlertTriangle } from 'lucide-react';
+import { Plus, Search, Trash2, ArrowUpDown, Upload, LayoutGrid, LayoutList, Eye, BookOpen, Megaphone, Info, Star, AlertTriangle, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -21,6 +21,7 @@ import { KeywordDetailPanel } from './KeywordDetailPanel';
 import { MarketScoreCell } from './MarketScoreCell';
 import { NewKeywordWizard } from './NewKeywordWizard';
 import { KeywordExportCSV } from './KeywordExportCSV';
+import { ResizableTableHeader } from './ResizableTableHeader';
 import { type Keyword, type CampaignType, type CompetitionLevel, type RelevanceLevel, type IntentType, type KeywordState, type BookInfo, type BookEconomy, type HistoryEntry, RELEVANCE_LEVELS, INTENT_TYPES, KEYWORD_STATES, calculateRelevance, classifyIntent } from '@/types/advertising';
 import { calculateMarketScore, getDefaultMarketData, KEYWORD_STATUS_OPTIONS, type KeywordStatus } from '@/lib/market-score';
 import { createKeywordDefaults } from '@/lib/keyword-helpers';
@@ -28,9 +29,38 @@ import { getAutoStatusFromScore } from '@/lib/keyword-builder';
 import { sortKeywords, getKeywordMarketScore, isMarketDataIncomplete, SORT_OPTIONS, type SortField, type SortOrder } from '@/lib/keyword-sorting';
 import { applyKeywordFilters } from '@/lib/keyword-filters';
 import { useKeywordUIPersistence, type FunctionalView } from '@/hooks/useKeywordUIPersistence';
+import { useColumnWidths, type ColumnWidths } from '@/hooks/useColumnWidths';
 import { calcularGastoAcumulado, calcularVentasAcumuladas, calcularAcosActualPorcentaje, calcularAcosSiguienteClickPorcentaje, calcularConversionPorcentaje, formatearPorcentaje, formatearMoneda } from '@/lib/acosEquilibrio';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+
+// Default column widths
+const DEFAULT_EDITORIAL_WIDTHS: ColumnWidths = {
+  checkbox: 40,
+  star: 40,
+  keyword: 200,
+  volume: 100,
+  competitors: 120,
+  marketScore: 130,
+  status: 110,
+};
+
+const DEFAULT_ADS_WIDTHS: ColumnWidths = {
+  checkbox: 40,
+  star: 40,
+  keyword: 180,
+  volume: 90,
+  competitors: 100,
+  acosPE: 70,
+  clicks: 70,
+  cpc: 70,
+  pedidos: 70,
+  gasto: 70,
+  ventas: 70,
+  acos: 80,
+  conversion: 70,
+  beneficio: 80,
+};
 interface KeywordsSectionProps {
   keywords: Keyword[];
   onAdd: (keyword: Omit<Keyword, 'id' | 'createdAt' | 'updatedAt'> | Keyword) => void;
@@ -101,6 +131,23 @@ export const KeywordsSection = ({
 
   // Functional view state (Editorial vs Ads)
   const [functionalView, setFunctionalView] = useState<FunctionalView>(persistedState.functionalView || 'editorial');
+
+  // Column width management for resizable columns
+  const { 
+    widths: editorialWidths, 
+    setColumnWidth: setEditorialColumnWidth, 
+    resetWidths: resetEditorialWidths 
+  } = useColumnWidths(`keywords-editorial-${marketplaceId}`, DEFAULT_EDITORIAL_WIDTHS);
+  
+  const { 
+    widths: adsWidths, 
+    setColumnWidth: setAdsColumnWidth, 
+    resetWidths: resetAdsWidths 
+  } = useColumnWidths(`keywords-ads-${marketplaceId}`, DEFAULT_ADS_WIDTHS);
+
+  const columnWidths = functionalView === 'editorial' ? editorialWidths : adsWidths;
+  const setColumnWidth = functionalView === 'editorial' ? setEditorialColumnWidth : setAdsColumnWidth;
+  const resetColumnWidths = functionalView === 'editorial' ? resetEditorialWidths : resetAdsWidths;
 
   // Sync persisted state when hydrated
   useEffect(() => {
@@ -301,6 +348,8 @@ export const KeywordsSection = ({
     } else {
       onUpdate(id, finalUpdates);
     }
+  };
+
   // Handle advanced filter change
   const handleAdvancedFiltersChange = (newFilters: AdvancedFiltersState) => {
     setFilters(newFilters);
@@ -489,6 +538,21 @@ export const KeywordsSection = ({
           {selectedIds.size > 0 && ` • ${selectedIds.size} seleccionadas`}
         </div>
         <div className="flex items-center gap-2">
+          {/* Reset Column Widths */}
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                onClick={resetColumnWidths}
+              >
+                <RotateCcw className="w-3.5 h-3.5" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Resetear anchos de columna</TooltipContent>
+          </Tooltip>
+          
           {/* View Toggle */}
           <div className="flex items-center rounded-md border border-border">
             <Button variant={viewMode === 'table' ? 'secondary' : 'ghost'} size="sm" className="rounded-r-none" onClick={() => handleViewModeChange('table')}>
@@ -531,113 +595,195 @@ export const KeywordsSection = ({
       {/* Content - Table or Cards */}
       {viewMode === 'table' ? <div className="rounded-lg border border-border overflow-hidden">
           <div className="overflow-x-auto">
-            <Table>
+            <Table className="table-fixed">
               <TableHeader>
                 <TableRow className="bg-muted/50 hover:bg-muted/50">
-                  <TableHead className="w-[40px]">
+                  <TableHead style={{ width: columnWidths.checkbox }}>
                     <Checkbox checked={selectedIds.size === filteredKeywords.length && filteredKeywords.length > 0} onCheckedChange={toggleSelectAll} />
                   </TableHead>
-                  <TableHead className="w-[40px]">
+                  <TableHead style={{ width: columnWidths.star }}>
                     <div className="flex items-center justify-center">
                       <Star className="w-3.5 h-3.5 text-muted-foreground" />
                     </div>
                   </TableHead>
-                  <TableHead className="cursor-pointer hover:text-foreground" onClick={() => handleSort('keyword')}>
+                  <ResizableTableHeader
+                    columnKey="keyword"
+                    width={columnWidths.keyword}
+                    onResize={setColumnWidth}
+                    className="cursor-pointer hover:text-foreground"
+                    onClick={() => handleSort('keyword')}
+                  >
                     <div className="flex items-center gap-1">
                       Keyword 
                       <ArrowUpDown className="w-3 h-3" />
                     </div>
-                  </TableHead>
-                  <TableHead className="cursor-pointer hover:text-foreground w-[100px]" onClick={() => handleSort('searchVolume')}>
+                  </ResizableTableHeader>
+                  <ResizableTableHeader
+                    columnKey="volume"
+                    width={columnWidths.volume}
+                    onResize={setColumnWidth}
+                    className="cursor-pointer hover:text-foreground"
+                    onClick={() => handleSort('searchVolume')}
+                  >
                     <div className="flex items-center gap-1">
                       Volumen
                       <ArrowUpDown className="w-3 h-3" />
                       <InfoTooltip content="Volumen de búsquedas mensuales estimado." />
                     </div>
-                  </TableHead>
-                  <TableHead className="cursor-pointer hover:text-foreground w-[120px]" onClick={() => handleSort('competitors')}>
+                  </ResizableTableHeader>
+                  <ResizableTableHeader
+                    columnKey="competitors"
+                    width={columnWidths.competitors}
+                    onResize={setColumnWidth}
+                    className="cursor-pointer hover:text-foreground"
+                    onClick={() => handleSort('competitors')}
+                  >
                     <div className="flex items-center gap-1">
                       Competidores
                       <ArrowUpDown className="w-3 h-3" />
                       <InfoTooltip content="Resultados Amazon para esta búsqueda. Menos de 3000 se considera favorable." />
                     </div>
-                  </TableHead>
+                  </ResizableTableHeader>
                   
                   {/* Columnas específicas por vista */}
                   {functionalView === 'editorial' ? (
                     <>
-                      <TableHead className="cursor-pointer hover:text-foreground w-[130px]" onClick={() => handleSort('marketScore')}>
+                      <ResizableTableHeader
+                        columnKey="marketScore"
+                        width={columnWidths.marketScore}
+                        onResize={setColumnWidth}
+                        className="cursor-pointer hover:text-foreground"
+                        onClick={() => handleSort('marketScore')}
+                      >
                         <div className="flex items-center gap-1">
                           Market Score
                           <ArrowUpDown className="w-3 h-3" />
                           <InfoTooltip content="Puntuación 0-100 de viabilidad de mercado." />
                         </div>
-                      </TableHead>
-                      <TableHead className="cursor-pointer hover:text-foreground w-[110px]" onClick={() => handleSort('status')}>
+                      </ResizableTableHeader>
+                      <ResizableTableHeader
+                        columnKey="status"
+                        width={columnWidths.status}
+                        onResize={setColumnWidth}
+                        className="cursor-pointer hover:text-foreground"
+                        onClick={() => handleSort('status')}
+                      >
                         <div className="flex items-center gap-1">
                           Estado
                           <ArrowUpDown className="w-3 h-3" />
                           <InfoTooltip content="Pendiente / Válida / Descartada" />
                         </div>
-                      </TableHead>
+                      </ResizableTableHeader>
                     </>
                   ) : (
                     <>
-                      <TableHead className="w-[70px]">
+                      <ResizableTableHeader
+                        columnKey="acosPE"
+                        width={columnWidths.acosPE}
+                        onResize={setColumnWidth}
+                      >
                         <div className="flex items-center gap-1">
                           ACOS PE
                           <InfoTooltip content="ACOS Punto de Equilibrio. Si ACOS actual supera este valor, pierdes dinero." />
                         </div>
-                      </TableHead>
-                      <TableHead className="cursor-pointer hover:text-foreground w-[70px]" onClick={() => handleSort('clicks')}>
+                      </ResizableTableHeader>
+                      <ResizableTableHeader
+                        columnKey="clicks"
+                        width={columnWidths.clicks}
+                        onResize={setColumnWidth}
+                        className="cursor-pointer hover:text-foreground"
+                        onClick={() => handleSort('clicks')}
+                      >
                         <div className="flex items-center gap-1">
                           Clicks
                           <ArrowUpDown className="w-3 h-3" />
                         </div>
-                      </TableHead>
-                      <TableHead className="cursor-pointer hover:text-foreground w-[70px]" onClick={() => handleSort('cpc')}>
+                      </ResizableTableHeader>
+                      <ResizableTableHeader
+                        columnKey="cpc"
+                        width={columnWidths.cpc}
+                        onResize={setColumnWidth}
+                        className="cursor-pointer hover:text-foreground"
+                        onClick={() => handleSort('cpc')}
+                      >
                         <div className="flex items-center gap-1">
                           CPC
                           <ArrowUpDown className="w-3 h-3" />
                         </div>
-                      </TableHead>
-                      <TableHead className="cursor-pointer hover:text-foreground w-[70px]" onClick={() => handleSort('pedidos')}>
+                      </ResizableTableHeader>
+                      <ResizableTableHeader
+                        columnKey="pedidos"
+                        width={columnWidths.pedidos}
+                        onResize={setColumnWidth}
+                        className="cursor-pointer hover:text-foreground"
+                        onClick={() => handleSort('pedidos')}
+                      >
                         <div className="flex items-center gap-1">
                           Pedidos
                           <ArrowUpDown className="w-3 h-3" />
                         </div>
-                      </TableHead>
-                      <TableHead className="cursor-pointer hover:text-foreground w-[70px]" onClick={() => handleSort('gasto')}>
+                      </ResizableTableHeader>
+                      <ResizableTableHeader
+                        columnKey="gasto"
+                        width={columnWidths.gasto}
+                        onResize={setColumnWidth}
+                        className="cursor-pointer hover:text-foreground"
+                        onClick={() => handleSort('gasto')}
+                      >
                         <div className="flex items-center gap-1">
                           Gasto
                           <ArrowUpDown className="w-3 h-3" />
                         </div>
-                      </TableHead>
-                      <TableHead className="cursor-pointer hover:text-foreground w-[70px]" onClick={() => handleSort('ventas')}>
+                      </ResizableTableHeader>
+                      <ResizableTableHeader
+                        columnKey="ventas"
+                        width={columnWidths.ventas}
+                        onResize={setColumnWidth}
+                        className="cursor-pointer hover:text-foreground"
+                        onClick={() => handleSort('ventas')}
+                      >
                         <div className="flex items-center gap-1">
                           Ventas
                           <ArrowUpDown className="w-3 h-3" />
                         </div>
-                      </TableHead>
-                      <TableHead className="cursor-pointer hover:text-foreground w-[80px]" onClick={() => handleSort('acosActual')}>
+                      </ResizableTableHeader>
+                      <ResizableTableHeader
+                        columnKey="acos"
+                        width={columnWidths.acos}
+                        onResize={setColumnWidth}
+                        className="cursor-pointer hover:text-foreground"
+                        onClick={() => handleSort('acosActual')}
+                      >
                         <div className="flex items-center gap-1">
                           ACOS
                           <ArrowUpDown className="w-3 h-3" />
                         </div>
-                      </TableHead>
-                      <TableHead className="cursor-pointer hover:text-foreground w-[70px]" onClick={() => handleSort('conversion')}>
+                      </ResizableTableHeader>
+                      <ResizableTableHeader
+                        columnKey="conversion"
+                        width={columnWidths.conversion}
+                        onResize={setColumnWidth}
+                        className="cursor-pointer hover:text-foreground"
+                        onClick={() => handleSort('conversion')}
+                      >
                         <div className="flex items-center gap-1">
                           Conv.
                           <ArrowUpDown className="w-3 h-3" />
                         </div>
-                      </TableHead>
-                      <TableHead className="cursor-pointer hover:text-foreground w-[80px]" onClick={() => handleSort('beneficio')}>
+                      </ResizableTableHeader>
+                      <ResizableTableHeader
+                        columnKey="beneficio"
+                        width={columnWidths.beneficio}
+                        onResize={setColumnWidth}
+                        className="cursor-pointer hover:text-foreground"
+                        onClick={() => handleSort('beneficio')}
+                      >
                         <div className="flex items-center gap-1">
                           Beneficio
                           <ArrowUpDown className="w-3 h-3" />
                           <InfoTooltip content="Ventas - Gasto. Muestra la rentabilidad de cada keyword." />
                         </div>
-                      </TableHead>
+                      </ResizableTableHeader>
                     </>
                   )}
                 </TableRow>

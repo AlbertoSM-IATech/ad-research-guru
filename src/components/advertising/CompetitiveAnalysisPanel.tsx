@@ -14,6 +14,12 @@ import { Progress } from '@/components/ui/progress';
 import { Separator } from '@/components/ui/separator';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import { type TargetASIN, type Keyword } from '@/types/advertising';
+import { 
+  CompetitiveAnalysisFilters, 
+  applyCompetitiveFilters,
+  defaultCompetitiveFiltersState,
+  type CompetitiveFiltersState 
+} from './CompetitiveAnalysisFilters';
 
 interface CompetitiveAnalysisPanelProps {
   asins: TargetASIN[];
@@ -43,15 +49,16 @@ export const CompetitiveAnalysisPanel = ({
   onClose,
 }: CompetitiveAnalysisPanelProps) => {
   const [selectedASIN, setSelectedASIN] = useState<TargetASIN | null>(null);
+  const [filters, setFilters] = useState<CompetitiveFiltersState>(defaultCompetitiveFiltersState);
 
-  // Sort ASINs by threat score
-  const sortedASINs = useMemo(() => {
-    return [...asins].sort((a, b) => (b.threatScore || 0) - (a.threatScore || 0));
-  }, [asins]);
+  // Apply filters and sorting
+  const filteredAndSortedASINs = useMemo(() => {
+    return applyCompetitiveFilters(asins, filters);
+  }, [asins, filters]);
 
   // Prepare chart data
   const chartData = useMemo(() => {
-    return sortedASINs.slice(0, 10).map(asin => ({
+    return filteredAndSortedASINs.slice(0, 10).map(asin => ({
       name: asin.asin.slice(0, 6) + '...',
       fullName: asin.asin,
       title: asin.title || 'Sin título',
@@ -59,7 +66,7 @@ export const CompetitiveAnalysisPanel = ({
       sharedKeywords: asin.sharedKeywords || 0,
       bsr: asin.bsr || 0,
     }));
-  }, [sortedASINs]);
+  }, [filteredAndSortedASINs]);
 
   // Calculate average metrics
   const avgThreatScore = useMemo(() => {
@@ -174,16 +181,19 @@ export const CompetitiveAnalysisPanel = ({
 
           <Separator />
 
+          {/* Filters */}
+          <CompetitiveAnalysisFilters filters={filters} onFiltersChange={setFilters} />
+
           {/* Comparison Table */}
           <div className="space-y-3">
             <h4 className="font-medium flex items-center gap-2">
               <Eye className="w-4 h-4 text-primary" />
-              Comparativa: Tu libro vs Competidores
+              Comparativa: Tu libro vs Competidores ({filteredAndSortedASINs.length} de {asins.length})
             </h4>
             
             <ScrollArea className="h-[300px]">
               <div className="space-y-3">
-                {sortedASINs.map(asin => (
+                {filteredAndSortedASINs.map(asin => (
                   <Card 
                     key={asin.id}
                     className={`cursor-pointer transition-colors ${
