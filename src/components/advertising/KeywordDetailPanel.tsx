@@ -237,9 +237,13 @@ export const KeywordDetailPanel = ({
     setAdsData(keyword.adsData);
   };
 
-  // Handle ads data change from AcosEquilibrioSection
+  // Handle ads data change from AcosEquilibrioSection - auto-save immediately
   const handleAdsDataChange = (newAdsData: AdsData) => {
     setAdsData(newAdsData);
+    // Auto-save adsData changes immediately
+    if (keyword) {
+      onSave(keyword.id, { adsData: newAdsData });
+    }
   };
 
   if (!keyword) return null;

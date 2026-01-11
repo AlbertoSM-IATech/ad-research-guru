@@ -26,9 +26,22 @@ export interface BookInfo {
 export interface HistoryEntry {
   id: string;
   timestamp: Date;
-  field: 'searchVolume' | 'state' | 'relevance' | 'competitionLevel' | 'notes';
+  field: 'searchVolume' | 'state' | 'relevance' | 'competitionLevel' | 'notes' | 'clicks' | 'cpcActual' | 'pedidos' | 'acosActual';
   oldValue: string | number | undefined;
   newValue: string | number | undefined;
+}
+
+// ADS History Entry for tracking ADS metrics over time
+export interface AdsHistoryEntry {
+  id: string;
+  timestamp: Date;
+  clicks: number;
+  cpcActual: number;
+  pedidos: number;
+  gasto: number;
+  ventas: number;
+  acosActual: number | null;
+  beneficio: number | null;
 }
 
 // Campaign Plan for organizing keywords
@@ -77,6 +90,7 @@ export interface AdsData {
   guiaLanzamiento?: number; // %
   guiaDominio?: number;     // %
   guiaBeneficio?: number;   // %
+  history?: AdsHistoryEntry[]; // Historical snapshots of ADS metrics
 }
 
 // ============ BOOK ECONOMY (global per book) ============

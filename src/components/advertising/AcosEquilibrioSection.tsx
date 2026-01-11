@@ -75,6 +75,21 @@ export const AcosEquilibrioSection = ({
     } else {
       const numValue = parseFloat(value);
       if (!isNaN(numValue) && numValue >= 0) {
+        // Auto-increment clicks when pedidos > clicks
+        if (field === 'pedidos') {
+          const currentClicks = adsData?.clicks ?? 0;
+          if (numValue > currentClicks) {
+            // Also update clicks
+            setClicks(String(numValue));
+            const newAdsData: AdsData = {
+              ...adsData,
+              clicks: numValue,
+              pedidos: numValue,
+            };
+            onAdsDataChange(newAdsData);
+            return;
+          }
+        }
         updateAdsData(field, numValue);
       }
     }
