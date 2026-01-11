@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, useCallback } from 'react';
-import { Plus, Search, Trash2, ArrowUpDown, Upload, LayoutGrid, LayoutList, Eye, BookOpen, Megaphone, Info, Star, AlertTriangle, RotateCcw, GitCompare } from 'lucide-react';
+import { Plus, Search, Trash2, ArrowUpDown, Upload, LayoutGrid, LayoutList, Eye, BookOpen, Megaphone, Info, Star, AlertTriangle, RotateCcw, GitCompare, History } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -14,8 +14,10 @@ import { BulkCopyTools } from './BulkCopyTools';
 import { BulkActionsToolbar } from './BulkActionsToolbar';
 import { AdvancedFilters, AdvancedFiltersContent, type AdvancedFiltersState } from './AdvancedFilters';
 import { AdvancedFiltersAds, AdsFiltersContent, defaultAdsFiltersState, type AdsFiltersState } from './AdvancedFiltersAds';
+import { FilterPresetsDropdown } from './FilterPresetsDropdown';
 import { KeywordCardView } from './KeywordCardView';
 import { KeywordHistoryModal } from './KeywordHistoryModal';
+import { AdsHistoryPanel } from './AdsHistoryPanel';
 import { VariantDetector } from './VariantDetector';
 import { KeywordDetailPanel } from './KeywordDetailPanel';
 import { MarketScoreCell } from './MarketScoreCell';
@@ -23,7 +25,7 @@ import { NewKeywordWizard } from './NewKeywordWizard';
 import { KeywordExportCSV } from './KeywordExportCSV';
 import { KeywordComparisonPanel } from './KeywordComparisonPanel';
 import { ResizableTableHeader } from './ResizableTableHeader';
-import { type Keyword, type CampaignType, type CompetitionLevel, type RelevanceLevel, type IntentType, type KeywordState, type BookInfo, type BookEconomy, type HistoryEntry, RELEVANCE_LEVELS, INTENT_TYPES, KEYWORD_STATES, calculateRelevance, classifyIntent } from '@/types/advertising';
+import { type Keyword, type CampaignType, type CompetitionLevel, type RelevanceLevel, type IntentType, type KeywordState, type BookInfo, type BookEconomy, type HistoryEntry, type AdsData, RELEVANCE_LEVELS, INTENT_TYPES, KEYWORD_STATES, calculateRelevance, classifyIntent } from '@/types/advertising';
 import { calculateMarketScore, getDefaultMarketData, KEYWORD_STATUS_OPTIONS, type KeywordStatus } from '@/lib/market-score';
 import { createKeywordDefaults } from '@/lib/keyword-helpers';
 import { getAutoStatusFromScore } from '@/lib/keyword-builder';
@@ -31,6 +33,7 @@ import { sortKeywords, getKeywordMarketScore, isMarketDataIncomplete, SORT_OPTIO
 import { applyKeywordFilters } from '@/lib/keyword-filters';
 import { useKeywordUIPersistence, type FunctionalView } from '@/hooks/useKeywordUIPersistence';
 import { useColumnWidths, type ColumnWidths } from '@/hooks/useColumnWidths';
+import { useFilterPresets } from '@/hooks/useFilterPresets';
 import { calcularGastoAcumulado, calcularVentasAcumuladas, calcularAcosActualPorcentaje, calcularAcosSiguienteClickPorcentaje, calcularConversionPorcentaje, formatearPorcentaje, formatearMoneda } from '@/lib/acosEquilibrio';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
@@ -131,6 +134,10 @@ export const KeywordsSection = ({
   const [validationKeyword, setValidationKeyword] = useState<Keyword | null>(null);
   const [advancedFiltersExpanded, setAdvancedFiltersExpanded] = useState(false);
   const [isComparisonOpen, setIsComparisonOpen] = useState(false);
+  const [adsHistoryKeyword, setAdsHistoryKeyword] = useState<Keyword | null>(null);
+
+  // Filter presets hook
+  const { presets, savePreset, deletePreset, loadPreset } = useFilterPresets();
 
   // Functional view state (Editorial vs Ads)
   const [functionalView, setFunctionalView] = useState<FunctionalView>(persistedState.functionalView || 'editorial');
@@ -282,13 +289,16 @@ export const KeywordsSection = ({
     onSelectedIdsChange(new Set());
   };
 
-  // Handle keyword update from detail panel
+  // Handle keyword update from detail panel (silent save for auto-sync)
   const handleKeywordDetailSave = (keywordId: string, updates: Partial<Keyword>) => {
     onUpdate(keywordId, updates);
-    toast({
-      title: 'Keyword guardada',
-      description: `Market Score: ${updates.marketScore}/100`
-    });
+    // Only show toast when saving full keyword data (with marketScore)
+    if (updates.marketScore !== undefined) {
+      toast({
+        title: 'Keyword guardada',
+        description: `Market Score: ${updates.marketScore}/100`
+      });
+    }
   };
 
   // Handle update with history tracking + auto status update
@@ -492,6 +502,22 @@ export const KeywordsSection = ({
         ) : (
           <AdvancedFiltersAds filters={adsFilters} onFiltersChange={handleAdsFiltersChange} renderTriggerOnly isExpanded={advancedFiltersExpanded} onToggleExpanded={() => setAdvancedFiltersExpanded(!advancedFiltersExpanded)} />
         )}
+        
+        {/* Filter Presets */}
+        <FilterPresetsDropdown
+          type={functionalView}
+          currentFilters={functionalView === 'editorial' ? filters : adsFilters}
+          presets={presets}
+          onSavePreset={savePreset}
+          onLoadPreset={(loadedFilters) => {
+            if (functionalView === 'editorial') {
+              handleAdvancedFiltersChange(loadedFilters as AdvancedFiltersState);
+            } else {
+              handleAdsFiltersChange(loadedFilters as AdsFiltersState);
+            }
+          }}
+          onDeletePreset={deletePreset}
+        />
       </div>
 
       {/* Advanced Filters Content */}
@@ -999,7 +1025,7 @@ export const KeywordsSection = ({
                                 step={1}
                                 value={ads?.clicks ?? ''}
                                 onChange={(e) => handleInlineAdsUpdate('clicks', e.target.value)}
-                                className="h-7 w-14 text-xs tabular-nums"
+                                className="h-7 w-20 text-xs tabular-nums [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                                 placeholder="—"
                               />
                             </TableCell>
@@ -1011,7 +1037,7 @@ export const KeywordsSection = ({
                                 step={0.01}
                                 value={ads?.cpcActual ?? ''}
                                 onChange={(e) => handleInlineAdsUpdate('cpcActual', e.target.value)}
-                                className="h-7 w-14 text-xs tabular-nums"
+                                className="h-7 w-20 text-xs tabular-nums [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                                 placeholder="—"
                               />
                             </TableCell>
@@ -1023,7 +1049,7 @@ export const KeywordsSection = ({
                                 step={1}
                                 value={ads?.pedidos ?? ''}
                                 onChange={(e) => handleInlineAdsUpdate('pedidos', e.target.value)}
-                                className="h-7 w-14 text-xs tabular-nums"
+                                className="h-7 w-20 text-xs tabular-nums [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                                 placeholder="—"
                               />
                             </TableCell>
@@ -1132,6 +1158,20 @@ export const KeywordsSection = ({
           if (newSet.size < 2) setIsComparisonOpen(false);
         }}
         bookEconomy={bookEconomy}
+      />
+      
+      {/* ADS History Panel */}
+      <AdsHistoryPanel
+        keyword={adsHistoryKeyword?.keyword ?? ''}
+        adsData={adsHistoryKeyword?.adsData}
+        bookEconomy={bookEconomy}
+        isOpen={!!adsHistoryKeyword}
+        onClose={() => setAdsHistoryKeyword(null)}
+        onAdsDataChange={(newAdsData: AdsData) => {
+          if (adsHistoryKeyword) {
+            onUpdate(adsHistoryKeyword.id, { adsData: newAdsData });
+          }
+        }}
       />
     </div>;
 };
