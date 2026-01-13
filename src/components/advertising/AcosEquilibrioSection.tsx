@@ -61,8 +61,9 @@ export const AcosEquilibrioSection = ({
 
   // Update parent when values change
   const updateAdsData = (field: keyof AdsData, value: number | undefined | AdsFase) => {
+    const baseAds = (adsData ?? {}) as AdsData;
     const newAdsData: AdsData = {
-      ...adsData,
+      ...baseAds,
       [field]: value,
     };
     onAdsDataChange(newAdsData);
@@ -81,8 +82,9 @@ export const AcosEquilibrioSection = ({
           if (numValue > currentClicks) {
             // Also update clicks
             setClicks(String(numValue));
+            const baseAds = (adsData ?? {}) as AdsData;
             const newAdsData: AdsData = {
-              ...adsData,
+              ...baseAds,
               clicks: numValue,
               pedidos: numValue,
             };

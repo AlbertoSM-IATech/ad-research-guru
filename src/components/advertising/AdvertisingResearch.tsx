@@ -12,7 +12,6 @@ import { GlobalSearch, type FilterType, type SortOption } from './GlobalSearch';
 import { CollapsibleEducation } from './CollapsibleEducation';
 import { VisualizationsTab } from './visualizations/VisualizationsTab';
 import { BookInfoPanel } from './BookInfoPanel';
-import { SuggestionsPanel } from './SuggestionsPanel';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { AdvancedExportModal } from './AdvancedExportModal';
 import { AdvancedImportModal } from './AdvancedImportModal';
@@ -81,7 +80,6 @@ export const AdvertisingResearch = ({
   const [pendingChangesCount, setPendingChangesCount] = useState(0);
   const [selectedMarketplace, setSelectedMarketplace] = useState('us');
   const [activeTab, setActiveTab] = useState<'keywords' | 'asins' | 'categories'>('keywords');
-  const [showSuggestions, setShowSuggestions] = useState(false);
   const [hasLoadedExamples, setHasLoadedExamples] = useState(false);
   const [isDemoMode, setIsDemoMode] = useState(isAIDemoMode());
   const [showInsights, setShowInsights] = useState(false);
@@ -512,14 +510,6 @@ export const AdvertisingResearch = ({
     }));
   }, [selectedMarketplace]);
 
-  // Suggestion handler
-  const handleAddSuggestion = useCallback((keyword: string) => {
-    handleAddKeyword(createKeywordDefaults({
-      keyword,
-      marketplaceId: selectedMarketplace,
-      notes: 'Añadida desde sugerencias'
-    }));
-  }, [handleAddKeyword, selectedMarketplace]);
 
   // Keyboard shortcut handlers
   const handleSave = useCallback(() => {
@@ -988,9 +978,6 @@ export const AdvertisingResearch = ({
       </div>
 
       {/* === MODALS Y PANELES OCULTOS === */}
-      
-      {/* Suggestions Panel - Accesible pero no dominante */}
-      <SuggestionsPanel keywords={currentKeywords} onAddKeyword={handleAddSuggestion} isOpen={showSuggestions} onClose={() => setShowSuggestions(!showSuggestions)} />
       
       {/* Guided Tour - Solo desde overflow */}
       {/* Guided Tour */}
