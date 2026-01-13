@@ -123,10 +123,17 @@ export const KeywordDetailPanel = ({
       setStatusManuallySet(keyword.statusManuallySet || false);
       setNotes(keyword.notes || '');
 
-      // Ads data
+      // Ads data (initial load)
       setAdsData(keyword.adsData);
     }
   }, [keyword, isOpen]);
+
+  // Keep ADS data in sync live while panel is open (table edits)
+  useEffect(() => {
+    if (keyword && isOpen) {
+      setAdsData(keyword.adsData);
+    }
+  }, [keyword?.adsData, keyword?.id, isOpen]);
 
   // Calculate Market Score
   const marketData: MarketData = useMemo(() => ({

@@ -76,22 +76,33 @@ export const AcosEquilibrioSection = ({
     } else {
       const numValue = parseFloat(value);
       if (!isNaN(numValue) && numValue >= 0) {
-        // Auto-increment clicks when pedidos > clicks
+        // Auto-click rule: when increasing pedidos, also increase clicks by the same delta.
         if (field === 'pedidos') {
-          const currentClicks = adsData?.clicks ?? 0;
-          if (numValue > currentClicks) {
-            // Also update clicks
-            setClicks(String(numValue));
+          const prevPedidos = adsData?.pedidos ?? 0;
+          const prevClicks = adsData?.clicks ?? 0;
+          const delta = numValue - prevPedidos;
+          if (delta > 0) {
+            const nextClicks = Math.max(prevClicks + delta, numValue);
+            setClicks(String(nextClicks));
             const baseAds = (adsData ?? {}) as AdsData;
             const newAdsData: AdsData = {
               ...baseAds,
-              clicks: numValue,
+              clicks: nextClicks,
               pedidos: numValue,
             };
             onAdsDataChange(newAdsData);
             return;
           }
+
+          // If pedidos was decreased/edited downward, keep existing clicks but enforce clicks >= pedidos
+          if (prevClicks < numValue) {
+            setClicks(String(numValue));
+            const baseAds = (adsData ?? {}) as AdsData;
+            onAdsDataChange({ ...baseAds, clicks: numValue, pedidos: numValue });
+            return;
+          }
         }
+
         updateAdsData(field, numValue);
       }
     }

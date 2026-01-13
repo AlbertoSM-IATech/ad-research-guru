@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, useCallback } from 'react';
-import { Plus, Search, Trash2, ArrowUpDown, Upload, LayoutGrid, LayoutList, Eye, BookOpen, Megaphone, Info, Star, AlertTriangle, RotateCcw, GitCompare, History, ChevronUp, ChevronDown } from 'lucide-react';
+import { Plus, Search, Trash2, ArrowUpDown, Upload, LayoutGrid, LayoutList, Eye, BookOpen, Megaphone, Info, Star, AlertTriangle, RotateCcw, GitCompare, History, ChevronUp, ChevronDown, Save } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -878,10 +878,17 @@ export const KeywordsSection = ({
                   [field]: numValue,
                 };
 
-                // Auto-increment clicks when adding pedidos if clicks < pedidos
+                // Auto-click rule: when increasing pedidos, also increase clicks by the same delta.
                 if (field === 'pedidos' && numValue !== undefined) {
-                  const currentClicks = baseAds.clicks ?? 0;
-                  if (currentClicks < numValue) {
+                  const prevPedidos = baseAds.pedidos ?? 0;
+                  const prevClicks = baseAds.clicks ?? 0;
+                  const delta = numValue - prevPedidos;
+                  if (delta > 0) {
+                    updatedAdsData.clicks = prevClicks + delta;
+                  }
+
+                  // Always keep clicks >= pedidos
+                  if ((updatedAdsData.clicks ?? 0) < numValue) {
                     updatedAdsData.clicks = numValue;
                   }
                 }
@@ -940,12 +947,44 @@ export const KeywordsSection = ({
                             {/* Primary action: Open detail panel */}
                             <Tooltip>
                               <TooltipTrigger asChild>
-                                <Button variant="ghost" size="sm" onClick={() => setValidationKeyword(keyword)} className="h-7 w-7 p-0 bg-primary/10 hover:bg-primary/20 text-primary">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => setValidationKeyword(keyword)}
+                                  className="h-7 w-7 p-0 bg-primary/10 hover:bg-primary/20 text-primary"
+                                >
                                   <Eye className="w-4 h-4" />
                                 </Button>
                               </TooltipTrigger>
                               <TooltipContent>Abrir ficha de keyword</TooltipContent>
                             </Tooltip>
+
+                            {/* Manual save (forces refresh + sync) */}
+                            {functionalView === 'ads' && (
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => {
+                                      const baseAds = (ads ?? {}) as AdsData;
+                                      const normalizedAds: AdsData = { ...baseAds };
+                                      // Trigger a new object reference to ensure side panel sync
+                                      onUpdate(keyword.id, { adsData: normalizedAds });
+                                      if (validationKeyword?.id === keyword.id) {
+                                        setValidationKeyword({ ...keyword, adsData: normalizedAds });
+                                      }
+                                      toast({ title: 'Guardado', description: 'Datos de Ads sincronizados.' });
+                                    }}
+                                    className="h-7 w-7 p-0 bg-muted/40 hover:bg-muted"
+                                  >
+                                    <Save className="w-4 h-4" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>Guardar Ads</TooltipContent>
+                              </Tooltip>
+                            )}
+
                             <div className={cn(
                               isMainKeyword && "text-amber-600 dark:text-amber-400"
                             )}>
