@@ -870,22 +870,24 @@ export const KeywordsSection = ({
               const handleInlineAdsUpdate = (field: 'clicks' | 'cpcActual' | 'pedidos', value: string) => {
                 const numValue = value === '' ? undefined : parseFloat(value);
                 if (value !== '' && (isNaN(numValue!) || numValue! < 0)) return;
-                
-                let updatedAdsData = {
-                  ...ads,
+
+                const baseAds = (ads ?? {}) as AdsData;
+
+                let updatedAdsData: AdsData = {
+                  ...baseAds,
                   [field]: numValue,
                 };
-                
+
                 // Auto-increment clicks when adding pedidos if clicks < pedidos
                 if (field === 'pedidos' && numValue !== undefined) {
-                  const currentClicks = ads?.clicks ?? 0;
+                  const currentClicks = baseAds.clicks ?? 0;
                   if (currentClicks < numValue) {
                     updatedAdsData.clicks = numValue;
                   }
                 }
-                
+
                 onUpdate(keyword.id, {
-                  adsData: updatedAdsData
+                  adsData: updatedAdsData,
                 });
               };
               
