@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, useCallback } from 'react';
-import { Plus, Search, Trash2, ArrowUpDown, Upload, LayoutGrid, LayoutList, Eye, BookOpen, Megaphone, Info, Star, AlertTriangle, RotateCcw, GitCompare, History } from 'lucide-react';
+import { Plus, Search, Trash2, ArrowUpDown, Upload, LayoutGrid, LayoutList, Eye, BookOpen, Megaphone, Info, Star, AlertTriangle, RotateCcw, GitCompare, History, ChevronUp, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -1017,41 +1017,101 @@ export const KeywordsSection = ({
                             <TableCell className="tabular-nums text-xs font-medium text-primary">
                               {acosEquilibrio !== null ? `${acosEquilibrio.toFixed(1)}%` : '—'}
                             </TableCell>
-                            {/* Clicks - Inline editable */}
+                            {/* Clicks - Inline editable with increment buttons */}
                             <TableCell onClick={e => e.stopPropagation()}>
-                              <Input
-                                type="number"
-                                min={0}
-                                step={1}
-                                value={ads?.clicks ?? ''}
-                                onChange={(e) => handleInlineAdsUpdate('clicks', e.target.value)}
-                                className="h-7 w-20 text-xs tabular-nums [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                                placeholder="—"
-                              />
+                              <div className="flex items-center gap-0.5">
+                                <Input
+                                  type="number"
+                                  min={0}
+                                  step={1}
+                                  value={ads?.clicks ?? ''}
+                                  onChange={(e) => handleInlineAdsUpdate('clicks', e.target.value)}
+                                  className="h-7 w-14 text-xs tabular-nums text-center [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                  placeholder="0"
+                                />
+                                <div className="flex flex-col">
+                                  <Button 
+                                    variant="ghost" 
+                                    size="sm" 
+                                    className="h-3.5 w-5 p-0 hover:bg-primary/20"
+                                    onClick={() => handleInlineAdsUpdate('clicks', String((ads?.clicks ?? 0) + 1))}
+                                  >
+                                    <ChevronUp className="w-3 h-3" />
+                                  </Button>
+                                  <Button 
+                                    variant="ghost" 
+                                    size="sm" 
+                                    className="h-3.5 w-5 p-0 hover:bg-primary/20"
+                                    onClick={() => handleInlineAdsUpdate('clicks', String(Math.max(0, (ads?.clicks ?? 0) - 1)))}
+                                  >
+                                    <ChevronDown className="w-3 h-3" />
+                                  </Button>
+                                </div>
+                              </div>
                             </TableCell>
-                            {/* CPC - Inline editable */}
+                            {/* CPC - Inline editable with increment buttons */}
                             <TableCell onClick={e => e.stopPropagation()}>
-                              <Input
-                                type="number"
-                                min={0}
-                                step={0.01}
-                                value={ads?.cpcActual ?? ''}
-                                onChange={(e) => handleInlineAdsUpdate('cpcActual', e.target.value)}
-                                className="h-7 w-20 text-xs tabular-nums [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                                placeholder="—"
-                              />
+                              <div className="flex items-center gap-0.5">
+                                <Input
+                                  type="number"
+                                  min={0}
+                                  step={0.01}
+                                  value={ads?.cpcActual ?? ''}
+                                  onChange={(e) => handleInlineAdsUpdate('cpcActual', e.target.value)}
+                                  className="h-7 w-14 text-xs tabular-nums text-center [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                  placeholder="0.00"
+                                />
+                                <div className="flex flex-col">
+                                  <Button 
+                                    variant="ghost" 
+                                    size="sm" 
+                                    className="h-3.5 w-5 p-0 hover:bg-primary/20"
+                                    onClick={() => handleInlineAdsUpdate('cpcActual', String(((ads?.cpcActual ?? 0) + 0.01).toFixed(2)))}
+                                  >
+                                    <ChevronUp className="w-3 h-3" />
+                                  </Button>
+                                  <Button 
+                                    variant="ghost" 
+                                    size="sm" 
+                                    className="h-3.5 w-5 p-0 hover:bg-primary/20"
+                                    onClick={() => handleInlineAdsUpdate('cpcActual', String(Math.max(0, (ads?.cpcActual ?? 0) - 0.01).toFixed(2)))}
+                                  >
+                                    <ChevronDown className="w-3 h-3" />
+                                  </Button>
+                                </div>
+                              </div>
                             </TableCell>
-                            {/* Pedidos - Inline editable */}
+                            {/* Pedidos - Inline editable with increment buttons */}
                             <TableCell onClick={e => e.stopPropagation()}>
-                              <Input
-                                type="number"
-                                min={0}
-                                step={1}
-                                value={ads?.pedidos ?? ''}
-                                onChange={(e) => handleInlineAdsUpdate('pedidos', e.target.value)}
-                                className="h-7 w-20 text-xs tabular-nums [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                                placeholder="—"
-                              />
+                              <div className="flex items-center gap-0.5">
+                                <Input
+                                  type="number"
+                                  min={0}
+                                  step={1}
+                                  value={ads?.pedidos ?? ''}
+                                  onChange={(e) => handleInlineAdsUpdate('pedidos', e.target.value)}
+                                  className="h-7 w-14 text-xs tabular-nums text-center [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                  placeholder="0"
+                                />
+                                <div className="flex flex-col">
+                                  <Button 
+                                    variant="ghost" 
+                                    size="sm" 
+                                    className="h-3.5 w-5 p-0 hover:bg-primary/20"
+                                    onClick={() => handleInlineAdsUpdate('pedidos', String((ads?.pedidos ?? 0) + 1))}
+                                  >
+                                    <ChevronUp className="w-3 h-3" />
+                                  </Button>
+                                  <Button 
+                                    variant="ghost" 
+                                    size="sm" 
+                                    className="h-3.5 w-5 p-0 hover:bg-primary/20"
+                                    onClick={() => handleInlineAdsUpdate('pedidos', String(Math.max(0, (ads?.pedidos ?? 0) - 1)))}
+                                  >
+                                    <ChevronDown className="w-3 h-3" />
+                                  </Button>
+                                </div>
+                              </div>
                             </TableCell>
                             {/* Gasto - Auto-calculated (read-only) */}
                             <TableCell className="tabular-nums text-xs text-muted-foreground">
