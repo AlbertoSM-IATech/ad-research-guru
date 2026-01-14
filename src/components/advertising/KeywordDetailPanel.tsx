@@ -11,7 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
-import { Info, Save, RotateCcw, Sparkles, BookOpen, Megaphone, Maximize2, Minimize2 } from 'lucide-react';
+import { Info, Save, RotateCcw, Sparkles, BookOpen, Megaphone, Maximize2, Minimize2, CheckCircle2, Clock } from 'lucide-react';
 import type { Keyword, BookEconomy, AdsData } from '@/types/advertising';
 import { getAutoStatusFromScore } from '@/lib/keyword-builder';
 import { type MarketData, type MarketStructure, type CatalogSignals, type EditorialData, type TrafficSource, type KeywordStatus, type BooksOver200ReviewsRange, calculateMarketScore, calculateEditorialScore, getDefaultMarketData, getDefaultEditorialData, getDefaultMarketStructure, getDefaultCatalogSignals, getMarketScoreInfo, getBooksOver200ReviewsPoints, TRAFFIC_SOURCE_OPTIONS, KEYWORD_STATUS_OPTIONS, MARKET_STRUCTURE_CHECKS, CATALOG_SIGNALS_CHECKS, EDITORIAL_CHECKS, BOOKS_OVER_200_REVIEWS_OPTIONS, BOOKS_OVER_200_REVIEWS_FIELD } from '@/lib/market-score';
@@ -66,6 +66,9 @@ export const KeywordDetailPanel = ({
   
   // Ads Data state
   const [adsData, setAdsData] = useState<AdsData | undefined>(undefined);
+  
+  // Sync timestamp state
+  const [lastSyncTime, setLastSyncTime] = useState<Date | null>(null);
 
   // Reset tab when opening with defaultTab
   useEffect(() => {
@@ -132,6 +135,7 @@ export const KeywordDetailPanel = ({
   useEffect(() => {
     if (keyword && isOpen) {
       setAdsData(keyword.adsData);
+      setLastSyncTime(new Date());
     }
   }, [keyword?.adsData, keyword?.id, isOpen]);
 
@@ -247,10 +251,17 @@ export const KeywordDetailPanel = ({
   // Handle ads data change from AcosEquilibrioSection - auto-save immediately
   const handleAdsDataChange = (newAdsData: AdsData) => {
     setAdsData(newAdsData);
+    setLastSyncTime(new Date());
     // Auto-save adsData changes immediately
     if (keyword) {
       onSave(keyword.id, { adsData: newAdsData });
     }
+  };
+  
+  // Format sync time for display
+  const formatSyncTime = (date: Date | null) => {
+    if (!date) return null;
+    return date.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
   };
 
   if (!keyword) return null;
@@ -685,6 +696,16 @@ export const KeywordDetailPanel = ({
 
           {/* ========== TAB ADS ========== */}
           <TabsContent value="ads" className="space-y-6 py-4">
+            {/* Sync indicator */}
+            {lastSyncTime && (
+              <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-green-500/10 border border-green-500/20 text-green-700 dark:text-green-300">
+                <CheckCircle2 className="w-4 h-4" />
+                <span className="text-xs font-medium">Sincronizado</span>
+                <Clock className="w-3 h-3 ml-auto opacity-70" />
+                <span className="text-xs opacity-70">{formatSyncTime(lastSyncTime)}</span>
+              </div>
+            )}
+            
             {/* Contexto mínimo de mercado */}
             <div className="p-4 rounded-lg border border-border bg-muted/30">
               <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3">

@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, useCallback } from 'react';
-import { Plus, Search, Trash2, ArrowUpDown, Upload, LayoutGrid, LayoutList, Eye, BookOpen, Megaphone, Info, Star, AlertTriangle, RotateCcw, GitCompare, History, ChevronUp, ChevronDown, Save } from 'lucide-react';
+import { Plus, Search, Trash2, ArrowUpDown, Upload, Eye, BookOpen, Megaphone, Info, Star, AlertTriangle, RotateCcw, GitCompare, History, ChevronUp, ChevronDown, Save } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -15,10 +15,8 @@ import { BulkActionsToolbar } from './BulkActionsToolbar';
 import { AdvancedFilters, AdvancedFiltersContent, type AdvancedFiltersState } from './AdvancedFilters';
 import { AdvancedFiltersAds, AdsFiltersContent, defaultAdsFiltersState, type AdsFiltersState } from './AdvancedFiltersAds';
 import { FilterPresetsDropdown } from './FilterPresetsDropdown';
-import { KeywordCardView } from './KeywordCardView';
 import { KeywordHistoryModal } from './KeywordHistoryModal';
 import { AdsHistoryPanel } from './AdsHistoryPanel';
-import { VariantDetector } from './VariantDetector';
 import { KeywordDetailPanel } from './KeywordDetailPanel';
 import { MarketScoreCell } from './MarketScoreCell';
 import { NewKeywordWizard } from './NewKeywordWizard';
@@ -85,7 +83,7 @@ interface KeywordsSectionProps {
   searchTerm: string;
   onSearchTermChange: (term: string) => void;
 }
-type ViewMode = 'table' | 'cards';
+
 const ITEMS_PER_PAGE = 20;
 export const KeywordsSection = ({
   keywords,
@@ -115,7 +113,6 @@ export const KeywordsSection = ({
     updateFilters,
     updateQuickFilter,
     updateSort,
-    updateViewMode,
     updateFunctionalView
   } = useKeywordUIPersistence(marketplaceId);
 
@@ -124,7 +121,6 @@ export const KeywordsSection = ({
   const [adsFilters, setAdsFilters] = useState<AdsFiltersState>(defaultAdsFiltersState);
   const [sortField, setSortField] = useState<SortField>(persistedState.sortField);
   const [sortOrder, setSortOrder] = useState<SortOrder>(persistedState.sortOrder);
-  const [viewMode, setViewMode] = useState<ViewMode>(persistedState.viewMode);
   const [currentPage, setCurrentPage] = useState(1);
   const [isBulkImportOpen, setIsBulkImportOpen] = useState(false);
   const [quickAddKeyword, setQuickAddKeyword] = useState('');
@@ -165,7 +161,6 @@ export const KeywordsSection = ({
       setFilters(persistedState.filters);
       setSortField(persistedState.sortField);
       setSortOrder(persistedState.sortOrder);
-      setViewMode(persistedState.viewMode);
       setFunctionalView(persistedState.functionalView || 'editorial');
     }
   }, [isHydrated, persistedState]);
@@ -228,10 +223,6 @@ export const KeywordsSection = ({
     setSortField(field);
     setSortOrder(order);
     updateSort(field, order);
-  };
-  const handleViewModeChange = (mode: ViewMode) => {
-    setViewMode(mode);
-    updateViewMode(mode);
   };
   const toggleSelectAll = () => {
     if (selectedIds.size === filteredKeywords.length) {
@@ -546,18 +537,6 @@ export const KeywordsSection = ({
           setCurrentPage(1);
         }} className="pl-10" />
         </div>
-
-        {/* Column 3: Sort */}
-        <Select value={`${sortField}-${sortOrder}`} onValueChange={handleSortOptionChange}>
-          <SelectTrigger>
-            <SelectValue placeholder="Ordenar..." />
-          </SelectTrigger>
-          <SelectContent className="bg-popover border-border z-50">
-            {SORT_OPTIONS.map(opt => <SelectItem key={`${opt.field}-${opt.order}`} value={`${opt.field}-${opt.order}`}>
-                {opt.label}
-              </SelectItem>)}
-          </SelectContent>
-        </Select>
       </div>
 
       {/* Toolbar + Results count */}
@@ -582,34 +561,8 @@ export const KeywordsSection = ({
             <TooltipContent>Resetear anchos de columna</TooltipContent>
           </Tooltip>
           
-          {/* View Toggle */}
-          <div className="flex items-center rounded-md border border-border">
-            <Button variant={viewMode === 'table' ? 'secondary' : 'ghost'} size="sm" className="rounded-r-none" onClick={() => handleViewModeChange('table')}>
-              <LayoutList className="w-4 h-4" />
-            </Button>
-            <Button variant={viewMode === 'cards' ? 'secondary' : 'ghost'} size="sm" className="rounded-l-none" onClick={() => handleViewModeChange('cards')}>
-              <LayoutGrid className="w-4 h-4" />
-            </Button>
-          </div>
           <BulkCopyTools keywords={filteredKeywords} selectedIds={selectedIds} />
           <KeywordExportCSV keywords={filteredKeywords} bookEconomy={bookEconomy} selectedIds={selectedIds} />
-          <VariantDetector keywords={keywords} onGroupVariants={(groupId, keywordIds) => {
-          keywordIds.forEach(id => {
-            const kw = keywords.find(k => k.id === id);
-            if (kw) {
-              onUpdate(id, {
-                notes: kw.notes ? `${kw.notes} [Variante: ${groupId}]` : `[Variante: ${groupId}]`
-              });
-            }
-          });
-          toast({
-            title: `${keywordIds.length} keywords agrupadas como variantes`
-          });
-        }} onSeparateVariants={keywordIds => {
-          toast({
-            title: 'Variantes separadas'
-          });
-        }} />
           <Button data-tour="bulk-import" variant="outline" size="sm" onClick={() => setIsBulkImportOpen(true)} className="gap-2">
             <Upload className="w-4 h-4" />
             Importar lote
@@ -632,8 +585,8 @@ export const KeywordsSection = ({
         </div>
       </div>
 
-      {/* Content - Table or Cards */}
-      {viewMode === 'table' ? <div className="rounded-lg border border-border overflow-hidden">
+      {/* Content - Table */}
+      <div className="rounded-lg border border-border overflow-hidden">
           <div className="overflow-x-auto">
             <Table className="table-fixed">
               <TableHeader>
@@ -1211,7 +1164,7 @@ export const KeywordsSection = ({
               </TableBody>
             </Table>
           </div>
-        </div> : <KeywordCardView keywords={paginatedKeywords} selectedIds={selectedIds} onToggleSelect={toggleSelect} onUpdate={handleUpdateWithHistory} onDelete={onDelete} onViewHistory={keyword => setHistoryKeyword(keyword)} />}
+        </div>
 
       {/* Pagination */}
       {totalPages > 1 && <div className="flex items-center justify-between">
