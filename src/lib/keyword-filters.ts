@@ -1,20 +1,19 @@
 // Centralized keyword filtering logic
 import type { Keyword } from '@/types/advertising';
-import type { KeywordPurpose, KeywordStatus } from './market-score';
+import type { KeywordStatus } from './market-score';
 import { getKeywordMarketScore } from './keyword-sorting';
 
 export interface KeywordFilters {
   searchTerm?: string;
-  purpose?: KeywordPurpose | 'all';
   status?: KeywordStatus | 'all';
-  competition?: string;
-  campaignType?: string;
   minVolume?: string;
   maxVolume?: string;
+  minCompetition?: string;
   maxCompetition?: string;
-  relevance?: string;
-  intent?: string;
-  state?: string;
+  campaignName?: string;
+  marketScoreRanges?: string[];
+  has200PlusReviews?: boolean;
+  hasUnder100Reviews?: boolean;
 }
 
 export type QuickFilter = 'all' | 'ready-for-ads' | 'candidates' | 'discard';
@@ -54,7 +53,7 @@ export const QUICK_FILTER_OPTIONS: QuickFilterOption[] = [
 ];
 
 // Get keyword purpose with fallback for old keywords
-export function getKeywordPurpose(keyword: Keyword): KeywordPurpose {
+export function getKeywordPurpose(keyword: Keyword): 'editorial' | 'ads' | 'both' {
   return keyword.purpose || 'editorial';
 }
 
@@ -67,22 +66,24 @@ export function getKeywordStatus(keyword: Keyword): KeywordStatus {
   return 'pending';
 }
 
+// Helper to check if score falls within a range
+function isScoreInRange(score: number, range: string): boolean {
+  const [min, max] = range.split('-').map(Number);
+  return score >= min && score < max;
+}
+
 // Apply all filters to a keyword list
 export function applyKeywordFilters(
   keywords: Keyword[],
   filters: KeywordFilters
 ): Keyword[] {
   return keywords.filter((k) => {
-    // Search term
-    if (filters.searchTerm && 
-        !k.keyword.toLowerCase().includes(filters.searchTerm.toLowerCase())) {
-      return false;
-    }
-    
-    // Purpose filter
-    if (filters.purpose && filters.purpose !== 'all') {
-      const keywordPurpose = getKeywordPurpose(k);
-      if (keywordPurpose !== filters.purpose) {
+    // Search term (includes keyword text and campaign name)
+    if (filters.searchTerm) {
+      const searchLower = filters.searchTerm.toLowerCase();
+      const matchesKeyword = k.keyword.toLowerCase().includes(searchLower);
+      const matchesCampaign = k.adsData?.campaignName?.toLowerCase().includes(searchLower);
+      if (!matchesKeyword && !matchesCampaign) {
         return false;
       }
     }
@@ -95,18 +96,6 @@ export function applyKeywordFilters(
       }
     }
     
-    // Competition filter
-    if (filters.competition && filters.competition !== 'all' && 
-        k.competitionLevel !== filters.competition) {
-      return false;
-    }
-    
-    // Campaign type filter
-    if (filters.campaignType && filters.campaignType !== 'all' && 
-        !k.campaignTypes.includes(filters.campaignType as any)) {
-      return false;
-    }
-    
     // Volume filters
     if (filters.minVolume && k.searchVolume < parseInt(filters.minVolume)) {
       return false;
@@ -115,22 +104,45 @@ export function applyKeywordFilters(
       return false;
     }
     
-    // Relevance filter
-    if (filters.relevance && filters.relevance !== 'all' && 
-        k.relevance !== filters.relevance) {
+    // Competition (competitors) filters
+    if (filters.minCompetition && k.competitors < parseInt(filters.minCompetition)) {
+      return false;
+    }
+    if (filters.maxCompetition && k.competitors > parseInt(filters.maxCompetition)) {
       return false;
     }
     
-    // Intent filter
-    if (filters.intent && filters.intent !== 'all' && 
-        k.intent !== filters.intent) {
-      return false;
+    // Campaign name filter
+    if (filters.campaignName && filters.campaignName.trim()) {
+      const campaignNameLower = filters.campaignName.toLowerCase();
+      if (!k.adsData?.campaignName?.toLowerCase().includes(campaignNameLower)) {
+        return false;
+      }
     }
     
-    // State filter (legacy)
-    if (filters.state && filters.state !== 'all' && 
-        k.state !== filters.state) {
-      return false;
+    // Market Score ranges (multiselect - pass if in ANY selected range)
+    if (filters.marketScoreRanges && filters.marketScoreRanges.length > 0) {
+      const score = getKeywordMarketScore(k);
+      const inAnyRange = filters.marketScoreRanges.some(range => isScoreInRange(score, range));
+      if (!inAnyRange) {
+        return false;
+      }
+    }
+    
+    // +200 reviews filter (check catalogSignals)
+    if (filters.has200PlusReviews) {
+      const range = k.catalogSignals?.booksOver200ReviewsRange;
+      // Only pass if range indicates presence of books with +200 reviews
+      if (!range) {
+        return false;
+      }
+    }
+    
+    // -100 reviews filter (check catalogSignals)
+    if (filters.hasUnder100Reviews) {
+      if (!k.catalogSignals?.hasBooksUnder100Reviews) {
+        return false;
+      }
     }
     
     return true;
@@ -153,7 +165,6 @@ export function applyQuickFilter(
     
     switch (quickFilter) {
       case 'ready-for-ads':
-        // purpose in (ads, both) AND marketScore >= 70 AND status != discarded
         return (
           (purpose === 'ads' || purpose === 'both') &&
           score >= 70 &&
@@ -161,7 +172,6 @@ export function applyQuickFilter(
         );
         
       case 'candidates':
-        // marketScore 40-69 AND status != discarded
         return (
           score >= 40 &&
           score < 70 &&
@@ -169,7 +179,6 @@ export function applyQuickFilter(
         );
         
       case 'discard':
-        // marketScore < 40 OR status == discarded
         return (
           score < 40 ||
           status === 'discarded'
@@ -186,12 +195,11 @@ export function getFiltersFromQuickFilter(quickFilter: QuickFilter): Partial<Key
   switch (quickFilter) {
     case 'ready-for-ads':
       return {
-        purpose: 'ads', // Will also include 'both' via custom logic
-        status: 'pending', // Not discarded
+        status: 'pending',
       };
     case 'candidates':
     case 'discard':
-      return {}; // These are score-based, handled separately
+      return {};
     default:
       return {};
   }

@@ -91,6 +91,7 @@ export interface AdsData {
   guiaDominio?: number;     // %
   guiaBeneficio?: number;   // %
   history?: AdsHistoryEntry[]; // Historical snapshots of ADS metrics
+  campaignName?: string;  // Nombre de la campaña asociada
 }
 
 // ============ BOOK ECONOMY (global per book) ============

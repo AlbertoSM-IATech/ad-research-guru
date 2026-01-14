@@ -51,6 +51,7 @@ const DEFAULT_ADS_WIDTHS: ColumnWidths = {
   checkbox: 40,
   star: 40,
   keyword: 180,
+  campaign: 120,
   volume: 90,
   competitors: 100,
   acosPE: 70,
@@ -378,16 +379,15 @@ export const KeywordsSection = ({
     // Apply search and advanced filters
     result = applyKeywordFilters(result, {
       searchTerm,
-      purpose: filters.purpose,
       status: filters.status,
-      competition: filters.competition,
-      campaignType: filters.campaignType,
       minVolume: filters.minVolume,
       maxVolume: filters.maxVolume,
+      minCompetition: filters.minCompetition,
       maxCompetition: filters.maxCompetition,
-      relevance: filters.relevance,
-      intent: filters.intent,
-      state: filters.state
+      campaignName: filters.campaignName,
+      marketScoreRanges: filters.marketScoreRanges,
+      has200PlusReviews: filters.has200PlusReviews,
+      hasUnder100Reviews: filters.hasUnder100Reviews,
     });
 
     // Apply ADS-specific filters when in ads view
