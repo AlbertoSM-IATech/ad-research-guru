@@ -738,10 +738,17 @@ export const AdvertisingResearch = ({
         <header className="mb-6">
           <div className="flex items-center justify-between gap-4 flex-wrap">
             {/* Title + Sync indicator */}
+            <div className="flex flex-col gap-1">
+              <div className="flex items-center gap-3">
+                <h1 className="font-heading text-2xl font-bold text-foreground">
+                  Análisis de Mercado y Validación de Nicho
+                </h1>
+              </div>
+              <p className="text-xs text-muted-foreground max-w-2xl">
+                <span className="text-amber-600 dark:text-amber-400 font-medium">⚠️ Aviso:</span> Este panel es un gestor complementario que ayuda a la visión y toma de decisiones (elección de nicho, KWs rentables, campañas de ADS), pero <span className="underline">no sustituye</span> herramientas de análisis de nicho, keywords o competencia. No arroja datos reales de Amazon.
+              </p>
+            </div>
             <div className="flex items-center gap-3">
-              <h1 className="font-heading text-2xl font-bold text-foreground">
-                Análisis de Mercado y Validación de Nicho
-              </h1>
               {/* Sync status indicators - Desktop */}
               <div className="hidden md:flex items-center gap-2">
                 {/* Pending changes indicator + Save Now button */}

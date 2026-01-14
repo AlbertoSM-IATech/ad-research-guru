@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   Select,
   SelectContent,
@@ -11,36 +12,29 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import {
-  type CampaignType,
-  type CompetitionLevel,
-  type RelevanceLevel,
-  type IntentType,
-  type KeywordState,
-  CAMPAIGN_TYPES,
-  RELEVANCE_LEVELS,
-  INTENT_TYPES,
-  KEYWORD_STATES,
-} from '@/types/advertising';
 import { 
-  type KeywordPurpose, 
   type KeywordStatus,
-  KEYWORD_PURPOSE_OPTIONS,
   KEYWORD_STATUS_OPTIONS,
 } from '@/lib/market-score';
 import { cn } from '@/lib/utils';
 
+// Market Score range options for multiselect
+const MARKET_SCORE_RANGES = [
+  { value: '0-40', label: 'Descartar (0-40)', color: 'bg-red-500/20 text-red-600 border-red-500/30' },
+  { value: '40-70', label: 'Candidatas (40-70)', color: 'bg-yellow-500/20 text-yellow-600 border-yellow-500/30' },
+  { value: '70-100', label: 'Listas (70-100)', color: 'bg-green-500/20 text-green-600 border-green-500/30' },
+];
+
 export interface AdvancedFiltersState {
-  competition: CompetitionLevel | 'all';
-  campaignType: CampaignType | 'all';
   minVolume: string;
   maxVolume: string;
+  minCompetition: string;
   maxCompetition: string;
-  relevance: RelevanceLevel | 'all';
-  intent: IntentType | 'all';
-  state: KeywordState | 'all';
-  purpose: KeywordPurpose | 'all';
   status: KeywordStatus | 'all';
+  campaignName: string;
+  marketScoreRanges: string[]; // e.g., ['0-40', '40-70', '70-100']
+  has200PlusReviews: boolean;
+  hasUnder100Reviews: boolean;
 }
 
 interface AdvancedFiltersProps {
@@ -64,24 +58,29 @@ export const AdvancedFilters = ({
   const toggleExpanded = onToggleExpanded || (() => setInternalExpanded(!internalExpanded));
 
   const activeFiltersCount = Object.entries(filters).filter(([key, value]) => {
-    if (key === 'minVolume' || key === 'maxVolume' || key === 'maxCompetition') {
+    if (key === 'minVolume' || key === 'maxVolume' || key === 'minCompetition' || key === 'maxCompetition' || key === 'campaignName') {
       return value !== '';
+    }
+    if (key === 'marketScoreRanges') {
+      return (value as string[]).length > 0;
+    }
+    if (key === 'has200PlusReviews' || key === 'hasUnder100Reviews') {
+      return value === true;
     }
     return value !== 'all';
   }).length;
 
   const resetFilters = () => {
     onFiltersChange({
-      competition: 'all',
-      campaignType: 'all',
       minVolume: '',
       maxVolume: '',
+      minCompetition: '',
       maxCompetition: '',
-      relevance: 'all',
-      intent: 'all',
-      state: 'all',
-      purpose: 'all',
       status: 'all',
+      campaignName: '',
+      marketScoreRanges: [],
+      has200PlusReviews: false,
+      hasUnder100Reviews: false,
     });
   };
 
@@ -188,29 +187,17 @@ export const AdvancedFiltersContent = ({
     onFiltersChange({ ...filters, [key]: value });
   };
 
+  const toggleMarketScoreRange = (range: string) => {
+    const current = filters.marketScoreRanges || [];
+    if (current.includes(range)) {
+      updateFilter('marketScoreRanges', current.filter(r => r !== range));
+    } else {
+      updateFilter('marketScoreRanges', [...current, range]);
+    }
+  };
+
   return (
     <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4 p-4 bg-muted/30 rounded-lg border border-border animate-scale-in">
-      {/* Purpose */}
-      <div className="space-y-2">
-        <Label className="text-xs">Propósito</Label>
-        <Select
-          value={filters.purpose}
-          onValueChange={(v) => updateFilter('purpose', v as KeywordPurpose | 'all')}
-        >
-          <SelectTrigger className="h-9">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent className="bg-popover border-border z-50">
-            <SelectItem value="all">Todos</SelectItem>
-            {KEYWORD_PURPOSE_OPTIONS.map((opt) => (
-              <SelectItem key={opt.value} value={opt.value}>
-                {opt.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-
       {/* Status */}
       <div className="space-y-2">
         <Label className="text-xs">Estado validación</Label>
@@ -234,113 +221,38 @@ export const AdvancedFiltersContent = ({
         </Select>
       </div>
 
-      {/* Competition */}
-      <div className="space-y-2">
-        <Label className="text-xs">Competencia</Label>
-        <Select
-          value={filters.competition}
-          onValueChange={(v) => updateFilter('competition', v as CompetitionLevel | 'all')}
-        >
-          <SelectTrigger className="h-9">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent className="bg-popover border-border z-50">
-            <SelectItem value="all">Todas</SelectItem>
-            <SelectItem value="low">Baja</SelectItem>
-            <SelectItem value="medium">Media</SelectItem>
-            <SelectItem value="high">Alta</SelectItem>
-          </SelectContent>
-        </Select>
+      {/* Market Score Ranges (multiselect) */}
+      <div className="space-y-2 col-span-2">
+        <Label className="text-xs">Market Score (rangos)</Label>
+        <div className="flex flex-wrap gap-1">
+          {MARKET_SCORE_RANGES.map(range => (
+            <Badge 
+              key={range.value}
+              variant="outline"
+              className={cn(
+                'cursor-pointer transition-all text-xs',
+                (filters.marketScoreRanges || []).includes(range.value) 
+                  ? range.color 
+                  : 'opacity-50 hover:opacity-75'
+              )}
+              onClick={() => toggleMarketScoreRange(range.value)}
+            >
+              {range.label}
+            </Badge>
+          ))}
+        </div>
       </div>
 
-      {/* Campaign Type */}
+      {/* Campaign Name */}
       <div className="space-y-2">
-        <Label className="text-xs">Tipo campaña</Label>
-        <Select
-          value={filters.campaignType}
-          onValueChange={(v) => updateFilter('campaignType', v as CampaignType | 'all')}
-        >
-          <SelectTrigger className="h-9">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent className="bg-popover border-border z-50">
-            <SelectItem value="all">Todos</SelectItem>
-            {CAMPAIGN_TYPES.map((type) => (
-              <SelectItem key={type.value} value={type.value}>
-                {type.value}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-
-      {/* Relevance */}
-      <div className="space-y-2">
-        <Label className="text-xs">Relevancia</Label>
-        <Select
-          value={filters.relevance}
-          onValueChange={(v) => updateFilter('relevance', v as RelevanceLevel | 'all')}
-        >
-          <SelectTrigger className="h-9">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent className="bg-popover border-border z-50">
-            <SelectItem value="all">Todas</SelectItem>
-            {RELEVANCE_LEVELS.map((level) => (
-              <SelectItem key={level.value} value={level.value}>
-                <span className="flex items-center gap-1">
-                  <span>{level.icon}</span>
-                  {level.label}
-                </span>
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-
-      {/* Intent */}
-      <div className="space-y-2">
-        <Label className="text-xs">Intención</Label>
-        <Select
-          value={filters.intent}
-          onValueChange={(v) => updateFilter('intent', v as IntentType | 'all')}
-        >
-          <SelectTrigger className="h-9">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent className="bg-popover border-border z-50">
-            <SelectItem value="all">Todas</SelectItem>
-            {INTENT_TYPES.map((intent) => (
-              <SelectItem key={intent.value} value={intent.value}>
-                {intent.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-
-      {/* State (legacy) */}
-      <div className="space-y-2">
-        <Label className="text-xs">Estado (legacy)</Label>
-        <Select
-          value={filters.state}
-          onValueChange={(v) => updateFilter('state', v as KeywordState | 'all')}
-        >
-          <SelectTrigger className="h-9">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent className="bg-popover border-border z-50">
-            <SelectItem value="all">Todos</SelectItem>
-            {KEYWORD_STATES.map((state) => (
-              <SelectItem key={state.value} value={state.value}>
-                <span className="flex items-center gap-1">
-                  <span>{state.icon}</span>
-                  {state.label}
-                </span>
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <Label className="text-xs">Nombre campaña</Label>
+        <Input
+          type="text"
+          value={filters.campaignName}
+          onChange={(e) => updateFilter('campaignName', e.target.value)}
+          placeholder="Buscar..."
+          className="h-9"
+        />
       </div>
 
       {/* Min Volume */}
@@ -367,6 +279,18 @@ export const AdvancedFiltersContent = ({
         />
       </div>
 
+      {/* Min Competition */}
+      <div className="space-y-2">
+        <Label className="text-xs">Competidores mín.</Label>
+        <Input
+          type="number"
+          value={filters.minCompetition}
+          onChange={(e) => updateFilter('minCompetition', e.target.value)}
+          placeholder="0"
+          className="h-9"
+        />
+      </div>
+
       {/* Max Competition */}
       <div className="space-y-2">
         <Label className="text-xs">Competidores máx.</Label>
@@ -377,6 +301,36 @@ export const AdvancedFiltersContent = ({
           placeholder="∞"
           className="h-9"
         />
+      </div>
+
+      {/* +200 Reviews */}
+      <div className="space-y-2">
+        <Label className="text-xs">Competencia (+200W)</Label>
+        <div className="flex items-center gap-2 h-9">
+          <Checkbox
+            id="has200PlusReviews"
+            checked={filters.has200PlusReviews}
+            onCheckedChange={(checked) => updateFilter('has200PlusReviews', checked === true)}
+          />
+          <Label htmlFor="has200PlusReviews" className="text-xs cursor-pointer">
+            Libros con +200 reseñas
+          </Label>
+        </div>
+      </div>
+
+      {/* -100 Reviews */}
+      <div className="space-y-2">
+        <Label className="text-xs">Competencia (-100W)</Label>
+        <div className="flex items-center gap-2 h-9">
+          <Checkbox
+            id="hasUnder100Reviews"
+            checked={filters.hasUnder100Reviews}
+            onCheckedChange={(checked) => updateFilter('hasUnder100Reviews', checked === true)}
+          />
+          <Label htmlFor="hasUnder100Reviews" className="text-xs cursor-pointer">
+            Libros con -100 reseñas
+          </Label>
+        </div>
       </div>
     </div>
   );

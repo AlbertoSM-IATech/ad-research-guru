@@ -27,16 +27,15 @@ function getStorageKey(bookId: string | undefined, marketplaceId: string): strin
 function getDefaultState(): KeywordUIState {
   return {
     filters: {
-      competition: 'all',
-      campaignType: 'all',
       minVolume: '',
       maxVolume: '',
+      minCompetition: '',
       maxCompetition: '',
-      relevance: 'all',
-      intent: 'all',
-      state: 'all',
-      purpose: 'all',
       status: 'all',
+      campaignName: '',
+      marketScoreRanges: [],
+      has200PlusReviews: false,
+      hasUnder100Reviews: false,
     },
     quickFilter: 'all',
     searchTerm: '',
