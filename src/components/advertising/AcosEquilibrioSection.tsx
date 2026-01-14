@@ -1,10 +1,11 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Info, TrendingUp, TrendingDown, AlertCircle, CheckCircle2, Target, Calculator } from 'lucide-react';
+import { Info, TrendingUp, TrendingDown, AlertCircle, CheckCircle2, Target, Calculator, MousePointerClick, ShoppingBag, Plus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { AdsData, AdsFase, BookEconomy } from '@/types/advertising';
 import { ADS_FASE_OPTIONS } from '@/types/advertising';
@@ -258,6 +259,61 @@ export const AcosEquilibrioSection = ({
           <p className="text-sm font-medium">{badge.label}</p>
           <p className="text-xs opacity-80">{badge.description}</p>
         </div>
+      </div>
+
+      {/* Quick Action Buttons */}
+      <div className="flex flex-wrap items-center gap-2 p-3 rounded-lg border border-border bg-muted/30">
+        <span className="text-xs text-muted-foreground font-medium">Acciones rápidas:</span>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => {
+            const prevClicks = adsData?.clicks ?? 0;
+            const newClicks = prevClicks + 1;
+            setClicks(String(newClicks));
+            updateAdsData('clicks', newClicks);
+          }}
+          className="h-7 gap-1.5 text-xs"
+        >
+          <MousePointerClick className="w-3 h-3" />
+          +1 Click
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => {
+            const prevCpc = adsData?.cpcActual ?? 0;
+            const newCpc = Math.round((prevCpc + 0.01) * 100) / 100;
+            setCpcActual(String(newCpc));
+            updateAdsData('cpcActual', newCpc);
+          }}
+          className="h-7 gap-1.5 text-xs"
+        >
+          <TrendingUp className="w-3 h-3" />
+          +0.01 CPC
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => {
+            const prevPedidos = adsData?.pedidos ?? 0;
+            const prevClicks = adsData?.clicks ?? 0;
+            const newPedidos = prevPedidos + 1;
+            const newClicks = Math.max(prevClicks + 1, newPedidos);
+            setPedidos(String(newPedidos));
+            setClicks(String(newClicks));
+            const baseAds = (adsData ?? {}) as AdsData;
+            onAdsDataChange({
+              ...baseAds,
+              pedidos: newPedidos,
+              clicks: newClicks,
+            });
+          }}
+          className="h-7 gap-1.5 text-xs"
+        >
+          <ShoppingBag className="w-3 h-3" />
+          +1 Pedido
+        </Button>
       </div>
 
       {/* BLOQUE 1: RELLENAR */}
