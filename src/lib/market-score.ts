@@ -466,9 +466,9 @@ export const BOOKS_OVER_200_REVIEWS_FIELD = {
 // 5 checks que NO afectan al Market Score
 
 export const EDITORIAL_CHECKS = [
-  { id: 'makesSenseAsBook', label: 'Tiene sentido como libro' },
-  { id: 'canCreateThisBook', label: 'Puedo crear este libro' },
-  { id: 'canDoItBetter', label: 'Puedo hacerlo mejor' },
-  { id: 'canDifferentiate', label: 'Puedo diferenciarlo' },
-  { id: 'personalInterest', label: 'Tengo interés personal' },
+  { id: 'makesSenseAsBook', label: 'Tiene sentido como libro', tooltip: '¿Es lógico que alguien compre un libro sobre este tema? Evalúa si el formato libro aporta valor.' },
+  { id: 'canCreateThisBook', label: 'Puedo crear este libro', tooltip: '¿Tienes los recursos, conocimientos o capacidad para crear un libro competitivo sobre este tema?' },
+  { id: 'canDoItBetter', label: 'Puedo hacerlo mejor', tooltip: '¿Puedes ofrecer más valor que los libros actuales del mercado? Calidad, contenido o presentación.' },
+  { id: 'canDifferentiate', label: 'Puedo diferenciarlo', tooltip: '¿Puedes crear un ángulo único o diferenciador? Portada, título, enfoque, extras, etc.' },
+  { id: 'personalInterest', label: 'Tengo interés personal', tooltip: '¿Te interesa personalmente el tema? La motivación facilita la creación y calidad del proyecto.' },
 ] as const;
