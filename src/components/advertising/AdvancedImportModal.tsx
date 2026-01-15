@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { Upload, FileSpreadsheet, ArrowRight, Save, Trash2, Plus, Settings } from 'lucide-react';
+import { Upload, FileSpreadsheet, ArrowRight, Save, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -23,7 +23,7 @@ import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Checkbox } from '@/components/ui/checkbox';
 import { ImportHelpTooltip } from './ImportHelpTooltip';
-import { type Keyword, type ImportMappingTemplate, normalizeText, calculateRelevance, classifyIntent, type BookInfo } from '@/types/advertising';
+import { type Keyword, type ImportMappingTemplate, normalizeText } from '@/types/advertising';
 import { createKeywordDefaults } from '@/lib/keyword-helpers';
 import { useToast } from '@/hooks/use-toast';
 
@@ -32,7 +32,6 @@ interface AdvancedImportModalProps {
   onClose: () => void;
   onImport: (keywords: Array<Omit<Keyword, 'id' | 'createdAt' | 'updatedAt'>>) => void;
   marketplaceId: string;
-  bookInfo?: BookInfo;
   existingKeywords?: string[];
 }
 
@@ -83,7 +82,6 @@ export const AdvancedImportModal = ({
   onClose,
   onImport,
   marketplaceId,
-  bookInfo,
   existingKeywords = [],
 }: AdvancedImportModalProps) => {
   const { toast } = useToast();
@@ -106,7 +104,6 @@ export const AdvancedImportModal = ({
   const [selectedTemplate, setSelectedTemplate] = useState<string>('');
   const [newTemplateName, setNewTemplateName] = useState('');
   const [skipDuplicates, setSkipDuplicates] = useState(true);
-  const [autoClassify, setAutoClassify] = useState(true);
 
   const detectDelimiter = (text: string): string => {
     const firstLine = text.split('\n')[0] || '';
@@ -250,12 +247,6 @@ export const AdvancedImportModal = ({
           }
         });
 
-        // Auto-classify if enabled
-        if (autoClassify && mappedData.keyword && bookInfo) {
-          mappedData.relevance = calculateRelevance(mappedData.keyword, bookInfo);
-          mappedData.intent = classifyIntent(mappedData.keyword);
-        }
-        
         const isValid = !!mappedData.keyword && mappedData.keyword.trim().length > 0;
         const isDuplicate = mappedData.keyword ? existingSet.has(normalizeText(mappedData.keyword)) : false;
         
@@ -264,7 +255,7 @@ export const AdvancedImportModal = ({
     
     setParsedRows(rows);
     setStep('preview');
-  }, [rawText, detectedHeaders, columnMappings, existingKeywords, autoClassify, bookInfo]);
+  }, [rawText, detectedHeaders, columnMappings, existingKeywords]);
 
   const handleImport = () => {
     const toImport = parsedRows
@@ -338,16 +329,6 @@ export const AdvancedImportModal = ({
                 </p>
               </div>
 
-              <div className="flex items-center space-x-2 p-3 bg-primary/5 rounded-lg border border-primary/20">
-                <Checkbox
-                  id="auto-classify-adv"
-                  checked={autoClassify}
-                  onCheckedChange={(checked) => setAutoClassify(checked === true)}
-                />
-                <label htmlFor="auto-classify-adv" className="text-sm cursor-pointer">
-                  Clasificar automáticamente relevancia e intención según info del libro
-                </label>
-              </div>
             </div>
           )}
 
