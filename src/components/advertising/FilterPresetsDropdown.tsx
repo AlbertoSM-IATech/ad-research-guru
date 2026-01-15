@@ -17,11 +17,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Bookmark, ChevronDown, Plus, Trash2 } from 'lucide-react';
+import { Bookmark, ChevronDown, Plus, Trash2, Sparkles } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { FilterPreset } from '@/hooks/useFilterPresets';
 import type { AdvancedFiltersState } from './AdvancedFilters';
 import type { AdsFiltersState } from './AdvancedFiltersAds';
+import { getPredefinedPresetsByType, type PredefinedPreset } from '@/lib/filter-presets';
 
 interface FilterPresetsDropdownProps {
   type: 'editorial' | 'ads';
@@ -44,6 +45,7 @@ export const FilterPresetsDropdown = ({
   const [presetName, setPresetName] = useState('');
 
   const typePresets = presets.filter(p => p.type === type);
+  const predefinedPresets = getPredefinedPresetsByType(type);
 
   const handleSave = () => {
     if (!presetName.trim()) return;
@@ -52,7 +54,7 @@ export const FilterPresetsDropdown = ({
     setIsSaveDialogOpen(false);
   };
 
-  const handleLoad = (preset: FilterPreset) => {
+  const handleLoad = (preset: FilterPreset | PredefinedPreset) => {
     onLoadPreset(preset.filters);
   };
 
@@ -66,11 +68,31 @@ export const FilterPresetsDropdown = ({
             <ChevronDown className="w-3 h-3" />
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="start" className="w-56 bg-popover border-border z-50">
-          <DropdownMenuLabel className="text-xs text-muted-foreground">
-            Presets de filtros ({type === 'editorial' ? 'Nicho' : 'ADS'})
+        <DropdownMenuContent align="start" className="w-64 bg-popover border-border z-50">
+          {/* Predefined presets section */}
+          <DropdownMenuLabel className="text-xs text-muted-foreground flex items-center gap-1">
+            <Sparkles className="w-3 h-3" />
+            Presets de ejemplo
           </DropdownMenuLabel>
+          {predefinedPresets.map((preset) => (
+            <DropdownMenuItem 
+              key={preset.id} 
+              className="flex flex-col items-start cursor-pointer"
+              onSelect={() => handleLoad(preset)}
+            >
+              <span className="text-sm font-medium">{preset.name}</span>
+              {preset.description && (
+                <span className="text-xs text-muted-foreground">{preset.description}</span>
+              )}
+            </DropdownMenuItem>
+          ))}
+          
           <DropdownMenuSeparator />
+          
+          {/* User-saved presets section */}
+          <DropdownMenuLabel className="text-xs text-muted-foreground">
+            Mis presets ({type === 'editorial' ? 'Nicho' : 'ADS'})
+          </DropdownMenuLabel>
           
           {typePresets.length === 0 ? (
             <div className="px-2 py-3 text-center text-sm text-muted-foreground">

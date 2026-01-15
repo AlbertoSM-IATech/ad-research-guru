@@ -452,6 +452,16 @@ export const KeywordDetailPanel = ({
                 <div className="space-y-2">
                   <div className="flex items-center gap-1">
                     <Label htmlFor="price">Precio ($)</Label>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Info className="w-3.5 h-3.5 text-muted-foreground cursor-help" />
+                        </TooltipTrigger>
+                        <TooltipContent side="top" className="max-w-xs">
+                          Precio medio de venta del nicho. Precios &gt;$9.99 puntúan mejor en Market Score.
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
                   </div>
                   <Input id="price" type="number" min={0} step={0.01} value={price} onChange={e => setPrice(Number(e.target.value))} />
                 </div>
@@ -460,6 +470,16 @@ export const KeywordDetailPanel = ({
                 <div className="space-y-2">
                   <div className="flex items-center gap-1">
                     <Label htmlFor="royalties">Regalías ($)</Label>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Info className="w-3.5 h-3.5 text-muted-foreground cursor-help" />
+                        </TooltipTrigger>
+                        <TooltipContent side="top" className="max-w-xs">
+                          Regalías por cada venta (después de costes de impresión). Afecta directamente a la rentabilidad de Ads.
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
                   </div>
                   <Input id="royalties" type="number" min={0} step={0.01} value={royalties} onChange={e => setRoyalties(Number(e.target.value))} />
                 </div>
@@ -467,7 +487,19 @@ export const KeywordDetailPanel = ({
               
               {/* Fuente de tráfico */}
               <div className="space-y-2">
-                <Label>Fuente de tráfico</Label>
+                <div className="flex items-center gap-1">
+                  <Label>Fuente de tráfico</Label>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Info className="w-3.5 h-3.5 text-muted-foreground cursor-help" />
+                      </TooltipTrigger>
+                      <TooltipContent side="top" className="max-w-xs">
+                        ¿De dónde viene el tráfico principal de esta keyword? Amazon = sin penalización. RRSS/Marca personal = penaliza el Market Score.
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </div>
                 <Select value={trafficSource} onValueChange={v => setTrafficSource(v as TrafficSource)}>
                   <SelectTrigger>
                     <SelectValue />
@@ -491,9 +523,21 @@ export const KeywordDetailPanel = ({
             {/* DEMANDA */}
             <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
-                  Demanda
-                </h3>
+                <div className="flex items-center gap-2">
+                  <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+                    Demanda
+                  </h3>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Info className="w-3.5 h-3.5 text-muted-foreground cursor-help" />
+                      </TooltipTrigger>
+                      <TooltipContent side="top" className="max-w-xs">
+                        Señales que indican que hay demanda real y consistente para esta keyword. Cada check confirmado suma +2 puntos al Market Score.
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </div>
                 <Badge variant="outline" className="text-primary">
                   {scoreBreakdown.marketStructure.points}/{scoreBreakdown.marketStructure.max} pts
                 </Badge>
@@ -514,6 +558,16 @@ export const KeywordDetailPanel = ({
                       <Label htmlFor={check.id} className="text-xs cursor-pointer">
                         {check.label}
                       </Label>
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Info className="w-3 h-3 text-muted-foreground/60 cursor-help" />
+                          </TooltipTrigger>
+                          <TooltipContent side="top" className="max-w-xs">
+                            {check.tooltip}
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
                     </div>
                     <span className="text-[10px] text-green-600 dark:text-green-400">+{check.points}</span>
                   </div>
@@ -526,9 +580,21 @@ export const KeywordDetailPanel = ({
             {/* COMPETENCIA */}
             <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
-                  Competencia
-                </h3>
+                <div className="flex items-center gap-2">
+                  <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+                    Competencia
+                  </h3>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Info className="w-3.5 h-3.5 text-muted-foreground cursor-help" />
+                      </TooltipTrigger>
+                      <TooltipContent side="top" className="max-w-xs">
+                        Señales que indican el nivel de competencia y oportunidades de entrada. Menos resultados y libros con pocas reseñas = mejor oportunidad.
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </div>
                 <Badge variant="outline" className="text-primary">
                   {scoreBreakdown.catalogSignals.points}/{scoreBreakdown.catalogSignals.max} pts
                 </Badge>
@@ -539,6 +605,16 @@ export const KeywordDetailPanel = ({
                 <div className="p-3 rounded bg-muted/30 space-y-2">
                   <div className="flex items-center gap-2">
                     <Label className="text-sm font-medium">{BOOKS_OVER_200_REVIEWS_FIELD.label}</Label>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Info className="w-3 h-3 text-muted-foreground/60 cursor-help" />
+                        </TooltipTrigger>
+                        <TooltipContent side="top" className="max-w-xs">
+                          {BOOKS_OVER_200_REVIEWS_FIELD.tooltip}
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
                   </div>
                   <div className="flex items-center justify-between gap-4">
                     <Select 
@@ -573,6 +649,16 @@ export const KeywordDetailPanel = ({
                       Menos de 3000 resultados
                       <span className="ml-1 text-xs italic">(auto)</span>
                     </Label>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Info className="w-3 h-3 text-muted-foreground/60 cursor-help" />
+                        </TooltipTrigger>
+                        <TooltipContent side="top" className="max-w-xs">
+                          Se calcula automáticamente a partir del campo "Competidores". Menos de 3000 resultados indica baja competencia.
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
                   </div>
                   <span className="text-xs text-green-600 dark:text-green-400">+5</span>
                 </div>
@@ -592,6 +678,16 @@ export const KeywordDetailPanel = ({
                       <Label htmlFor={check.id} className="text-sm cursor-pointer">
                         {check.label}
                       </Label>
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Info className="w-3 h-3 text-muted-foreground/60 cursor-help" />
+                          </TooltipTrigger>
+                          <TooltipContent side="top" className="max-w-xs">
+                            {check.tooltip}
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
                     </div>
                     <span className="text-xs text-green-600 dark:text-green-400">+{check.points}</span>
                   </div>
@@ -604,9 +700,21 @@ export const KeywordDetailPanel = ({
             {/* CONTEXTO EDITORIAL */}
             <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
-                  Contexto Editorial
-                </h3>
+                <div className="flex items-center gap-2">
+                  <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+                    Contexto Editorial
+                  </h3>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Info className="w-3.5 h-3.5 text-muted-foreground cursor-help" />
+                      </TooltipTrigger>
+                      <TooltipContent side="top" className="max-w-xs">
+                        Evaluación personal sobre si este nicho tiene sentido para TI como autor. No afecta al Market Score, es orientativo.
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </div>
                 <Badge variant="outline" className="text-muted-foreground">
                   {editorialScore}/5 checks
                 </Badge>
@@ -630,12 +738,34 @@ export const KeywordDetailPanel = ({
                     <Label htmlFor={check.id} className="cursor-pointer text-sm">
                       {check.label}
                     </Label>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Info className="w-3 h-3 text-muted-foreground/60 cursor-help" />
+                        </TooltipTrigger>
+                        <TooltipContent side="top" className="max-w-xs">
+                          {check.tooltip}
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
                   </div>
                 ))}
               </div>
               
               <div className="space-y-2">
-                <Label htmlFor="editorialNotes">Notas editoriales</Label>
+                <div className="flex items-center gap-1">
+                  <Label htmlFor="editorialNotes">Notas editoriales</Label>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Info className="w-3 h-3 text-muted-foreground/60 cursor-help" />
+                      </TooltipTrigger>
+                      <TooltipContent side="top" className="max-w-xs">
+                        Espacio libre para ideas, observaciones o motivos de decisión sobre este nicho.
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </div>
                 <Textarea 
                   id="editorialNotes" 
                   value={editorialNotes} 

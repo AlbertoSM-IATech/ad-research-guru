@@ -671,6 +671,18 @@ export const KeywordsSection = ({
                   ) : (
                     <>
                       <ResizableTableHeader
+                        columnKey="campaign"
+                        width={columnWidths.campaign}
+                        onResize={setColumnWidth}
+                        className="cursor-pointer hover:text-foreground"
+                        onClick={() => handleSort('keyword')}
+                      >
+                        <div className="flex items-center gap-1">
+                          Campaña
+                          <InfoTooltip content="Nombre de la campaña de Amazon Ads donde se usa esta keyword." />
+                        </div>
+                      </ResizableTableHeader>
+                      <ResizableTableHeader
                         columnKey="acosPE"
                         width={columnWidths.acosPE}
                         onResize={setColumnWidth}
@@ -1007,6 +1019,20 @@ export const KeywordsSection = ({
                           </>
                         ) : (
                           <>
+                            {/* Campaña - Inline editable */}
+                            <TableCell onClick={e => e.stopPropagation()}>
+                              <InlineEditableCell
+                                value={ads?.campaignName ?? ''}
+                                onSave={(value) => {
+                                  const baseAds = (ads ?? {}) as AdsData;
+                                  onUpdate(keyword.id, { 
+                                    adsData: { ...baseAds, campaignName: String(value) } 
+                                  });
+                                }}
+                                placeholder="Campaña..."
+                                className="text-xs max-w-[100px]"
+                              />
+                            </TableCell>
                             {/* ACOS Equilibrio (PE) - Read only reference */}
                             <TableCell className="tabular-nums text-xs font-medium text-primary">
                               {acosEquilibrio !== null ? `${acosEquilibrio.toFixed(1)}%` : '—'}
