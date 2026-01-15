@@ -1288,7 +1288,6 @@ export const AdvertisingResearch = ({ bookId }: AdvertisingResearchProps) => {
         onClose={() => setShowImportModal(false)}
         onImport={handleAddBulkKeywords}
         marketplaceId={selectedMarketplace}
-        bookInfo={bookInfo}
         existingKeywords={currentKeywords.map((k) => k.keyword)}
       />
 

@@ -12,7 +12,7 @@ import {
   ReferenceArea,
   Label,
 } from 'recharts';
-import { TrendingUp, Sparkles, Copy, Check, Maximize2, X, Filter } from 'lucide-react';
+import { TrendingUp, Sparkles, Copy, Check, Maximize2, Filter } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -402,62 +402,84 @@ export const OpportunityMap = ({ keywords, marketplaceId }: OpportunityMapProps)
       <Dialog open={isExpanded} onOpenChange={setIsExpanded}>
         <DialogContent className="max-w-[95vw] w-[95vw] h-[90vh] flex flex-col">
           <DialogHeader>
-            <DialogTitle className="flex items-center justify-between">
+            <DialogTitle className="flex flex-col gap-1">
               <span>Mapa de Oportunidades - Vista Ampliada</span>
+              <span className="text-xs font-normal text-muted-foreground">
+                Herramienta complementaria para visualizar oportunidades. No sustituye a otras herramientas de análisis.
+              </span>
             </DialogTitle>
           </DialogHeader>
           
-          <div className="flex-1 flex gap-4 min-h-0">
-            {/* Gráfico ampliado */}
-            <div className="flex-1 flex flex-col min-w-0">
+          {/* Determinar si solo hay 1 segmento visible para ampliar el gráfico */}
+          {visibleSegments.size === 1 ? (
+            // Vista ampliada: solo gráfico cuando hay 1 segmento
+            <div className="flex-1 flex flex-col min-h-0">
               <div className="mb-3">
                 {renderLegendFilters()}
               </div>
               <div className="flex-1">
                 {renderChart()}
               </div>
+              <div className="pt-3 mt-2 border-t border-border">
+                <p className="text-xs text-muted-foreground text-center">
+                  Mostrando solo: <span className="font-medium">{SEGMENT_CONFIG[Array.from(visibleSegments)[0]].label}</span> ({keywordsBySegment[Array.from(visibleSegments)[0]].length} keywords)
+                </p>
+              </div>
             </div>
-            
-            {/* Panel lateral ampliado */}
-            <div className="w-80 flex-shrink-0 border-l border-border pl-4 flex flex-col">
-              <div className="flex items-center gap-2 pb-2 border-b border-border mb-3">
-                <Sparkles className="h-4 w-4 text-primary" />
-                <h4 className="text-sm font-medium text-foreground">Keywords por Segmento</h4>
+          ) : (
+            // Vista normal con panel lateral
+            <div className="flex-1 flex gap-4 min-h-0">
+              {/* Gráfico ampliado */}
+              <div className="flex-1 flex flex-col min-w-0">
+                <div className="mb-3">
+                  {renderLegendFilters()}
+                </div>
+                <div className="flex-1">
+                  {renderChart()}
+                </div>
               </div>
               
-              <Tabs value={activeSegment} onValueChange={(v) => setActiveSegment(v as OpportunityLevel | 'all')} className="flex-1 flex flex-col">
-                <TabsList className="grid grid-cols-4 h-8 mb-3">
-                  <TabsTrigger value="high" className="text-xs data-[state=active]:bg-green-500/20">
-                    Alta ({keywordsBySegment.high.length})
-                  </TabsTrigger>
-                  <TabsTrigger value="medium" className="text-xs data-[state=active]:bg-yellow-500/20">
-                    Media ({keywordsBySegment.medium.length})
-                  </TabsTrigger>
-                  <TabsTrigger value="low" className="text-xs data-[state=active]:bg-orange-500/20">
-                    Baja ({keywordsBySegment.low.length})
-                  </TabsTrigger>
-                  <TabsTrigger value="saturated" className="text-xs data-[state=active]:bg-red-500/20">
-                    Sat. ({keywordsBySegment.saturated.length})
-                  </TabsTrigger>
-                </TabsList>
-                
-                <div className="flex-1 overflow-hidden">
-                  <TabsContent value="high" className="h-full m-0">
-                    {renderSegmentList('high')}
-                  </TabsContent>
-                  <TabsContent value="medium" className="h-full m-0">
-                    {renderSegmentList('medium')}
-                  </TabsContent>
-                  <TabsContent value="low" className="h-full m-0">
-                    {renderSegmentList('low')}
-                  </TabsContent>
-                  <TabsContent value="saturated" className="h-full m-0">
-                    {renderSegmentList('saturated')}
-                  </TabsContent>
+              {/* Panel lateral ampliado */}
+              <div className="w-80 flex-shrink-0 border-l border-border pl-4 flex flex-col">
+                <div className="flex items-center gap-2 pb-2 border-b border-border mb-3">
+                  <Sparkles className="h-4 w-4 text-primary" />
+                  <h4 className="text-sm font-medium text-foreground">Keywords por Segmento</h4>
                 </div>
-              </Tabs>
+                
+                <Tabs value={activeSegment} onValueChange={(v) => setActiveSegment(v as OpportunityLevel | 'all')} className="flex-1 flex flex-col">
+                  <TabsList className="grid grid-cols-4 h-8 mb-3">
+                    <TabsTrigger value="high" className="text-xs data-[state=active]:bg-green-500/20">
+                      Alta ({keywordsBySegment.high.length})
+                    </TabsTrigger>
+                    <TabsTrigger value="medium" className="text-xs data-[state=active]:bg-yellow-500/20">
+                      Media ({keywordsBySegment.medium.length})
+                    </TabsTrigger>
+                    <TabsTrigger value="low" className="text-xs data-[state=active]:bg-orange-500/20">
+                      Baja ({keywordsBySegment.low.length})
+                    </TabsTrigger>
+                    <TabsTrigger value="saturated" className="text-xs data-[state=active]:bg-red-500/20">
+                      Sat. ({keywordsBySegment.saturated.length})
+                    </TabsTrigger>
+                  </TabsList>
+                  
+                  <div className="flex-1 overflow-hidden">
+                    <TabsContent value="high" className="h-full m-0">
+                      {renderSegmentList('high')}
+                    </TabsContent>
+                    <TabsContent value="medium" className="h-full m-0">
+                      {renderSegmentList('medium')}
+                    </TabsContent>
+                    <TabsContent value="low" className="h-full m-0">
+                      {renderSegmentList('low')}
+                    </TabsContent>
+                    <TabsContent value="saturated" className="h-full m-0">
+                      {renderSegmentList('saturated')}
+                    </TabsContent>
+                  </div>
+                </Tabs>
+              </div>
             </div>
-          </div>
+          )}
         </DialogContent>
       </Dialog>
     </>
