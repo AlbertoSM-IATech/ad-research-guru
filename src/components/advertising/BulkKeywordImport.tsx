@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Upload, Eye, Plus, X, Wand2 } from 'lucide-react';
+import { Upload, Eye, Plus, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -22,7 +22,6 @@ import {
 } from '@/components/ui/select';
 import { ImportHelpTooltip } from './ImportHelpTooltip';
 import { InfoTooltip } from './InfoTooltip';
-import { InlineCampaignTypeSelect } from './InlineCampaignTypeSelect';
 import { InlineCompetitionLevelSelect } from './InlineCompetitionLevelSelect';
 import { InlineSelectBadge } from './InlineSelectBadge';
 import {
@@ -30,16 +29,11 @@ import {
   type CampaignType,
   type CompetitionLevel,
   type RelevanceLevel,
-  type IntentType,
   type KeywordState,
   type BookInfo,
-  CAMPAIGN_TYPES,
   RELEVANCE_LEVELS,
-  INTENT_TYPES,
   KEYWORD_STATES,
   normalizeText,
-  calculateRelevance,
-  classifyIntent,
 } from '@/types/advertising';
 import { createKeywordDefaults } from '@/lib/keyword-helpers';
 
@@ -59,7 +53,6 @@ interface ParsedKeyword {
   campaignTypes: CampaignType[];
   notes: string;
   relevance?: RelevanceLevel;
-  intent?: IntentType;
   state?: KeywordState;
   isDuplicate?: boolean;
 }
@@ -75,19 +68,12 @@ export const BulkKeywordImport = ({
   const [bulkText, setBulkText] = useState('');
   const [defaultVolume, setDefaultVolume] = useState('1000');
   const [defaultCompetitionLevel, setDefaultCompetitionLevel] = useState<CompetitionLevel>('medium');
-  const [defaultCampaignTypes, setDefaultCampaignTypes] = useState<CampaignType[]>(['SP']);
-  const [defaultNotes, setDefaultNotes] = useState('');
+  const [defaultCampaignTypes] = useState<CampaignType[]>(['SP']);
+  const [defaultNotes] = useState('');
   const [defaultState, setDefaultState] = useState<KeywordState>('pending');
   const [parsedKeywords, setParsedKeywords] = useState<ParsedKeyword[]>([]);
   const [showPreview, setShowPreview] = useState(false);
-  const [autoClassify, setAutoClassify] = useState(true);
   const [skipDuplicates, setSkipDuplicates] = useState(true);
-
-  const handleCampaignTypeToggle = (type: CampaignType) => {
-    setDefaultCampaignTypes((prev) =>
-      prev.includes(type) ? prev.filter((t) => t !== type) : [...prev, type]
-    );
-  };
 
   const parseKeywords = () => {
     const existingSet = new Set(existingKeywords.map(k => normalizeText(k)));
@@ -102,14 +88,6 @@ export const BulkKeywordImport = ({
 
     const parsed: ParsedKeyword[] = uniqueLines.map((keyword) => {
       const isDuplicate = existingSet.has(normalizeText(keyword));
-      
-      let relevance: RelevanceLevel | undefined;
-      let intent: IntentType | undefined;
-      
-      if (autoClassify && bookInfo && (bookInfo.title || bookInfo.subtitle)) {
-        relevance = calculateRelevance(keyword, bookInfo);
-        intent = classifyIntent(keyword);
-      }
 
       return {
         keyword,
@@ -117,8 +95,6 @@ export const BulkKeywordImport = ({
         competitionLevel: defaultCompetitionLevel,
         campaignTypes: defaultCampaignTypes,
         notes: defaultNotes,
-        relevance,
-        intent,
         state: defaultState,
         isDuplicate,
       };
@@ -144,7 +120,6 @@ export const BulkKeywordImport = ({
         campaignTypes: k.campaignTypes,
         notes: k.notes,
         relevance: k.relevance,
-        intent: k.intent,
         state: k.state,
         marketplaceId,
       }));
@@ -196,18 +171,6 @@ export const BulkKeywordImport = ({
               </p>
             </div>
 
-            <div className="flex items-center space-x-2 p-3 bg-primary/5 rounded-lg border border-primary/20">
-              <Checkbox
-                id="auto-classify"
-                checked={autoClassify}
-                onCheckedChange={(checked) => setAutoClassify(checked === true)}
-              />
-              <label htmlFor="auto-classify" className="text-sm cursor-pointer flex items-center gap-2">
-                <Wand2 className="w-4 h-4 text-primary" />
-                <span>Clasificar automáticamente relevancia e intención</span>
-              </label>
-            </div>
-
             <div className="p-4 bg-muted/30 rounded-lg space-y-4">
               <h4 className="font-medium text-sm">Valores por defecto</h4>
               
@@ -253,24 +216,6 @@ export const BulkKeywordImport = ({
                       ))}
                     </SelectContent>
                   </Select>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Tipos de Campaña</Label>
-                <div className="flex flex-wrap gap-3">
-                  {CAMPAIGN_TYPES.map((type) => (
-                    <div key={type.value} className="flex items-center space-x-2">
-                      <Checkbox
-                        id={`bulk-campaign-${type.value}`}
-                        checked={defaultCampaignTypes.includes(type.value)}
-                        onCheckedChange={() => handleCampaignTypeToggle(type.value)}
-                      />
-                      <label htmlFor={`bulk-campaign-${type.value}`} className="text-sm font-medium cursor-pointer">
-                        {type.value}
-                      </label>
-                    </div>
-                  ))}
                 </div>
               </div>
             </div>
