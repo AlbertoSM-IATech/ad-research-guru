@@ -15,6 +15,7 @@ import { cn } from '@/lib/utils';
 
 // ADS-specific filter state
 export interface AdsFiltersState {
+  campaignName: string;
   minClicks: string;
   maxClicks: string;
   minCpc: string;
@@ -29,6 +30,7 @@ export interface AdsFiltersState {
 }
 
 export const defaultAdsFiltersState: AdsFiltersState = {
+  campaignName: '',
   minClicks: '',
   maxClicks: '',
   minCpc: '',
@@ -64,6 +66,7 @@ export const AdvancedFiltersAds = ({
 
   const activeFiltersCount = Object.entries(filters).filter(([key, value]) => {
     if (key === 'rentabilidad') return value !== 'all';
+    if (key === 'campaignName') return value !== '';
     return value !== '';
   }).length;
 
@@ -169,6 +172,18 @@ export const AdsFiltersContent = ({
 
   return (
     <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 p-4 bg-muted/30 rounded-lg border border-border animate-scale-in">
+      {/* Nombre de campaña */}
+      <div className="space-y-2">
+        <Label className="text-xs">Nombre campaña</Label>
+        <Input
+          type="text"
+          value={filters.campaignName}
+          onChange={(e) => updateFilter('campaignName', e.target.value)}
+          placeholder="Buscar..."
+          className="h-9"
+        />
+      </div>
+
       {/* Rentabilidad */}
       <div className="space-y-2">
         <Label className="text-xs">Rentabilidad</Label>

@@ -3,6 +3,7 @@ import { Plus, Search, Trash2, ArrowUpDown, Upload, Eye, BookOpen, Megaphone, In
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
@@ -399,6 +400,12 @@ export const KeywordsSection = ({
         const beneficio = gastoCalculado !== null && ventasCalculadas !== null ? ventasCalculadas - gastoCalculado : null;
         const acosActual = calcularAcosActualPorcentaje(gastoCalculado ?? undefined, ventasCalculadas ?? undefined);
 
+        // Campaign name filter
+        if (adsFilters.campaignName) {
+          const campaignName = ads?.campaignName?.toLowerCase() || '';
+          if (!campaignName.includes(adsFilters.campaignName.toLowerCase())) return false;
+        }
+
         // Rentabilidad filter
         if (adsFilters.rentabilidad === 'profitable' && (beneficio === null || beneficio < 0)) return false;
         if (adsFilters.rentabilidad === 'unprofitable' && (beneficio === null || beneficio >= 0)) return false;
@@ -475,6 +482,9 @@ export const KeywordsSection = ({
           }} className={cn("gap-2 transition-all", functionalView === 'ads' && "bg-primary text-primary-foreground")}>
               <Megaphone className="w-4 h-4" />
               Gestión de Ads
+              <Badge variant="secondary" className="ml-1 bg-blue-500 text-white text-[10px] px-1.5 py-0 h-4">
+                Plus
+              </Badge>
             </Button>
           </div>
         </div>

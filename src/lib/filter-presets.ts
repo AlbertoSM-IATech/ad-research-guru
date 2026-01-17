@@ -26,6 +26,7 @@ const defaultEditorialFilters: AdvancedFiltersState = {
 
 // Default ADS filters state
 const defaultAdsFilters: AdsFiltersState = {
+  campaignName: '',
   minClicks: '',
   maxClicks: '',
   minCpc: '',
