@@ -145,84 +145,98 @@ export const OpportunityMap = ({ keywords, marketplaceId }: OpportunityMapProps)
     );
   }
 
-  const renderChart = (height: string = "100%") => (
-    <ResponsiveContainer width="100%" height={height}>
-      <ScatterChart margin={{ top: 20, right: 20, bottom: 40, left: 50 }}>
-        {visibleSegments.has('high') && (
-          <ReferenceArea x1={0} x2={compThresholds.low} fill="hsl(142, 76%, 36%)" fillOpacity={0.1} />
-        )}
-        {visibleSegments.has('medium') && (
-          <ReferenceArea x1={compThresholds.low} x2={compThresholds.medium} fill="hsl(45, 93%, 47%)" fillOpacity={0.1} />
-        )}
-        {visibleSegments.has('low') && (
-          <ReferenceArea x1={compThresholds.medium} x2={compThresholds.high} fill="hsl(24, 94%, 59%)" fillOpacity={0.1} />
-        )}
-        {visibleSegments.has('saturated') && (
-          <ReferenceArea x1={compThresholds.high} x2={maxCompetitors} fill="hsl(0, 84%, 60%)" fillOpacity={0.1} />
-        )}
-        
-        <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.5} />
-        <XAxis
-          type="number"
-          dataKey="x"
-          name="Competidores"
-          domain={[0, maxCompetitors]}
-          tickFormatter={(v) => Number(v).toLocaleString()}
-          tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }}
-          tickLine={{ stroke: 'hsl(var(--border))' }}
-        >
-          <Label value="Nº Competidores →" offset={-10} position="insideBottom" fill="hsl(var(--muted-foreground))" fontSize={11} />
-        </XAxis>
-        <YAxis
-          type="number"
-          dataKey="y"
-          name="Volumen"
-          domain={[0, maxVolume * 1.1]}
-          tickFormatter={(v) => Number(v).toLocaleString()}
-          tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }}
-          tickLine={{ stroke: 'hsl(var(--border))' }}
-        >
-          <Label value="Volumen ↑" angle={-90} position="insideLeft" fill="hsl(var(--muted-foreground))" fontSize={11} />
-        </YAxis>
-        
-        <ReferenceLine x={compThresholds.low} stroke="hsl(142, 76%, 36%)" strokeDasharray="5 5" opacity={0.6} />
-        <ReferenceLine x={compThresholds.medium} stroke="hsl(45, 93%, 47%)" strokeDasharray="5 5" opacity={0.6} />
-        <ReferenceLine x={compThresholds.high} stroke="hsl(0, 84%, 60%)" strokeDasharray="5 5" opacity={0.6} />
-        
-        <Tooltip
-          cursor={{ strokeDasharray: '3 3' }}
-          content={({ active, payload }) => {
-            if (active && payload && payload.length) {
-              const d = payload[0].payload;
-              const segmentInfo = SEGMENT_CONFIG[d.segment as OpportunityLevel];
-              
-              return (
-                <div className="bg-popover border border-border rounded-lg p-3 shadow-lg">
-                  <p className="font-medium text-sm text-foreground">{d.keyword}</p>
-                  <div className="mt-2 space-y-1 text-xs text-muted-foreground">
-                    <p>Volumen: <span className="text-foreground font-medium">{d.y.toLocaleString()}</span></p>
-                    <p>Competidores: <span className="text-foreground font-medium">{d.x.toLocaleString()}</span></p>
-                    <p>Campaña: <span className="text-foreground font-medium">{d.campaignType}</span></p>
-                    <p className={`font-medium ${segmentInfo.color}`}>{segmentInfo.label}</p>
+  const renderChart = (height: string = "100%", forceFullWidth: boolean = false) => {
+    // Calculate dynamic domain based on visible segments only when forceFullWidth
+    let effectiveMaxCompetitors = maxCompetitors;
+    let effectiveMaxVolume = maxVolume;
+    
+    if (forceFullWidth && visibleSegments.size === 1) {
+      const visibleData = filteredData;
+      if (visibleData.length > 0) {
+        effectiveMaxCompetitors = Math.max(...visibleData.map(d => d.x)) * 1.2;
+        effectiveMaxVolume = Math.max(...visibleData.map(d => d.y)) * 1.1;
+      }
+    }
+
+    return (
+      <ResponsiveContainer width="100%" height={height}>
+        <ScatterChart margin={{ top: 20, right: 20, bottom: 40, left: 50 }}>
+          {visibleSegments.has('high') && (
+            <ReferenceArea x1={0} x2={compThresholds.low} fill="hsl(142, 76%, 36%)" fillOpacity={0.1} />
+          )}
+          {visibleSegments.has('medium') && (
+            <ReferenceArea x1={compThresholds.low} x2={compThresholds.medium} fill="hsl(45, 93%, 47%)" fillOpacity={0.1} />
+          )}
+          {visibleSegments.has('low') && (
+            <ReferenceArea x1={compThresholds.medium} x2={compThresholds.high} fill="hsl(24, 94%, 59%)" fillOpacity={0.1} />
+          )}
+          {visibleSegments.has('saturated') && (
+            <ReferenceArea x1={compThresholds.high} x2={effectiveMaxCompetitors} fill="hsl(0, 84%, 60%)" fillOpacity={0.1} />
+          )}
+          
+          <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.5} />
+          <XAxis
+            type="number"
+            dataKey="x"
+            name="Competidores"
+            domain={[0, effectiveMaxCompetitors]}
+            tickFormatter={(v) => Number(v).toLocaleString()}
+            tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }}
+            tickLine={{ stroke: 'hsl(var(--border))' }}
+          >
+            <Label value="Nº Competidores →" offset={-10} position="insideBottom" fill="hsl(var(--muted-foreground))" fontSize={11} />
+          </XAxis>
+          <YAxis
+            type="number"
+            dataKey="y"
+            name="Volumen"
+            domain={[0, effectiveMaxVolume]}
+            tickFormatter={(v) => Number(v).toLocaleString()}
+            tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }}
+            tickLine={{ stroke: 'hsl(var(--border))' }}
+          >
+            <Label value="Volumen ↑" angle={-90} position="insideLeft" fill="hsl(var(--muted-foreground))" fontSize={11} />
+          </YAxis>
+          
+          <ReferenceLine x={compThresholds.low} stroke="hsl(142, 76%, 36%)" strokeDasharray="5 5" opacity={0.6} />
+          <ReferenceLine x={compThresholds.medium} stroke="hsl(45, 93%, 47%)" strokeDasharray="5 5" opacity={0.6} />
+          <ReferenceLine x={compThresholds.high} stroke="hsl(0, 84%, 60%)" strokeDasharray="5 5" opacity={0.6} />
+          
+          <Tooltip
+            cursor={{ strokeDasharray: '3 3' }}
+            content={({ active, payload }) => {
+              if (active && payload && payload.length) {
+                const d = payload[0].payload;
+                const segmentInfo = SEGMENT_CONFIG[d.segment as OpportunityLevel];
+                
+                return (
+                  <div className="bg-popover border border-border rounded-lg p-3 shadow-lg">
+                    <p className="font-medium text-sm text-foreground">{d.keyword}</p>
+                    <div className="mt-2 space-y-1 text-xs text-muted-foreground">
+                      <p>Volumen: <span className="text-foreground font-medium">{d.y.toLocaleString()}</span></p>
+                      <p>Competidores: <span className="text-foreground font-medium">{d.x.toLocaleString()}</span></p>
+                      <p>Campaña: <span className="text-foreground font-medium">{d.campaignType}</span></p>
+                      <p className={`font-medium ${segmentInfo.color}`}>{segmentInfo.label}</p>
+                    </div>
                   </div>
-                </div>
-              );
-            }
-            return null;
-          }}
-        />
-        <Scatter name="Keywords" data={filteredData} fill="hsl(var(--primary))">
-          {filteredData.map((entry, index) => (
-            <Cell
-              key={`cell-${index}`}
-              fill={CAMPAIGN_COLORS[entry.campaignType as CampaignType]}
-              opacity={0.8}
-            />
-          ))}
-        </Scatter>
-      </ScatterChart>
-    </ResponsiveContainer>
-  );
+                );
+              }
+              return null;
+            }}
+          />
+          <Scatter name="Keywords" data={filteredData} fill="hsl(var(--primary))">
+            {filteredData.map((entry, index) => (
+              <Cell
+                key={`cell-${index}`}
+                fill={CAMPAIGN_COLORS[entry.campaignType as CampaignType]}
+                opacity={0.8}
+              />
+            ))}
+          </Scatter>
+        </ScatterChart>
+      </ResponsiveContainer>
+    );
+  };
 
   const renderSegmentList = (segment: OpportunityLevel) => {
     const segmentKeywords = keywordsBySegment[segment];
@@ -418,7 +432,7 @@ export const OpportunityMap = ({ keywords, marketplaceId }: OpportunityMapProps)
                 {renderLegendFilters()}
               </div>
               <div className="flex-1">
-                {renderChart()}
+                {renderChart("100%", true)}
               </div>
               <div className="pt-3 mt-2 border-t border-border">
                 <p className="text-xs text-muted-foreground text-center">

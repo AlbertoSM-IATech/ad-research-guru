@@ -369,13 +369,9 @@ export const KeywordsSection = ({
     setCurrentPage(1);
   };
 
-  // Filter and sort keywords with functional view purpose filtering
+  // Filter and sort keywords - show ALL keywords in both views (no purpose filter)
   const filteredKeywords = useMemo(() => {
     let result = keywords;
-
-    // Apply functional view purpose filter
-    const purposeFilter = functionalView === 'editorial' ? ['editorial', 'both'] : ['ads', 'both'];
-    result = result.filter(k => purposeFilter.includes(k.purpose));
 
     // Apply search and advanced filters
     result = applyKeywordFilters(result, {
@@ -1233,7 +1229,7 @@ export const KeywordsSection = ({
       />
       
       {/* New Keyword Wizard */}
-      <NewKeywordWizard open={isWizardOpen} onOpenChange={setIsWizardOpen} onComplete={handleWizardComplete} marketplaceId={marketplaceId} bookInfo={bookInfo} existingKeywords={keywords} initialKeyword={wizardInitialKeyword} onOpenExistingKeyword={handleOpenExistingKeyword} />
+      <NewKeywordWizard open={isWizardOpen} onOpenChange={setIsWizardOpen} onComplete={handleWizardComplete} marketplaceId={marketplaceId} bookInfo={bookInfo} bookEconomy={bookEconomy} existingKeywords={keywords} initialKeyword={wizardInitialKeyword} onOpenExistingKeyword={handleOpenExistingKeyword} />
       
       {/* Keyword Comparison Panel */}
       <KeywordComparisonPanel 
