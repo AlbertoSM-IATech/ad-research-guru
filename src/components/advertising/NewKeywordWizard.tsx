@@ -138,6 +138,7 @@ interface NewKeywordWizardProps {
   onComplete: (keyword: Keyword) => void;
   marketplaceId: string;
   bookInfo?: BookInfo;
+  bookEconomy?: BookEconomy;
   existingKeywords: Keyword[];
   initialKeyword?: string;
   onOpenExistingKeyword?: (keyword: Keyword) => void;
@@ -183,10 +184,13 @@ export function NewKeywordWizard({
   onComplete,
   marketplaceId,
   bookInfo,
+  bookEconomy,
   existingKeywords,
   initialKeyword = '',
   onOpenExistingKeyword,
 }: NewKeywordWizardProps) {
+  // Use passed bookEconomy or fall back to defaults
+  const effectiveBookEconomy = bookEconomy ?? DEFAULT_BOOK_ECONOMY;
   // ============ WIZARD STATE ============
   const [currentStep, setCurrentStep] = useState<WizardStep>(1);
   const [step1, setStep1] = useState<WizardStep1Data>(getInitialStep1(initialKeyword, marketplaceId));
@@ -968,17 +972,17 @@ export function NewKeywordWizard({
                   <div className="grid grid-cols-3 gap-3 text-xs p-2 bg-muted/50 rounded">
                     <div className="text-center">
                       <span className="text-muted-foreground block">PVP</span>
-                      <span className="font-medium">${DEFAULT_BOOK_ECONOMY.precioLibro.toFixed(2)}</span>
+                      <span className="font-medium">${effectiveBookEconomy.precioLibro.toFixed(2)}</span>
                     </div>
                     <div className="text-center">
                       <span className="text-muted-foreground block">Regalías</span>
-                      <span className="font-medium">${DEFAULT_BOOK_ECONOMY.regaliasPorVenta.toFixed(2)}</span>
+                      <span className="font-medium">${effectiveBookEconomy.regaliasPorVenta.toFixed(2)}</span>
                     </div>
                     <div className="text-center">
                       <span className="text-muted-foreground block">ACOS PE</span>
                       <span className="font-medium text-primary">
-                        {DEFAULT_BOOK_ECONOMY.precioLibro > 0 
-                          ? `${((DEFAULT_BOOK_ECONOMY.regaliasPorVenta / DEFAULT_BOOK_ECONOMY.precioLibro) * 100).toFixed(1)}%`
+                        {effectiveBookEconomy.precioLibro > 0 
+                          ? `${((effectiveBookEconomy.regaliasPorVenta / effectiveBookEconomy.precioLibro) * 100).toFixed(1)}%`
                           : '—'}
                       </span>
                     </div>
@@ -1000,7 +1004,7 @@ export function NewKeywordWizard({
                       <span className="text-xs text-muted-foreground">Ventas acumuladas</span>
                       <span className="font-medium tabular-nums">
                         {adsPedidos 
-                          ? `$${(parseFloat(adsPedidos) * DEFAULT_BOOK_ECONOMY.precioLibro).toFixed(2)}`
+                          ? `$${(parseFloat(adsPedidos) * effectiveBookEconomy.precioLibro).toFixed(2)}`
                           : '—'}
                       </span>
                     </div>
@@ -1010,7 +1014,7 @@ export function NewKeywordWizard({
                       <span className="text-xs text-muted-foreground">Beneficio ahora</span>
                       {(() => {
                         const gasto = adsClicks && adsCpc ? parseFloat(adsClicks) * parseFloat(adsCpc) : null;
-                        const ventas = adsPedidos ? parseFloat(adsPedidos) * DEFAULT_BOOK_ECONOMY.precioLibro : null;
+                        const ventas = adsPedidos ? parseFloat(adsPedidos) * effectiveBookEconomy.precioLibro : null;
                         const beneficio = gasto !== null && ventas !== null ? ventas - gasto : null;
                         return (
                           <span className={cn(
