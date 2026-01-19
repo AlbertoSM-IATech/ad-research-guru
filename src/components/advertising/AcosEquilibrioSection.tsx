@@ -9,6 +9,7 @@ import { Info, TrendingUp, TrendingDown, AlertCircle, CheckCircle2, Target, Calc
 import { cn } from '@/lib/utils';
 import type { AdsData, AdsFase, BookEconomy } from '@/types/advertising';
 import { ADS_FASE_OPTIONS } from '@/types/advertising';
+import { CampaignSelect } from './CampaignSelect';
 import {
   calcularAcosEquilibrioPorcentaje,
   calcularGastoAcumulado,
@@ -30,6 +31,8 @@ interface AcosEquilibrioSectionProps {
   bookEconomy: BookEconomy;
   onAdsDataChange: (adsData: AdsData) => void;
   isExpanded?: boolean;
+  campaigns?: string[];
+  onAddCampaign?: (name: string) => void;
 }
 
 export const AcosEquilibrioSection = ({
@@ -37,12 +40,15 @@ export const AcosEquilibrioSection = ({
   bookEconomy,
   onAdsDataChange,
   isExpanded = false,
+  campaigns = [],
+  onAddCampaign,
 }: AcosEquilibrioSectionProps) => {
   // Local state for RELLENAR inputs (only clicks, cpcActual, pedidos, faseActual)
   const [clicks, setClicks] = useState<string>('');
   const [cpcActual, setCpcActual] = useState<string>('');
   const [pedidos, setPedidos] = useState<string>('');
   const [faseActual, setFaseActual] = useState<AdsFase | undefined>(undefined);
+  const [campaignName, setCampaignName] = useState<string>('');
   const [guiaLanzamiento, setGuiaLanzamiento] = useState<string>('');
   const [guiaDominio, setGuiaDominio] = useState<string>('');
   const [guiaBeneficio, setGuiaBeneficio] = useState<string>('');
@@ -54,6 +60,7 @@ export const AcosEquilibrioSection = ({
       setCpcActual(adsData.cpcActual?.toString() ?? '');
       setPedidos(adsData.pedidos?.toString() ?? '');
       setFaseActual(adsData.faseActual);
+      setCampaignName(adsData.campaignName ?? '');
       setGuiaLanzamiento(adsData.guiaLanzamiento?.toString() ?? '');
       setGuiaDominio(adsData.guiaDominio?.toString() ?? '');
       setGuiaBeneficio(adsData.guiaBeneficio?.toString() ?? '');
@@ -61,7 +68,7 @@ export const AcosEquilibrioSection = ({
   }, [adsData]);
 
   // Update parent when values change
-  const updateAdsData = (field: keyof AdsData, value: number | undefined | AdsFase) => {
+  const updateAdsData = (field: keyof AdsData, value: number | undefined | AdsFase | string) => {
     const baseAds = (adsData ?? {}) as AdsData;
     const newAdsData: AdsData = {
       ...baseAds,
@@ -325,8 +332,34 @@ export const AcosEquilibrioSection = ({
         
         <div className={cn(
           "grid gap-4",
-          isExpanded ? "grid-cols-2 lg:grid-cols-4" : "grid-cols-2"
+          isExpanded ? "grid-cols-2 lg:grid-cols-5" : "grid-cols-2"
         )}>
+          {/* Campaña */}
+          <div className="space-y-1.5">
+            <Label className="text-xs flex items-center gap-1">
+              Campaña
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Info className="w-3 h-3 text-muted-foreground cursor-help" />
+                  </TooltipTrigger>
+                  <TooltipContent>Nombre de la campaña de Amazon Ads donde se usa esta keyword.</TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </Label>
+            <CampaignSelect
+              value={campaignName}
+              onChange={(value) => {
+                setCampaignName(value);
+                updateAdsData('campaignName', value);
+              }}
+              campaigns={campaigns}
+              onAddCampaign={onAddCampaign}
+              placeholder="Seleccionar..."
+              className="h-9"
+            />
+          </div>
+          
           {/* Clicks */}
           <div className="space-y-1.5">
             <Label htmlFor="ads-clicks" className="text-xs flex items-center gap-1">

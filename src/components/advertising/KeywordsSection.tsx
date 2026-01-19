@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, useCallback } from 'react';
-import { Plus, Search, Trash2, ArrowUpDown, Upload, Eye, BookOpen, Megaphone, Info, Star, AlertTriangle, RotateCcw, GitCompare, History, ChevronUp, ChevronDown, Save } from 'lucide-react';
+import { Plus, Search, Trash2, ArrowUpDown, Upload, Eye, BookOpen, Megaphone, Info, Star, AlertTriangle, RotateCcw, GitCompare, History, ChevronUp, ChevronDown, Save, Crown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -24,6 +24,9 @@ import { NewKeywordWizard } from './NewKeywordWizard';
 import { KeywordExportCSV } from './KeywordExportCSV';
 import { KeywordComparisonPanel } from './KeywordComparisonPanel';
 import { ResizableTableHeader } from './ResizableTableHeader';
+import { AdsDashboard } from './AdsDashboard';
+import { CampaignSelect } from './CampaignSelect';
+import { PlanUpgradeModal } from './PlanUpgradeModal';
 import { type Keyword, type CampaignType, type CompetitionLevel, type RelevanceLevel, type IntentType, type KeywordState, type BookInfo, type BookEconomy, type HistoryEntry, type AdsData, RELEVANCE_LEVELS, INTENT_TYPES, KEYWORD_STATES, calculateRelevance, classifyIntent } from '@/types/advertising';
 import { calculateMarketScore, getDefaultMarketData, KEYWORD_STATUS_OPTIONS, type KeywordStatus } from '@/lib/market-score';
 import { createKeywordDefaults } from '@/lib/keyword-helpers';
@@ -33,7 +36,9 @@ import { applyKeywordFilters } from '@/lib/keyword-filters';
 import { useKeywordUIPersistence, type FunctionalView } from '@/hooks/useKeywordUIPersistence';
 import { useColumnWidths, type ColumnWidths } from '@/hooks/useColumnWidths';
 import { useFilterPresets } from '@/hooks/useFilterPresets';
-import { calcularGastoAcumulado, calcularVentasAcumuladas, calcularAcosActualPorcentaje, calcularAcosSiguienteClickPorcentaje, calcularConversionPorcentaje, formatearPorcentaje, formatearMoneda } from '@/lib/acosEquilibrio';
+import { useCampaigns } from '@/hooks/useCampaigns';
+import { calcularGastoAcumulado, calcularVentasAcumuladas, calcularAcosActualPorcentaje, calcularAcosSiguienteClickPorcentaje, calcularConversionPorcentaje, calcularAcosEquilibrioPorcentaje, formatearPorcentaje, formatearMoneda } from '@/lib/acosEquilibrio';
+import { getCurrentPlan, hasAccess } from '@/lib/plan-system';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 
@@ -133,9 +138,17 @@ export const KeywordsSection = ({
   const [advancedFiltersExpanded, setAdvancedFiltersExpanded] = useState(false);
   const [isComparisonOpen, setIsComparisonOpen] = useState(false);
   const [adsHistoryKeyword, setAdsHistoryKeyword] = useState<Keyword | null>(null);
+  const [showPlanUpgradeModal, setShowPlanUpgradeModal] = useState(false);
 
   // Filter presets hook
   const { presets, savePreset, deletePreset, loadPreset } = useFilterPresets();
+
+  // Campaigns hook
+  const { campaigns, addCampaign } = useCampaigns(keywords);
+
+  // Plan access check
+  const userPlan = getCurrentPlan();
+  const hasAdsAccess = hasAccess('ads-management');
 
   // Functional view state (Editorial vs Ads)
   const [functionalView, setFunctionalView] = useState<FunctionalView>(persistedState.functionalView || 'editorial');
@@ -473,9 +486,13 @@ export const KeywordsSection = ({
               Estudio de Nicho
             </Button>
             <Button variant={functionalView === 'ads' ? 'default' : 'ghost'} size="sm" onClick={() => {
-            setFunctionalView('ads');
-            updateFunctionalView('ads');
-          }} className={cn("gap-2 transition-all", functionalView === 'ads' && "bg-primary text-primary-foreground")}>
+              if (!hasAdsAccess) {
+                setShowPlanUpgradeModal(true);
+                return;
+              }
+              setFunctionalView('ads');
+              updateFunctionalView('ads');
+            }} className={cn("gap-2 transition-all", functionalView === 'ads' && "bg-primary text-primary-foreground")}>
               <Megaphone className="w-4 h-4" />
               Gestión de Ads
               <Badge variant="secondary" className="ml-1 bg-blue-500 text-white text-[10px] px-1.5 py-0 h-4">
@@ -490,6 +507,11 @@ export const KeywordsSection = ({
           <Info className="w-4 h-4 flex-shrink-0" />
           {functionalView === 'editorial' ? "Esta vista está pensada para decisiones editoriales, no para inversión publicitaria." : "Esta vista está pensada para decisiones de inversión en Ads."}
         </div>
+
+        {/* ADS Dashboard - only in ads view */}
+        {functionalView === 'ads' && hasAdsAccess && (
+          <AdsDashboard keywords={keywords} bookEconomy={bookEconomy} />
+        )}
       </div>
 
       {/* Advanced Filters - positioned above table with toolbar */}
@@ -1025,18 +1047,20 @@ export const KeywordsSection = ({
                           </>
                         ) : (
                           <>
-                            {/* Campaña - Inline editable */}
+                            {/* Campaña - Dropdown select */}
                             <TableCell onClick={e => e.stopPropagation()}>
-                              <InlineEditableCell
+                              <CampaignSelect
                                 value={ads?.campaignName ?? ''}
-                                onSave={(value) => {
+                                onChange={(value) => {
                                   const baseAds = (ads ?? {}) as AdsData;
                                   onUpdate(keyword.id, { 
-                                    adsData: { ...baseAds, campaignName: String(value) } 
+                                    adsData: { ...baseAds, campaignName: value } 
                                   });
                                 }}
+                                campaigns={campaigns}
+                                onAddCampaign={addCampaign}
                                 placeholder="Campaña..."
-                                className="text-xs max-w-[100px]"
+                                className="h-7 text-xs max-w-[120px]"
                               />
                             </TableCell>
                             {/* ACOS Equilibrio (PE) - Read only reference */}
@@ -1226,6 +1250,7 @@ export const KeywordsSection = ({
         marketplaceId={marketplaceId}
         bookEconomy={bookEconomy}
         defaultTab={functionalView === 'ads' ? 'ads' : 'nicho'}
+        allKeywords={keywords}
       />
       
       {/* New Keyword Wizard */}
@@ -1258,6 +1283,12 @@ export const KeywordsSection = ({
             onUpdate(adsHistoryKeyword.id, { adsData: newAdsData });
           }
         }}
+      />
+      
+      {/* Plan Upgrade Modal */}
+      <PlanUpgradeModal
+        open={showPlanUpgradeModal}
+        onOpenChange={setShowPlanUpgradeModal}
       />
     </div>;
 };

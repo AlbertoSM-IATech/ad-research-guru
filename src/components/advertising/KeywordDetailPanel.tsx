@@ -16,6 +16,7 @@ import type { Keyword, BookEconomy, AdsData } from '@/types/advertising';
 import { getAutoStatusFromScore } from '@/lib/keyword-builder';
 import { type MarketData, type MarketStructure, type CatalogSignals, type EditorialData, type TrafficSource, type KeywordStatus, type BooksOver200ReviewsRange, calculateMarketScore, calculateEditorialScore, getDefaultMarketData, getDefaultEditorialData, getDefaultMarketStructure, getDefaultCatalogSignals, getMarketScoreInfo, getBooksOver200ReviewsPoints, TRAFFIC_SOURCE_OPTIONS, KEYWORD_STATUS_OPTIONS, MARKET_STRUCTURE_CHECKS, CATALOG_SIGNALS_CHECKS, EDITORIAL_CHECKS, BOOKS_OVER_200_REVIEWS_OPTIONS, BOOKS_OVER_200_REVIEWS_FIELD } from '@/lib/market-score';
 import { AcosEquilibrioSection } from './AcosEquilibrioSection';
+import { useCampaigns } from '@/hooks/useCampaigns';
 import { DEFAULT_BOOK_ECONOMY } from '@/hooks/useLocalPersistence';
 
 interface KeywordDetailPanelProps {
@@ -26,6 +27,7 @@ interface KeywordDetailPanelProps {
   marketplaceId?: string;
   defaultTab?: 'nicho' | 'ads';
   bookEconomy?: BookEconomy;
+  allKeywords?: Keyword[];
 }
 
 export const KeywordDetailPanel = ({
@@ -36,7 +38,10 @@ export const KeywordDetailPanel = ({
   marketplaceId = 'us',
   defaultTab = 'nicho',
   bookEconomy = DEFAULT_BOOK_ECONOMY,
+  allKeywords = [],
 }: KeywordDetailPanelProps) => {
+  // Campaigns hook
+  const { campaigns, addCampaign } = useCampaigns(allKeywords);
   // Panel state
   const [isExpanded, setIsExpanded] = useState(false);
   const [activeTab, setActiveTab] = useState<'nicho' | 'ads'>(defaultTab);
@@ -871,6 +876,8 @@ export const KeywordDetailPanel = ({
               bookEconomy={bookEconomy}
               onAdsDataChange={handleAdsDataChange}
               isExpanded={isExpanded}
+              campaigns={campaigns}
+              onAddCampaign={addCampaign}
             />
           </TabsContent>
         </Tabs>
