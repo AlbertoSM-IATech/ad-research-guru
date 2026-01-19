@@ -50,9 +50,8 @@ const DEFAULT_EDITORIAL_WIDTHS: ColumnWidths = {
   volume: 100,
   competitors: 120,
   marketScore: 130,
-  status: 110,
+  status: 110
 };
-
 const DEFAULT_ADS_WIDTHS: ColumnWidths = {
   checkbox: 40,
   star: 40,
@@ -69,7 +68,7 @@ const DEFAULT_ADS_WIDTHS: ColumnWidths = {
   acos: 80,
   acosSig: 75,
   conversion: 70,
-  beneficio: 80,
+  beneficio: 80
 };
 interface KeywordsSectionProps {
   keywords: Keyword[];
@@ -90,7 +89,6 @@ interface KeywordsSectionProps {
   searchTerm: string;
   onSearchTermChange: (term: string) => void;
 }
-
 const ITEMS_PER_PAGE = 20;
 export const KeywordsSection = ({
   keywords,
@@ -141,10 +139,18 @@ export const KeywordsSection = ({
   const [showPlanUpgradeModal, setShowPlanUpgradeModal] = useState(false);
 
   // Filter presets hook
-  const { presets, savePreset, deletePreset, loadPreset } = useFilterPresets();
+  const {
+    presets,
+    savePreset,
+    deletePreset,
+    loadPreset
+  } = useFilterPresets();
 
   // Campaigns hook
-  const { campaigns, addCampaign } = useCampaigns(keywords);
+  const {
+    campaigns,
+    addCampaign
+  } = useCampaigns(keywords);
 
   // Plan access check
   const userPlan = getCurrentPlan();
@@ -154,18 +160,16 @@ export const KeywordsSection = ({
   const [functionalView, setFunctionalView] = useState<FunctionalView>(persistedState.functionalView || 'editorial');
 
   // Column width management for resizable columns
-  const { 
-    widths: editorialWidths, 
-    setColumnWidth: setEditorialColumnWidth, 
-    resetWidths: resetEditorialWidths 
+  const {
+    widths: editorialWidths,
+    setColumnWidth: setEditorialColumnWidth,
+    resetWidths: resetEditorialWidths
   } = useColumnWidths(`keywords-editorial-${marketplaceId}`, DEFAULT_EDITORIAL_WIDTHS);
-  
-  const { 
-    widths: adsWidths, 
-    setColumnWidth: setAdsColumnWidth, 
-    resetWidths: resetAdsWidths 
+  const {
+    widths: adsWidths,
+    setColumnWidth: setAdsColumnWidth,
+    resetWidths: resetAdsWidths
   } = useColumnWidths(`keywords-ads-${marketplaceId}`, DEFAULT_ADS_WIDTHS);
-
   const columnWidths = functionalView === 'editorial' ? editorialWidths : adsWidths;
   const setColumnWidth = functionalView === 'editorial' ? setEditorialColumnWidth : setAdsColumnWidth;
   const resetColumnWidths = functionalView === 'editorial' ? resetEditorialWidths : resetAdsWidths;
@@ -397,7 +401,7 @@ export const KeywordsSection = ({
       campaignName: filters.campaignName,
       marketScoreRanges: filters.marketScoreRanges,
       has200PlusReviews: filters.has200PlusReviews,
-      hasUnder100Reviews: filters.hasUnder100Reviews,
+      hasUnder100Reviews: filters.hasUnder100Reviews
     });
 
     // Apply ADS-specific filters when in ads view
@@ -438,11 +442,9 @@ export const KeywordsSection = ({
         // Beneficio range
         if (adsFilters.minBeneficio && (beneficio === null || beneficio < parseFloat(adsFilters.minBeneficio))) return false;
         if (adsFilters.maxBeneficio && (beneficio === null || beneficio > parseFloat(adsFilters.maxBeneficio))) return false;
-
         return true;
       });
     }
-
     return sortKeywords(result, sortField, sortOrder, bookEconomy.precioLibro);
   }, [keywords, searchTerm, filters, adsFilters, sortField, sortOrder, functionalView, bookEconomy.precioLibro]);
 
@@ -486,13 +488,13 @@ export const KeywordsSection = ({
               Estudio de Nicho
             </Button>
             <Button variant={functionalView === 'ads' ? 'default' : 'ghost'} size="sm" onClick={() => {
-              if (!hasAdsAccess) {
-                setShowPlanUpgradeModal(true);
-                return;
-              }
-              setFunctionalView('ads');
-              updateFunctionalView('ads');
-            }} className={cn("gap-2 transition-all", functionalView === 'ads' && "bg-primary text-primary-foreground")}>
+            if (!hasAdsAccess) {
+              setShowPlanUpgradeModal(true);
+              return;
+            }
+            setFunctionalView('ads');
+            updateFunctionalView('ads');
+          }} className={cn("gap-2 transition-all", functionalView === 'ads' && "bg-primary text-primary-foreground")}>
               <Megaphone className="w-4 h-4" />
               Gestión de Ads
               <Badge variant="secondary" className="ml-1 bg-blue-500 text-white text-[10px] px-1.5 py-0 h-4">
@@ -509,42 +511,25 @@ export const KeywordsSection = ({
         </div>
 
         {/* ADS Dashboard - only in ads view */}
-        {functionalView === 'ads' && hasAdsAccess && (
-          <AdsDashboard keywords={keywords} bookEconomy={bookEconomy} />
-        )}
+        {functionalView === 'ads' && hasAdsAccess && <AdsDashboard keywords={keywords} bookEconomy={bookEconomy} />}
       </div>
 
       {/* Advanced Filters - positioned above table with toolbar */}
-      <div className="flex flex-wrap items-center gap-2">
-        {functionalView === 'editorial' ? (
-          <AdvancedFilters filters={filters} onFiltersChange={handleAdvancedFiltersChange} renderTriggerOnly isExpanded={advancedFiltersExpanded} onToggleExpanded={() => setAdvancedFiltersExpanded(!advancedFiltersExpanded)} />
-        ) : (
-          <AdvancedFiltersAds filters={adsFilters} onFiltersChange={handleAdsFiltersChange} renderTriggerOnly isExpanded={advancedFiltersExpanded} onToggleExpanded={() => setAdvancedFiltersExpanded(!advancedFiltersExpanded)} />
-        )}
+      <div className="flex-wrap gap-2 flex items-center justify-start">
+        {functionalView === 'editorial' ? <AdvancedFilters filters={filters} onFiltersChange={handleAdvancedFiltersChange} renderTriggerOnly isExpanded={advancedFiltersExpanded} onToggleExpanded={() => setAdvancedFiltersExpanded(!advancedFiltersExpanded)} /> : <AdvancedFiltersAds filters={adsFilters} onFiltersChange={handleAdsFiltersChange} renderTriggerOnly isExpanded={advancedFiltersExpanded} onToggleExpanded={() => setAdvancedFiltersExpanded(!advancedFiltersExpanded)} />}
         
         {/* Filter Presets */}
-        <FilterPresetsDropdown
-          type={functionalView}
-          currentFilters={functionalView === 'editorial' ? filters : adsFilters}
-          presets={presets}
-          onSavePreset={savePreset}
-          onLoadPreset={(loadedFilters) => {
-            if (functionalView === 'editorial') {
-              handleAdvancedFiltersChange(loadedFilters as AdvancedFiltersState);
-            } else {
-              handleAdsFiltersChange(loadedFilters as AdsFiltersState);
-            }
-          }}
-          onDeletePreset={deletePreset}
-        />
+        <FilterPresetsDropdown type={functionalView} currentFilters={functionalView === 'editorial' ? filters : adsFilters} presets={presets} onSavePreset={savePreset} onLoadPreset={loadedFilters => {
+        if (functionalView === 'editorial') {
+          handleAdvancedFiltersChange(loadedFilters as AdvancedFiltersState);
+        } else {
+          handleAdsFiltersChange(loadedFilters as AdsFiltersState);
+        }
+      }} onDeletePreset={deletePreset} />
       </div>
 
       {/* Advanced Filters Content */}
-      {advancedFiltersExpanded && (
-        functionalView === 'editorial' 
-          ? <AdvancedFiltersContent filters={filters} onFiltersChange={handleAdvancedFiltersChange} />
-          : <AdsFiltersContent filters={adsFilters} onFiltersChange={handleAdsFiltersChange} />
-      )}
+      {advancedFiltersExpanded && (functionalView === 'editorial' ? <AdvancedFiltersContent filters={filters} onFiltersChange={handleAdvancedFiltersChange} /> : <AdsFiltersContent filters={adsFilters} onFiltersChange={handleAdsFiltersChange} />)}
 
       {/* Quick Add, Search & Sort */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3 items-center">
@@ -577,12 +562,7 @@ export const KeywordsSection = ({
           {/* Reset Column Widths */}
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8"
-                onClick={resetColumnWidths}
-              >
+              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={resetColumnWidths}>
                 <RotateCcw className="w-3.5 h-3.5" />
               </Button>
             </TooltipTrigger>
@@ -595,8 +575,7 @@ export const KeywordsSection = ({
             <Upload className="w-4 h-4" />
             Importar lote
           </Button>
-          {selectedIds.size === 2 && (
-            <Tooltip>
+          {selectedIds.size === 2 && <Tooltip>
               <TooltipTrigger asChild>
                 <Button variant="outline" size="sm" onClick={() => setIsComparisonOpen(true)} className="gap-2 border-primary/50 text-primary hover:bg-primary/10">
                   <GitCompare className="w-4 h-4" />
@@ -604,8 +583,7 @@ export const KeywordsSection = ({
                 </Button>
               </TooltipTrigger>
               <TooltipContent>Comparar las 2 keywords seleccionadas lado a lado</TooltipContent>
-            </Tooltip>
-          )}
+            </Tooltip>}
           {selectedIds.size > 0 && <Button variant="destructive" size="sm" onClick={handleDeleteSelected} className="gap-2">
               <Trash2 className="w-4 h-4" />
               Eliminar ({selectedIds.size})
@@ -619,46 +597,32 @@ export const KeywordsSection = ({
             <Table className="table-fixed">
               <TableHeader>
                 <TableRow className="bg-muted/50 hover:bg-muted/50">
-                  <TableHead style={{ width: columnWidths.checkbox }}>
+                  <TableHead style={{
+                width: columnWidths.checkbox
+              }}>
                     <Checkbox checked={selectedIds.size === filteredKeywords.length && filteredKeywords.length > 0} onCheckedChange={toggleSelectAll} />
                   </TableHead>
-                  <TableHead style={{ width: columnWidths.star }}>
+                  <TableHead style={{
+                width: columnWidths.star
+              }}>
                     <div className="flex items-center justify-center">
                       <Star className="w-3.5 h-3.5 text-muted-foreground" />
                     </div>
                   </TableHead>
-                  <ResizableTableHeader
-                    columnKey="keyword"
-                    width={columnWidths.keyword}
-                    onResize={setColumnWidth}
-                    className="cursor-pointer hover:text-foreground"
-                    onClick={() => handleSort('keyword')}
-                  >
+                  <ResizableTableHeader columnKey="keyword" width={columnWidths.keyword} onResize={setColumnWidth} className="cursor-pointer hover:text-foreground" onClick={() => handleSort('keyword')}>
                     <div className="flex items-center gap-1">
                       Keyword 
                       <ArrowUpDown className="w-3 h-3" />
                     </div>
                   </ResizableTableHeader>
-                  <ResizableTableHeader
-                    columnKey="volume"
-                    width={columnWidths.volume}
-                    onResize={setColumnWidth}
-                    className="cursor-pointer hover:text-foreground"
-                    onClick={() => handleSort('searchVolume')}
-                  >
+                  <ResizableTableHeader columnKey="volume" width={columnWidths.volume} onResize={setColumnWidth} className="cursor-pointer hover:text-foreground" onClick={() => handleSort('searchVolume')}>
                     <div className="flex items-center gap-1">
                       Volumen
                       <ArrowUpDown className="w-3 h-3" />
                       <InfoTooltip content="Volumen de búsquedas mensuales estimado." />
                     </div>
                   </ResizableTableHeader>
-                  <ResizableTableHeader
-                    columnKey="competitors"
-                    width={columnWidths.competitors}
-                    onResize={setColumnWidth}
-                    className="cursor-pointer hover:text-foreground"
-                    onClick={() => handleSort('competitors')}
-                  >
+                  <ResizableTableHeader columnKey="competitors" width={columnWidths.competitors} onResize={setColumnWidth} className="cursor-pointer hover:text-foreground" onClick={() => handleSort('competitors')}>
                     <div className="flex items-center gap-1">
                       Competidores
                       <ArrowUpDown className="w-3 h-3" />
@@ -667,171 +631,91 @@ export const KeywordsSection = ({
                   </ResizableTableHeader>
                   
                   {/* Columnas específicas por vista */}
-                  {functionalView === 'editorial' ? (
-                    <>
-                      <ResizableTableHeader
-                        columnKey="marketScore"
-                        width={columnWidths.marketScore}
-                        onResize={setColumnWidth}
-                        className="cursor-pointer hover:text-foreground"
-                        onClick={() => handleSort('marketScore')}
-                      >
+                  {functionalView === 'editorial' ? <>
+                      <ResizableTableHeader columnKey="marketScore" width={columnWidths.marketScore} onResize={setColumnWidth} className="cursor-pointer hover:text-foreground" onClick={() => handleSort('marketScore')}>
                         <div className="flex items-center gap-1">
                           Market Score
                           <ArrowUpDown className="w-3 h-3" />
                           <InfoTooltip content="Puntuación 0-100 de viabilidad de mercado." />
                         </div>
                       </ResizableTableHeader>
-                      <ResizableTableHeader
-                        columnKey="status"
-                        width={columnWidths.status}
-                        onResize={setColumnWidth}
-                        className="cursor-pointer hover:text-foreground"
-                        onClick={() => handleSort('status')}
-                      >
+                      <ResizableTableHeader columnKey="status" width={columnWidths.status} onResize={setColumnWidth} className="cursor-pointer hover:text-foreground" onClick={() => handleSort('status')}>
                         <div className="flex items-center gap-1">
                           Estado
                           <ArrowUpDown className="w-3 h-3" />
                           <InfoTooltip content="Pendiente / Válida / Descartada" />
                         </div>
                       </ResizableTableHeader>
-                    </>
-                  ) : (
-                    <>
-                      <ResizableTableHeader
-                        columnKey="campaign"
-                        width={columnWidths.campaign}
-                        onResize={setColumnWidth}
-                        className="cursor-pointer hover:text-foreground"
-                        onClick={() => handleSort('keyword')}
-                      >
+                    </> : <>
+                      <ResizableTableHeader columnKey="campaign" width={columnWidths.campaign} onResize={setColumnWidth} className="cursor-pointer hover:text-foreground" onClick={() => handleSort('keyword')}>
                         <div className="flex items-center gap-1">
                           Campaña
                           <InfoTooltip content="Nombre de la campaña de Amazon Ads donde se usa esta keyword." />
                         </div>
                       </ResizableTableHeader>
-                      <ResizableTableHeader
-                        columnKey="acosPE"
-                        width={columnWidths.acosPE}
-                        onResize={setColumnWidth}
-                      >
+                      <ResizableTableHeader columnKey="acosPE" width={columnWidths.acosPE} onResize={setColumnWidth}>
                         <div className="flex items-center gap-1">
                           ACOS PE
                           <InfoTooltip content="ACOS Punto de Equilibrio. Si ACOS actual supera este valor, pierdes dinero." />
                         </div>
                       </ResizableTableHeader>
-                      <ResizableTableHeader
-                        columnKey="clicks"
-                        width={columnWidths.clicks}
-                        onResize={setColumnWidth}
-                        className="cursor-pointer hover:text-foreground"
-                        onClick={() => handleSort('clicks')}
-                      >
+                      <ResizableTableHeader columnKey="clicks" width={columnWidths.clicks} onResize={setColumnWidth} className="cursor-pointer hover:text-foreground" onClick={() => handleSort('clicks')}>
                         <div className="flex items-center gap-1">
                           Clicks
                           <ArrowUpDown className="w-3 h-3" />
                         </div>
                       </ResizableTableHeader>
-                      <ResizableTableHeader
-                        columnKey="cpc"
-                        width={columnWidths.cpc}
-                        onResize={setColumnWidth}
-                        className="cursor-pointer hover:text-foreground"
-                        onClick={() => handleSort('cpc')}
-                      >
+                      <ResizableTableHeader columnKey="cpc" width={columnWidths.cpc} onResize={setColumnWidth} className="cursor-pointer hover:text-foreground" onClick={() => handleSort('cpc')}>
                         <div className="flex items-center gap-1">
                           CPC
                           <ArrowUpDown className="w-3 h-3" />
                         </div>
                       </ResizableTableHeader>
-                      <ResizableTableHeader
-                        columnKey="pedidos"
-                        width={columnWidths.pedidos}
-                        onResize={setColumnWidth}
-                        className="cursor-pointer hover:text-foreground"
-                        onClick={() => handleSort('pedidos')}
-                      >
+                      <ResizableTableHeader columnKey="pedidos" width={columnWidths.pedidos} onResize={setColumnWidth} className="cursor-pointer hover:text-foreground" onClick={() => handleSort('pedidos')}>
                         <div className="flex items-center gap-1">
                           Pedidos
                           <ArrowUpDown className="w-3 h-3" />
                         </div>
                       </ResizableTableHeader>
-                      <ResizableTableHeader
-                        columnKey="gasto"
-                        width={columnWidths.gasto}
-                        onResize={setColumnWidth}
-                        className="cursor-pointer hover:text-foreground"
-                        onClick={() => handleSort('gasto')}
-                      >
+                      <ResizableTableHeader columnKey="gasto" width={columnWidths.gasto} onResize={setColumnWidth} className="cursor-pointer hover:text-foreground" onClick={() => handleSort('gasto')}>
                         <div className="flex items-center gap-1">
                           Gasto
                           <ArrowUpDown className="w-3 h-3" />
                         </div>
                       </ResizableTableHeader>
-                      <ResizableTableHeader
-                        columnKey="ventas"
-                        width={columnWidths.ventas}
-                        onResize={setColumnWidth}
-                        className="cursor-pointer hover:text-foreground"
-                        onClick={() => handleSort('ventas')}
-                      >
+                      <ResizableTableHeader columnKey="ventas" width={columnWidths.ventas} onResize={setColumnWidth} className="cursor-pointer hover:text-foreground" onClick={() => handleSort('ventas')}>
                         <div className="flex items-center gap-1">
                           Ventas
                           <ArrowUpDown className="w-3 h-3" />
                         </div>
                       </ResizableTableHeader>
-                      <ResizableTableHeader
-                        columnKey="acos"
-                        width={columnWidths.acos}
-                        onResize={setColumnWidth}
-                        className="cursor-pointer hover:text-foreground"
-                        onClick={() => handleSort('acosActual')}
-                      >
+                      <ResizableTableHeader columnKey="acos" width={columnWidths.acos} onResize={setColumnWidth} className="cursor-pointer hover:text-foreground" onClick={() => handleSort('acosActual')}>
                         <div className="flex items-center gap-1">
                           ACOS
                           <ArrowUpDown className="w-3 h-3" />
                         </div>
                       </ResizableTableHeader>
-                      <ResizableTableHeader
-                        columnKey="acosSig"
-                        width={columnWidths.acosSig}
-                        onResize={setColumnWidth}
-                        className="cursor-pointer hover:text-foreground"
-                        onClick={() => handleSort('acosSiguiente')}
-                      >
+                      <ResizableTableHeader columnKey="acosSig" width={columnWidths.acosSig} onResize={setColumnWidth} className="cursor-pointer hover:text-foreground" onClick={() => handleSort('acosSiguiente')}>
                         <div className="flex items-center gap-1">
                           ACOS Sig.
                           <ArrowUpDown className="w-3 h-3" />
                           <InfoTooltip content="ACOS si el siguiente click genera 1 venta. Escenario optimista." />
                         </div>
                       </ResizableTableHeader>
-                      <ResizableTableHeader
-                        columnKey="conversion"
-                        width={columnWidths.conversion}
-                        onResize={setColumnWidth}
-                        className="cursor-pointer hover:text-foreground"
-                        onClick={() => handleSort('conversion')}
-                      >
+                      <ResizableTableHeader columnKey="conversion" width={columnWidths.conversion} onResize={setColumnWidth} className="cursor-pointer hover:text-foreground" onClick={() => handleSort('conversion')}>
                         <div className="flex items-center gap-1">
                           Conv.
                           <ArrowUpDown className="w-3 h-3" />
                         </div>
                       </ResizableTableHeader>
-                      <ResizableTableHeader
-                        columnKey="beneficio"
-                        width={columnWidths.beneficio}
-                        onResize={setColumnWidth}
-                        className="cursor-pointer hover:text-foreground"
-                        onClick={() => handleSort('beneficio')}
-                      >
+                      <ResizableTableHeader columnKey="beneficio" width={columnWidths.beneficio} onResize={setColumnWidth} className="cursor-pointer hover:text-foreground" onClick={() => handleSort('beneficio')}>
                         <div className="flex items-center gap-1">
                           Beneficio
                           <ArrowUpDown className="w-3 h-3" />
                           <InfoTooltip content="Ventas - Gasto. Muestra la rentabilidad de cada keyword." />
                         </div>
                       </ResizableTableHeader>
-                    </>
-                  )}
+                    </>}
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -843,32 +727,23 @@ export const KeywordsSection = ({
               const score = getKeywordMarketScore(keyword);
               const incomplete = isMarketDataIncomplete(keyword);
               const ads = keyword.adsData;
-              
+
               // Auto-calculated values for Ads view
               const gastoCalculado = calcularGastoAcumulado(ads?.clicks, ads?.cpcActual);
               const ventasCalculadas = calcularVentasAcumuladas(ads?.pedidos, bookEconomy.precioLibro);
               const acosActual = calcularAcosActualPorcentaje(gastoCalculado ?? undefined, ventasCalculadas ?? undefined);
-              const acosSiguiente = calcularAcosSiguienteClickPorcentaje(
-                gastoCalculado ?? undefined, 
-                ads?.cpcActual, 
-                ventasCalculadas ?? undefined, 
-                bookEconomy.precioLibro
-              );
+              const acosSiguiente = calcularAcosSiguienteClickPorcentaje(gastoCalculado ?? undefined, ads?.cpcActual, ventasCalculadas ?? undefined, bookEconomy.precioLibro);
               const conversion = calcularConversionPorcentaje(ads?.pedidos, ads?.clicks);
-              const acosEquilibrio = bookEconomy.precioLibro > 0 && bookEconomy.regaliasPorVenta > 0
-                ? (bookEconomy.regaliasPorVenta / bookEconomy.precioLibro) * 100
-                : null;
-              
+              const acosEquilibrio = bookEconomy.precioLibro > 0 && bookEconomy.regaliasPorVenta > 0 ? bookEconomy.regaliasPorVenta / bookEconomy.precioLibro * 100 : null;
+
               // Inline update handler for ads data with auto-click logic
               const handleInlineAdsUpdate = (field: 'clicks' | 'cpcActual' | 'pedidos', value: string) => {
                 const numValue = value === '' ? undefined : parseFloat(value);
                 if (value !== '' && (isNaN(numValue!) || numValue! < 0)) return;
-
                 const baseAds = (ads ?? {}) as AdsData;
-
                 let updatedAdsData: AdsData = {
                   ...baseAds,
-                  [field]: numValue,
+                  [field]: numValue
                 };
 
                 // Auto-click rule: when increasing pedidos, also increase clicks by the same delta.
@@ -885,16 +760,15 @@ export const KeywordsSection = ({
                     updatedAdsData.clicks = numValue;
                   }
                 }
-
                 onUpdate(keyword.id, {
-                  adsData: updatedAdsData,
+                  adsData: updatedAdsData
                 });
               };
-              
+
               // Check for data inconsistency: clicks < pedidos
               const hasDataInconsistency = ads?.clicks !== undefined && ads?.pedidos !== undefined && ads.clicks < ads.pedidos;
               const isMainKeyword = bookInfo.mainKeywordId === keyword.id;
-              
+
               // Handle setting as main keyword
               const handleSetMainKeyword = (e: React.MouseEvent) => {
                 e.stopPropagation();
@@ -903,31 +777,19 @@ export const KeywordsSection = ({
                   mainKeywordId: isMainKeyword ? undefined : keyword.id
                 });
               };
-              
               return <TableRow key={keyword.id} className={cn('transition-colors', functionalView === 'editorial' ? getRowScoreClass(score) : hasDataInconsistency ? 'bg-amber-500/10 hover:bg-amber-500/15' : 'hover:bg-muted/30')}>
                         <TableCell onClick={e => e.stopPropagation()}>
                           <Checkbox checked={selectedIds.has(keyword.id)} onCheckedChange={() => toggleSelect(keyword.id)} />
                         </TableCell>
                         <TableCell onClick={e => e.stopPropagation()}>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={handleSetMainKeyword}
-                            className={cn(
-                              "h-7 w-7 p-0",
-                              isMainKeyword 
-                                ? "bg-amber-500/20 text-amber-600 hover:bg-amber-500/30" 
-                                : "text-muted-foreground hover:text-amber-600 hover:bg-amber-500/10"
-                            )}
-                          >
+                          <Button variant="ghost" size="sm" onClick={handleSetMainKeyword} className={cn("h-7 w-7 p-0", isMainKeyword ? "bg-amber-500/20 text-amber-600 hover:bg-amber-500/30" : "text-muted-foreground hover:text-amber-600 hover:bg-amber-500/10")}>
                             <Star className={cn("w-4 h-4", isMainKeyword && "fill-current")} />
                           </Button>
                         </TableCell>
                         <TableCell>
                           <div className="flex items-center gap-2">
                             {/* Data inconsistency warning */}
-                            {hasDataInconsistency && (
-                              <Tooltip>
+                            {hasDataInconsistency && <Tooltip>
                                 <TooltipTrigger asChild>
                                   <AlertTriangle className="w-4 h-4 text-amber-500 flex-shrink-0" />
                                 </TooltipTrigger>
@@ -935,17 +797,11 @@ export const KeywordsSection = ({
                                   <p className="font-medium">Datos inconsistentes</p>
                                   <p className="text-xs text-muted-foreground">Clicks ({ads?.clicks}) &lt; Pedidos ({ads?.pedidos})</p>
                                 </TooltipContent>
-                              </Tooltip>
-                            )}
+                              </Tooltip>}
                             {/* Primary action: Open detail panel */}
                             <Tooltip>
                               <TooltipTrigger asChild>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => setValidationKeyword(keyword)}
-                                  className="h-7 w-7 p-0 bg-primary/10 hover:bg-primary/20 text-primary"
-                                >
+                                <Button variant="ghost" size="sm" onClick={() => setValidationKeyword(keyword)} className="h-7 w-7 p-0 bg-primary/10 hover:bg-primary/20 text-primary">
                                   <Eye className="w-4 h-4" />
                                 </Button>
                               </TooltipTrigger>
@@ -953,115 +809,85 @@ export const KeywordsSection = ({
                             </Tooltip>
 
                             {/* Manual save (forces refresh + sync) */}
-                            {functionalView === 'ads' && (
-                              <Tooltip>
+                            {functionalView === 'ads' && <Tooltip>
                                 <TooltipTrigger asChild>
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => {
-                                      const baseAds = (ads ?? {}) as AdsData;
-                                      const normalizedAds: AdsData = { ...baseAds };
-                                      // Trigger a new object reference to ensure side panel sync
-                                      onUpdate(keyword.id, { adsData: normalizedAds });
-                                      if (validationKeyword?.id === keyword.id) {
-                                        setValidationKeyword({ ...keyword, adsData: normalizedAds });
-                                      }
-                                      toast({ title: 'Guardado', description: 'Datos de Ads sincronizados.' });
-                                    }}
-                                    className="h-7 w-7 p-0 bg-muted/40 hover:bg-muted"
-                                  >
+                                  <Button variant="ghost" size="sm" onClick={() => {
+                          const baseAds = (ads ?? {}) as AdsData;
+                          const normalizedAds: AdsData = {
+                            ...baseAds
+                          };
+                          // Trigger a new object reference to ensure side panel sync
+                          onUpdate(keyword.id, {
+                            adsData: normalizedAds
+                          });
+                          if (validationKeyword?.id === keyword.id) {
+                            setValidationKeyword({
+                              ...keyword,
+                              adsData: normalizedAds
+                            });
+                          }
+                          toast({
+                            title: 'Guardado',
+                            description: 'Datos de Ads sincronizados.'
+                          });
+                        }} className="h-7 w-7 p-0 bg-muted/40 hover:bg-muted">
                                     <Save className="w-4 h-4" />
                                   </Button>
                                 </TooltipTrigger>
                                 <TooltipContent>Guardar Ads</TooltipContent>
-                              </Tooltip>
-                            )}
+                              </Tooltip>}
 
-                            <div className={cn(
-                              isMainKeyword && "text-amber-600 dark:text-amber-400"
-                            )}>
-                              <InlineEditableCell
-                                value={keyword.keyword}
-                                onSave={(value) => handleUpdateWithHistory(keyword.id, { keyword: String(value) })}
-                                placeholder="Keyword..."
-                                className={cn(
-                                  "font-medium",
-                                  isMainKeyword && "text-amber-600 dark:text-amber-400"
-                                )}
-                              />
+                            <div className={cn(isMainKeyword && "text-amber-600 dark:text-amber-400")}>
+                              <InlineEditableCell value={keyword.keyword} onSave={value => handleUpdateWithHistory(keyword.id, {
+                        keyword: String(value)
+                      })} placeholder="Keyword..." className={cn("font-medium", isMainKeyword && "text-amber-600 dark:text-amber-400")} />
                             </div>
                           </div>
                         </TableCell>
                         <TableCell className="tabular-nums text-sm" onClick={e => e.stopPropagation()}>
-                          {functionalView === 'editorial' ? (
-                            <InlineEditableCell
-                              value={keyword.searchVolume || 0}
-                              type="number"
-                              min={0}
-                              onSave={(value) => handleUpdateWithHistory(keyword.id, { searchVolume: Number(value) })}
-                              formatter={(v) => Number(v || 0).toLocaleString()}
-                              className="text-sm"
-                            />
-                          ) : (
-                            (keyword.searchVolume || 0).toLocaleString()
-                          )}
+                          {functionalView === 'editorial' ? <InlineEditableCell value={keyword.searchVolume || 0} type="number" min={0} onSave={value => handleUpdateWithHistory(keyword.id, {
+                    searchVolume: Number(value)
+                  })} formatter={v => Number(v || 0).toLocaleString()} className="text-sm" /> : (keyword.searchVolume || 0).toLocaleString()}
                         </TableCell>
                         <TableCell className="tabular-nums text-sm" onClick={e => e.stopPropagation()}>
-                          {functionalView === 'editorial' ? (
-                            <div className="flex items-center gap-2">
+                          {functionalView === 'editorial' ? <div className="flex items-center gap-2">
                               <span className={cn("w-2 h-2 rounded-full flex-shrink-0", (keyword.competitors || 0) < 3000 ? "bg-green-500" : "bg-red-500")} />
-                              <InlineEditableCell
-                                value={keyword.competitors || 0}
-                                type="number"
-                                min={0}
-                                onSave={(value) => handleUpdateWithHistory(keyword.id, { competitors: Number(value) })}
-                                formatter={(v) => Number(v || 0).toLocaleString()}
-                                className="text-sm"
-                              />
-                            </div>
-                          ) : (
-                            <div className="flex items-center gap-2">
+                              <InlineEditableCell value={keyword.competitors || 0} type="number" min={0} onSave={value => handleUpdateWithHistory(keyword.id, {
+                      competitors: Number(value)
+                    })} formatter={v => Number(v || 0).toLocaleString()} className="text-sm" />
+                            </div> : <div className="flex items-center gap-2">
                               <span className={cn("w-2 h-2 rounded-full flex-shrink-0", (keyword.competitors || 0) < 3000 ? "bg-green-500" : "bg-red-500")} />
                               {(keyword.competitors || 0).toLocaleString()}
-                            </div>
-                          )}
+                            </div>}
                         </TableCell>
                         
                         {/* Columnas específicas por vista */}
-                        {functionalView === 'editorial' ? (
-                          <>
+                        {functionalView === 'editorial' ? <>
                             <TableCell>
                               <MarketScoreCell marketData={keyword.marketData} score={score} isIncomplete={incomplete} onValidate={() => setValidationKeyword(keyword)} />
                             </TableCell>
                             <TableCell onClick={e => e.stopPropagation()}>
                               <InlineSelectBadge value={keyword.status || 'pending'} options={KEYWORD_STATUS_OPTIONS.map(s => ({
-                                value: s.value,
-                                label: s.label,
-                                color: s.color
-                              }))} onChange={value => handleUpdateWithHistory(keyword.id, {
-                                status: value as KeywordStatus,
-                                statusManuallySet: true
-                              })} />
+                      value: s.value,
+                      label: s.label,
+                      color: s.color
+                    }))} onChange={value => handleUpdateWithHistory(keyword.id, {
+                      status: value as KeywordStatus,
+                      statusManuallySet: true
+                    })} />
                             </TableCell>
-                          </>
-                        ) : (
-                          <>
+                          </> : <>
                             {/* Campaña - Dropdown select */}
                             <TableCell onClick={e => e.stopPropagation()}>
-                              <CampaignSelect
-                                value={ads?.campaignName ?? ''}
-                                onChange={(value) => {
-                                  const baseAds = (ads ?? {}) as AdsData;
-                                  onUpdate(keyword.id, { 
-                                    adsData: { ...baseAds, campaignName: value } 
-                                  });
-                                }}
-                                campaigns={campaigns}
-                                onAddCampaign={addCampaign}
-                                placeholder="Campaña..."
-                                className="h-7 text-xs max-w-[120px]"
-                              />
+                              <CampaignSelect value={ads?.campaignName ?? ''} onChange={value => {
+                      const baseAds = (ads ?? {}) as AdsData;
+                      onUpdate(keyword.id, {
+                        adsData: {
+                          ...baseAds,
+                          campaignName: value
+                        }
+                      });
+                    }} campaigns={campaigns} onAddCampaign={addCampaign} placeholder="Campaña..." className="h-7 text-xs max-w-[120px]" />
                             </TableCell>
                             {/* ACOS Equilibrio (PE) - Read only reference */}
                             <TableCell className="tabular-nums text-xs font-medium text-primary">
@@ -1070,30 +896,12 @@ export const KeywordsSection = ({
                             {/* Clicks - Inline editable with increment buttons */}
                             <TableCell onClick={e => e.stopPropagation()}>
                               <div className="flex items-center gap-0.5">
-                                <Input
-                                  type="number"
-                                  min={0}
-                                  step={1}
-                                  value={ads?.clicks ?? ''}
-                                  onChange={(e) => handleInlineAdsUpdate('clicks', e.target.value)}
-                                  className="h-7 w-14 text-xs tabular-nums text-center [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                                  placeholder="0"
-                                />
+                                <Input type="number" min={0} step={1} value={ads?.clicks ?? ''} onChange={e => handleInlineAdsUpdate('clicks', e.target.value)} className="h-7 w-14 text-xs tabular-nums text-center [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" placeholder="0" />
                                 <div className="flex flex-col">
-                                  <Button 
-                                    variant="ghost" 
-                                    size="sm" 
-                                    className="h-3.5 w-5 p-0 hover:bg-primary/20"
-                                    onClick={() => handleInlineAdsUpdate('clicks', String((ads?.clicks ?? 0) + 1))}
-                                  >
+                                  <Button variant="ghost" size="sm" className="h-3.5 w-5 p-0 hover:bg-primary/20" onClick={() => handleInlineAdsUpdate('clicks', String((ads?.clicks ?? 0) + 1))}>
                                     <ChevronUp className="w-3 h-3" />
                                   </Button>
-                                  <Button 
-                                    variant="ghost" 
-                                    size="sm" 
-                                    className="h-3.5 w-5 p-0 hover:bg-primary/20"
-                                    onClick={() => handleInlineAdsUpdate('clicks', String(Math.max(0, (ads?.clicks ?? 0) - 1)))}
-                                  >
+                                  <Button variant="ghost" size="sm" className="h-3.5 w-5 p-0 hover:bg-primary/20" onClick={() => handleInlineAdsUpdate('clicks', String(Math.max(0, (ads?.clicks ?? 0) - 1)))}>
                                     <ChevronDown className="w-3 h-3" />
                                   </Button>
                                 </div>
@@ -1102,30 +910,12 @@ export const KeywordsSection = ({
                             {/* CPC - Inline editable with increment buttons */}
                             <TableCell onClick={e => e.stopPropagation()}>
                               <div className="flex items-center gap-0.5">
-                                <Input
-                                  type="number"
-                                  min={0}
-                                  step={0.01}
-                                  value={ads?.cpcActual ?? ''}
-                                  onChange={(e) => handleInlineAdsUpdate('cpcActual', e.target.value)}
-                                  className="h-7 w-14 text-xs tabular-nums text-center [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                                  placeholder="0.00"
-                                />
+                                <Input type="number" min={0} step={0.01} value={ads?.cpcActual ?? ''} onChange={e => handleInlineAdsUpdate('cpcActual', e.target.value)} className="h-7 w-14 text-xs tabular-nums text-center [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" placeholder="0.00" />
                                 <div className="flex flex-col">
-                                  <Button 
-                                    variant="ghost" 
-                                    size="sm" 
-                                    className="h-3.5 w-5 p-0 hover:bg-primary/20"
-                                    onClick={() => handleInlineAdsUpdate('cpcActual', String(((ads?.cpcActual ?? 0) + 0.01).toFixed(2)))}
-                                  >
+                                  <Button variant="ghost" size="sm" className="h-3.5 w-5 p-0 hover:bg-primary/20" onClick={() => handleInlineAdsUpdate('cpcActual', String(((ads?.cpcActual ?? 0) + 0.01).toFixed(2)))}>
                                     <ChevronUp className="w-3 h-3" />
                                   </Button>
-                                  <Button 
-                                    variant="ghost" 
-                                    size="sm" 
-                                    className="h-3.5 w-5 p-0 hover:bg-primary/20"
-                                    onClick={() => handleInlineAdsUpdate('cpcActual', String(Math.max(0, (ads?.cpcActual ?? 0) - 0.01).toFixed(2)))}
-                                  >
+                                  <Button variant="ghost" size="sm" className="h-3.5 w-5 p-0 hover:bg-primary/20" onClick={() => handleInlineAdsUpdate('cpcActual', String(Math.max(0, (ads?.cpcActual ?? 0) - 0.01).toFixed(2)))}>
                                     <ChevronDown className="w-3 h-3" />
                                   </Button>
                                 </div>
@@ -1134,30 +924,12 @@ export const KeywordsSection = ({
                             {/* Pedidos - Inline editable with increment buttons */}
                             <TableCell onClick={e => e.stopPropagation()}>
                               <div className="flex items-center gap-0.5">
-                                <Input
-                                  type="number"
-                                  min={0}
-                                  step={1}
-                                  value={ads?.pedidos ?? ''}
-                                  onChange={(e) => handleInlineAdsUpdate('pedidos', e.target.value)}
-                                  className="h-7 w-14 text-xs tabular-nums text-center [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                                  placeholder="0"
-                                />
+                                <Input type="number" min={0} step={1} value={ads?.pedidos ?? ''} onChange={e => handleInlineAdsUpdate('pedidos', e.target.value)} className="h-7 w-14 text-xs tabular-nums text-center [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" placeholder="0" />
                                 <div className="flex flex-col">
-                                  <Button 
-                                    variant="ghost" 
-                                    size="sm" 
-                                    className="h-3.5 w-5 p-0 hover:bg-primary/20"
-                                    onClick={() => handleInlineAdsUpdate('pedidos', String((ads?.pedidos ?? 0) + 1))}
-                                  >
+                                  <Button variant="ghost" size="sm" className="h-3.5 w-5 p-0 hover:bg-primary/20" onClick={() => handleInlineAdsUpdate('pedidos', String((ads?.pedidos ?? 0) + 1))}>
                                     <ChevronUp className="w-3 h-3" />
                                   </Button>
-                                  <Button 
-                                    variant="ghost" 
-                                    size="sm" 
-                                    className="h-3.5 w-5 p-0 hover:bg-primary/20"
-                                    onClick={() => handleInlineAdsUpdate('pedidos', String(Math.max(0, (ads?.pedidos ?? 0) - 1)))}
-                                  >
+                                  <Button variant="ghost" size="sm" className="h-3.5 w-5 p-0 hover:bg-primary/20" onClick={() => handleInlineAdsUpdate('pedidos', String(Math.max(0, (ads?.pedidos ?? 0) - 1)))}>
                                     <ChevronDown className="w-3 h-3" />
                                   </Button>
                                 </div>
@@ -1173,25 +945,13 @@ export const KeywordsSection = ({
                             </TableCell>
                             {/* ACOS Actual */}
                             <TableCell className="tabular-nums text-xs">
-                              <span className={cn(
-                                acosActual !== null && acosEquilibrio !== null
-                                  ? acosActual <= acosEquilibrio
-                                    ? 'text-green-600 dark:text-green-400'
-                                    : 'text-red-600 dark:text-red-400'
-                                  : 'text-muted-foreground'
-                              )}>
+                              <span className={cn(acosActual !== null && acosEquilibrio !== null ? acosActual <= acosEquilibrio ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400' : 'text-muted-foreground')}>
                                 {formatearPorcentaje(acosActual)}
                               </span>
                             </TableCell>
                             {/* ACOS Siguiente Click */}
                             <TableCell className="tabular-nums text-xs">
-                              <span className={cn(
-                                acosSiguiente !== null && acosEquilibrio !== null
-                                  ? acosSiguiente <= acosEquilibrio
-                                    ? 'text-green-600 dark:text-green-400'
-                                    : 'text-amber-600 dark:text-amber-400'
-                                  : 'text-muted-foreground'
-                              )}>
+                              <span className={cn(acosSiguiente !== null && acosEquilibrio !== null ? acosSiguiente <= acosEquilibrio ? 'text-green-600 dark:text-green-400' : 'text-amber-600 dark:text-amber-400' : 'text-muted-foreground')}>
                                 {formatearPorcentaje(acosSiguiente)}
                               </span>
                             </TableCell>
@@ -1202,19 +962,14 @@ export const KeywordsSection = ({
                             {/* Beneficio */}
                             <TableCell className="tabular-nums text-xs">
                               {(() => {
-                                const beneficio = gastoCalculado !== null && ventasCalculadas !== null
-                                  ? ventasCalculadas - gastoCalculado
-                                  : null;
-                                if (beneficio === null) return '—';
-                                return (
-                                  <span className={beneficio >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}>
+                      const beneficio = gastoCalculado !== null && ventasCalculadas !== null ? ventasCalculadas - gastoCalculado : null;
+                      if (beneficio === null) return '—';
+                      return <span className={beneficio >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}>
                                     {formatearMoneda(beneficio)}
-                                  </span>
-                                );
-                              })()}
+                                  </span>;
+                    })()}
                             </TableCell>
-                          </>
-                        )}
+                          </>}
                       </TableRow>;
             })}
               </TableBody>
@@ -1242,53 +997,29 @@ export const KeywordsSection = ({
       <KeywordHistoryModal keyword={historyKeyword} isOpen={!!historyKeyword} onClose={() => setHistoryKeyword(null)} />
 
       {/* Keyword Detail Panel */}
-      <KeywordDetailPanel 
-        keyword={validationKeyword} 
-        isOpen={!!validationKeyword} 
-        onClose={() => setValidationKeyword(null)} 
-        onSave={handleKeywordDetailSave} 
-        marketplaceId={marketplaceId}
-        bookEconomy={bookEconomy}
-        defaultTab={functionalView === 'ads' ? 'ads' : 'nicho'}
-        allKeywords={keywords}
-      />
+      <KeywordDetailPanel keyword={validationKeyword} isOpen={!!validationKeyword} onClose={() => setValidationKeyword(null)} onSave={handleKeywordDetailSave} marketplaceId={marketplaceId} bookEconomy={bookEconomy} defaultTab={functionalView === 'ads' ? 'ads' : 'nicho'} allKeywords={keywords} />
       
       {/* New Keyword Wizard */}
       <NewKeywordWizard open={isWizardOpen} onOpenChange={setIsWizardOpen} onComplete={handleWizardComplete} marketplaceId={marketplaceId} bookInfo={bookInfo} bookEconomy={bookEconomy} existingKeywords={keywords} initialKeyword={wizardInitialKeyword} onOpenExistingKeyword={handleOpenExistingKeyword} />
       
       {/* Keyword Comparison Panel */}
-      <KeywordComparisonPanel 
-        items={keywords.filter(k => selectedIds.has(k.id)).slice(0, 2)}
-        type="keyword"
-        isOpen={isComparisonOpen}
-        onClose={() => setIsComparisonOpen(false)}
-        onRemove={(id) => {
-          const newSet = new Set(selectedIds);
-          newSet.delete(id);
-          onSelectedIdsChange(newSet);
-          if (newSet.size < 2) setIsComparisonOpen(false);
-        }}
-        bookEconomy={bookEconomy}
-      />
+      <KeywordComparisonPanel items={keywords.filter(k => selectedIds.has(k.id)).slice(0, 2)} type="keyword" isOpen={isComparisonOpen} onClose={() => setIsComparisonOpen(false)} onRemove={id => {
+      const newSet = new Set(selectedIds);
+      newSet.delete(id);
+      onSelectedIdsChange(newSet);
+      if (newSet.size < 2) setIsComparisonOpen(false);
+    }} bookEconomy={bookEconomy} />
       
       {/* ADS History Panel */}
-      <AdsHistoryPanel
-        keyword={adsHistoryKeyword?.keyword ?? ''}
-        adsData={adsHistoryKeyword?.adsData}
-        bookEconomy={bookEconomy}
-        isOpen={!!adsHistoryKeyword}
-        onClose={() => setAdsHistoryKeyword(null)}
-        onAdsDataChange={(newAdsData: AdsData) => {
-          if (adsHistoryKeyword) {
-            onUpdate(adsHistoryKeyword.id, { adsData: newAdsData });
-          }
-        }}
-      />
+      <AdsHistoryPanel keyword={adsHistoryKeyword?.keyword ?? ''} adsData={adsHistoryKeyword?.adsData} bookEconomy={bookEconomy} isOpen={!!adsHistoryKeyword} onClose={() => setAdsHistoryKeyword(null)} onAdsDataChange={(newAdsData: AdsData) => {
+      if (adsHistoryKeyword) {
+        onUpdate(adsHistoryKeyword.id, {
+          adsData: newAdsData
+        });
+      }
+    }} />
       
       {/* Plan Upgrade Modal */}
-      <PlanUpgradeModal
-        open={showPlanUpgradeModal}
-        onOpenChange={setShowPlanUpgradeModal}
-      />
+      <PlanUpgradeModal open={showPlanUpgradeModal} onOpenChange={setShowPlanUpgradeModal} />
     </div>;
 };
