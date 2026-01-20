@@ -84,14 +84,17 @@ export function AdsDashboard({
     keywords.forEach(k => {
       if (k.adsData) {
         const ads = k.adsData;
-        const clicks = ads.clicks ?? 0;
-        const pedidos = ads.pedidos ?? 0;
-        const cpc = ads.cpcActual ?? 0;
+        const clicks = typeof ads.clicks === 'number' ? ads.clicks : 0;
+        const pedidos = typeof ads.pedidos === 'number' ? ads.pedidos : 0;
+        const cpc = typeof ads.cpcActual === 'number' ? ads.cpcActual : 0;
         
-        // Only count keywords that have actual ads data (clicks, cpc, or pedidos > 0)
-        const hasAdsData = clicks > 0 || pedidos > 0 || cpc > 0;
+        // Only count keywords that have REAL ads data:
+        // - clicks > 0 (have actual clicks)
+        // - OR pedidos > 0 (have actual orders)
+        // - OR (cpc > 0 AND clicks > 0) to avoid counting just configured CPC with no activity
+        const hasRealAdsActivity = clicks > 0 || pedidos > 0;
         
-        if (hasAdsData) {
+        if (hasRealAdsActivity) {
           keywordsWithAdsData++;
           totalClicks += clicks;
           totalPedidos += pedidos;

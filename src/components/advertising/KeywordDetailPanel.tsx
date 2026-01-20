@@ -82,67 +82,79 @@ export const KeywordDetailPanel = ({
     }
   }, [isOpen, defaultTab]);
 
-  // Load keyword data when opening
+  // Keep ALL data in sync with keyword prop (bidirectional sync with table edits and wizard)
+  // This single useEffect handles both initial load AND live sync
   useEffect(() => {
-    if (keyword && isOpen) {
-      // Keyword text
-      setKeywordText(keyword.keyword || '');
+    if (!keyword || !isOpen) return;
+    
+    // Keyword text
+    setKeywordText(keyword.keyword || '');
 
-      // Market data
-      const md = keyword.marketData ?? getDefaultMarketData();
-      setSearchVolume(keyword.searchVolume || md.searchVolume);
-      setCompetitors(keyword.competitors || md.competitors);
-      setPrice(keyword.price || md.price);
-      setRoyalties(keyword.royalties || md.royalties);
-      setTrafficSource(md.trafficSource);
+    // Market data
+    const md = keyword.marketData ?? getDefaultMarketData();
+    setSearchVolume(keyword.searchVolume || md.searchVolume);
+    setCompetitors(keyword.competitors || md.competitors);
+    setPrice(keyword.price || md.price);
+    setRoyalties(keyword.royalties || md.royalties);
+    setTrafficSource(md.trafficSource);
 
-      // Market Structure data (6 checks)
-      const ms = keyword.marketStructure ?? getDefaultMarketStructure();
-      setMarketStructureChecks({
-        selfContained: ms.selfContained ?? false,
-        amazonSuggestion: ms.amazonSuggestion ?? false,
-        booksSellingWell: ms.booksSellingWell ?? false,
-        indieAuthorsSelling: ms.indieAuthorsSelling ?? false,
-        topMatchesIntent: ms.topMatchesIntent ?? false,
-        variantsPotential: ms.variantsPotential ?? false
-      });
+    // Market Structure data (6 checks)
+    const ms = keyword.marketStructure ?? getDefaultMarketStructure();
+    setMarketStructureChecks({
+      selfContained: ms.selfContained ?? false,
+      amazonSuggestion: ms.amazonSuggestion ?? false,
+      booksSellingWell: ms.booksSellingWell ?? false,
+      indieAuthorsSelling: ms.indieAuthorsSelling ?? false,
+      topMatchesIntent: ms.topMatchesIntent ?? false,
+      variantsPotential: ms.variantsPotential ?? false
+    });
 
-      // Catalog Signals data
-      const cs = keyword.catalogSignals ?? getDefaultCatalogSignals();
-      setCatalogSignalsChecks({
-        booksOver200ReviewsRange: cs.booksOver200ReviewsRange ?? null,
-        hasProfitableBooks: cs.hasProfitableBooks ?? false,
-        hasBooksUnder100Reviews: cs.hasBooksUnder100Reviews ?? false
-      });
+    // Catalog Signals data
+    const cs = keyword.catalogSignals ?? getDefaultCatalogSignals();
+    setCatalogSignalsChecks({
+      booksOver200ReviewsRange: cs.booksOver200ReviewsRange ?? null,
+      hasProfitableBooks: cs.hasProfitableBooks ?? false,
+      hasBooksUnder100Reviews: cs.hasBooksUnder100Reviews ?? false
+    });
 
-      // Editorial data - load from keyword editorialData
-      const ed = keyword.editorialData ?? getDefaultEditorialData();
-      const checks: Record<string, boolean> = {};
-      if (ed.checklist.makesSenseAsBook === true) checks.makesSenseAsBook = true;
-      if (ed.checklist.canCreateThisBook === true) checks.canCreateThisBook = true;
-      if (ed.checklist.canDoItBetter === true) checks.canDoItBetter = true;
-      if (ed.checklist.canDifferentiate === true) checks.canDifferentiate = true;
-      if (ed.checklist.personalInterest === true) checks.personalInterest = true;
-      setEditorialChecks(checks);
-      setEditorialNotes(ed.notes);
+    // Editorial data - load from keyword editorialData
+    const ed = keyword.editorialData ?? getDefaultEditorialData();
+    const checks: Record<string, boolean> = {};
+    if (ed.checklist.makesSenseAsBook === true) checks.makesSenseAsBook = true;
+    if (ed.checklist.canCreateThisBook === true) checks.canCreateThisBook = true;
+    if (ed.checklist.canDoItBetter === true) checks.canDoItBetter = true;
+    if (ed.checklist.canDifferentiate === true) checks.canDifferentiate = true;
+    if (ed.checklist.personalInterest === true) checks.personalInterest = true;
+    setEditorialChecks(checks);
+    setEditorialNotes(ed.notes);
 
-      // Status & notes
-      setStatus(keyword.status || 'pending');
-      setStatusManuallySet(keyword.statusManuallySet || false);
-      setNotes(keyword.notes || '');
+    // Status & notes
+    setStatus(keyword.status || 'pending');
+    setStatusManuallySet(keyword.statusManuallySet || false);
+    setNotes(keyword.notes || '');
 
-      // Ads data (initial load)
-      setAdsData(keyword.adsData);
-    }
-  }, [keyword, isOpen]);
-
-  // Keep ADS data in sync live while panel is open (table edits)
-  useEffect(() => {
-    if (keyword && isOpen) {
-      setAdsData(keyword.adsData);
-      setLastSyncTime(new Date());
-    }
-  }, [keyword?.adsData, keyword?.id, isOpen]);
+    // Ads data
+    setAdsData(keyword.adsData);
+    
+    setLastSyncTime(new Date());
+  }, [
+    // Trigger on any keyword property change for full sync
+    keyword?.id,
+    keyword?.keyword,
+    keyword?.searchVolume,
+    keyword?.competitors,
+    keyword?.price,
+    keyword?.royalties,
+    keyword?.marketData,
+    keyword?.marketStructure,
+    keyword?.catalogSignals,
+    keyword?.editorialData,
+    keyword?.status,
+    keyword?.statusManuallySet,
+    keyword?.notes,
+    keyword?.adsData,
+    isOpen
+  ]);
 
   // Calculate Market Score
   const marketData: MarketData = useMemo(() => ({
