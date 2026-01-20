@@ -60,14 +60,6 @@ export const StatsPanel = ({
           </div>)}
       </div>
 
-      {topVolumeKeyword && (
-        <div className="mt-4 p-4 bg-muted/50 rounded-lg">
-          <p className="text-sm text-muted-foreground mb-1">Keyword con mayor volumen:</p>
-          <p className="font-medium text-foreground">{topVolumeKeyword.keyword}</p>
-          <p className="text-sm text-muted-foreground">
-            {topVolumeKeyword.searchVolume.toLocaleString()} búsquedas/mes
-          </p>
-        </div>
-      )}
+      {topVolumeKeyword}
     </div>;
 };
