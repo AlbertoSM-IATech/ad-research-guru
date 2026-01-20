@@ -84,11 +84,15 @@ export function AdsDashboard({
     keywords.forEach(k => {
       if (k.adsData) {
         const ads = k.adsData;
-        if (ads.clicks || ads.pedidos || ads.cpcActual) {
+        const clicks = ads.clicks ?? 0;
+        const pedidos = ads.pedidos ?? 0;
+        const cpc = ads.cpcActual ?? 0;
+        
+        // Only count keywords that have actual ads data (clicks, cpc, or pedidos > 0)
+        const hasAdsData = clicks > 0 || pedidos > 0 || cpc > 0;
+        
+        if (hasAdsData) {
           keywordsWithAdsData++;
-          const clicks = ads.clicks ?? 0;
-          const pedidos = ads.pedidos ?? 0;
-          const cpc = ads.cpcActual ?? 0;
           totalClicks += clicks;
           totalPedidos += pedidos;
           const gasto = calcularGastoAcumulado(clicks, cpc) ?? 0;

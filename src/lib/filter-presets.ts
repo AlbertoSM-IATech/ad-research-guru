@@ -162,6 +162,16 @@ export const ADS_PRESETS: PredefinedPreset[] = [
       minBeneficio: '0.01',
     },
   },
+  {
+    id: 'preset-ads-negative-benefit',
+    name: 'Beneficio negativo',
+    type: 'ads',
+    description: 'Keywords que están generando pérdidas',
+    filters: {
+      ...defaultAdsFilters,
+      rentabilidad: 'unprofitable',
+    },
+  },
 ];
 
 // Get all predefined presets

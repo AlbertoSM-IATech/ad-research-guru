@@ -98,6 +98,10 @@ export const AdvertisingResearch = ({ bookId }: AdvertisingResearchProps) => {
   const [hasLoadedExamples, setHasLoadedExamples] = useState(false);
   const [isDemoMode, setIsDemoMode] = useState(isAIDemoMode());
   const [showInsights, setShowInsights] = useState(false);
+  
+  // Derived mainView from showInsights for UI
+  const mainView = showInsights ? 'insights' : 'data';
+  const setMainView = (view: 'data' | 'insights') => setShowInsights(view === 'insights');
 
   // Tour state
   const { hasCompletedTour, setHasCompletedTour, resetTour } = useTourStatus();
@@ -1119,112 +1123,120 @@ export const AdvertisingResearch = ({ bookId }: AdvertisingResearchProps) => {
           </div>
         )}
 
-        {/* === SECCIÓN 2: TRABAJO (CORE) === Dominante visualmente */}
+        {/* === SECCIÓN 2: PESTAÑAS PRINCIPALES (Datos / Insights) === */}
         <section className="mb-6" data-tour="tabs">
-          <Tabs
-            value={activeTab}
-            onValueChange={(v) => setActiveTab(v as "keywords" | "asins" | "categories")}
-            className="space-y-4"
-          >
-            <TabsList className="grid w-full grid-cols-3 lg:w-[450px] bg-muted">
-              <TabsTrigger value="keywords" className="gap-2 data-[state=active]:bg-card">
-                <Search className="w-4 h-4" />
-                <span className="hidden sm:inline">Keywords</span>
-                {currentKeywords.length > 0 && (
-                  <span className="ml-1 px-1.5 py-0.5 text-xs rounded-full bg-primary/10 text-primary">
-                    {currentKeywords.length}
-                  </span>
-                )}
-              </TabsTrigger>
-              <TabsTrigger value="asins" className="gap-2 data-[state=active]:bg-card">
-                <Target className="w-4 h-4" />
-                <span className="hidden sm:inline">ASIN</span>
-                {currentASINs.length > 0 && (
-                  <span className="ml-1 px-1.5 py-0.5 text-xs rounded-full bg-primary/10 text-primary">
-                    {currentASINs.length}
-                  </span>
-                )}
-              </TabsTrigger>
-              <TabsTrigger value="categories" className="gap-2 data-[state=active]:bg-card">
-                <FolderOpen className="w-4 h-4" />
-                <span className="hidden sm:inline">Categorías</span>
-                {currentCategories.length > 0 && (
-                  <span className="ml-1 px-1.5 py-0.5 text-xs rounded-full bg-primary/10 text-primary">
-                    {currentCategories.length}
-                  </span>
-                )}
-              </TabsTrigger>
-            </TabsList>
+          {/* Main View Toggle: Datos / Insights */}
+          <div className="flex items-center gap-2 p-1 bg-muted rounded-lg w-fit mb-4">
+            <Button 
+              variant={mainView === 'data' ? 'default' : 'ghost'} 
+              size="sm" 
+              onClick={() => setMainView('data')}
+              className={cn("gap-2 transition-all", mainView === 'data' && "bg-primary text-primary-foreground")}
+            >
+              <Search className="w-4 h-4" />
+              Datos
+            </Button>
+            <Button 
+              variant={mainView === 'insights' ? 'default' : 'ghost'} 
+              size="sm" 
+              onClick={() => setMainView('insights')}
+              className={cn("gap-2 transition-all", mainView === 'insights' && "bg-primary text-primary-foreground")}
+            >
+              <TrendingUp className="w-4 h-4" />
+              Insights y Visualizaciones
+            </Button>
+          </div>
 
-            <TabsContent value="keywords" className="mt-4 space-y-4">
-              <KeywordsSection
-                keywords={globalFilter === "all" || globalFilter === "keywords" ? filteredKeywords : []}
-                onAdd={handleAddKeyword}
-                onAddBulk={handleAddBulkKeywords}
-                onUpdate={handleUpdateKeyword}
-                onDelete={handleDeleteKeyword}
-                onDeleteBulk={handleDeleteBulkKeywords}
-                onUpdateBulk={handleUpdateBulkKeywords}
-                marketplaceId={selectedMarketplace}
-                bookInfo={bookInfo}
-                bookEconomy={bookEconomy}
-                onBookInfoChange={setBookInfo}
-                selectedIds={selection.keywords}
-                onSelectedIdsChange={(ids) => setTabSelection("keywords", ids)}
-                searchTerm={globalSearchTerm}
-                onSearchTermChange={setGlobalSearchTerm}
-              />
-            </TabsContent>
-            <TabsContent value="asins" className="mt-4">
-              <ASINSection
-                asins={globalFilter === "all" || globalFilter === "asins" ? filteredASINs : []}
-                keywords={currentKeywords}
-                bookTitle={bookInfo.title}
-                onAdd={handleAddASIN}
-                onAddBulk={handleAddBulkASINs}
-                onUpdate={handleUpdateASIN}
-                onDelete={handleDeleteASIN}
-                onDeleteBulk={handleDeleteBulkASINs}
-                marketplaceId={selectedMarketplace}
-                selectedIds={selection.asins}
-                onSelectedIdsChange={(ids) => setTabSelection("asins", ids)}
-              />
-            </TabsContent>
-            <TabsContent value="categories" className="mt-4">
-              <CategoriesSection
-                categories={globalFilter === "all" || globalFilter === "categories" ? filteredCategories : []}
-                onAdd={handleAddCategory}
-                onAddBulk={handleAddBulkCategories}
-                onUpdate={handleUpdateCategory}
-                onDelete={handleDeleteCategory}
-                onDeleteBulk={handleDeleteBulkCategories}
-                marketplaceId={selectedMarketplace}
-                selectedIds={selection.categories}
-                onSelectedIdsChange={(ids) => setTabSelection("categories", ids)}
-              />
-            </TabsContent>
-          </Tabs>
-        </section>
+          {/* Data View: Keywords / ASINs / Categories tabs */}
+          {mainView === 'data' && (
+            <Tabs
+              value={activeTab}
+              onValueChange={(v) => setActiveTab(v as "keywords" | "asins" | "categories")}
+              className="space-y-4"
+            >
+              <TabsList className="grid w-full grid-cols-3 lg:w-[450px] bg-muted">
+                <TabsTrigger value="keywords" className="gap-2 data-[state=active]:bg-card">
+                  <Search className="w-4 h-4" />
+                  <span className="hidden sm:inline">Keywords</span>
+                  {currentKeywords.length > 0 && (
+                    <span className="ml-1 px-1.5 py-0.5 text-xs rounded-full bg-primary/10 text-primary">
+                      {currentKeywords.length}
+                    </span>
+                  )}
+                </TabsTrigger>
+                <TabsTrigger value="asins" className="gap-2 data-[state=active]:bg-card">
+                  <Target className="w-4 h-4" />
+                  <span className="hidden sm:inline">ASIN</span>
+                  {currentASINs.length > 0 && (
+                    <span className="ml-1 px-1.5 py-0.5 text-xs rounded-full bg-primary/10 text-primary">
+                      {currentASINs.length}
+                    </span>
+                  )}
+                </TabsTrigger>
+                <TabsTrigger value="categories" className="gap-2 data-[state=active]:bg-card">
+                  <FolderOpen className="w-4 h-4" />
+                  <span className="hidden sm:inline">Categorías</span>
+                  {currentCategories.length > 0 && (
+                    <span className="ml-1 px-1.5 py-0.5 text-xs rounded-full bg-primary/10 text-primary">
+                      {currentCategories.length}
+                    </span>
+                  )}
+                </TabsTrigger>
+              </TabsList>
 
-        {/* === SECCIÓN 4: INSIGHTS === Secundaria, colapsable */}
-        <section className="mt-8">
-          <Collapsible open={showInsights} onOpenChange={setShowInsights}>
-            <CollapsibleTrigger className="w-full flex items-center justify-between p-4 rounded-lg border border-border/50 bg-muted/30 hover:bg-muted/50 transition-colors">
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-md bg-accent/10 flex items-center justify-center">
-                  <TrendingUp className="w-4 h-4 text-accent" />
-                </div>
-                <div className="text-left">
-                  <p className="text-sm font-medium">Insights y Visualizaciones</p>
-                  <p className="text-xs text-muted-foreground">Analiza lo ya trabajado</p>
-                </div>
-              </div>
-              <ChevronDown
-                className={cn("w-5 h-5 text-muted-foreground transition-transform", showInsights && "rotate-180")}
-              />
-            </CollapsibleTrigger>
+              <TabsContent value="keywords" className="mt-4 space-y-4">
+                <KeywordsSection
+                  keywords={globalFilter === "all" || globalFilter === "keywords" ? filteredKeywords : []}
+                  onAdd={handleAddKeyword}
+                  onAddBulk={handleAddBulkKeywords}
+                  onUpdate={handleUpdateKeyword}
+                  onDelete={handleDeleteKeyword}
+                  onDeleteBulk={handleDeleteBulkKeywords}
+                  onUpdateBulk={handleUpdateBulkKeywords}
+                  marketplaceId={selectedMarketplace}
+                  bookInfo={bookInfo}
+                  bookEconomy={bookEconomy}
+                  onBookInfoChange={setBookInfo}
+                  selectedIds={selection.keywords}
+                  onSelectedIdsChange={(ids) => setTabSelection("keywords", ids)}
+                  searchTerm={globalSearchTerm}
+                  onSearchTermChange={setGlobalSearchTerm}
+                />
+              </TabsContent>
+              <TabsContent value="asins" className="mt-4">
+                <ASINSection
+                  asins={globalFilter === "all" || globalFilter === "asins" ? filteredASINs : []}
+                  keywords={currentKeywords}
+                  bookTitle={bookInfo.title}
+                  onAdd={handleAddASIN}
+                  onAddBulk={handleAddBulkASINs}
+                  onUpdate={handleUpdateASIN}
+                  onDelete={handleDeleteASIN}
+                  onDeleteBulk={handleDeleteBulkASINs}
+                  marketplaceId={selectedMarketplace}
+                  selectedIds={selection.asins}
+                  onSelectedIdsChange={(ids) => setTabSelection("asins", ids)}
+                />
+              </TabsContent>
+              <TabsContent value="categories" className="mt-4">
+                <CategoriesSection
+                  categories={globalFilter === "all" || globalFilter === "categories" ? filteredCategories : []}
+                  onAdd={handleAddCategory}
+                  onAddBulk={handleAddBulkCategories}
+                  onUpdate={handleUpdateCategory}
+                  onDelete={handleDeleteCategory}
+                  onDeleteBulk={handleDeleteBulkCategories}
+                  marketplaceId={selectedMarketplace}
+                  selectedIds={selection.categories}
+                  onSelectedIdsChange={(ids) => setTabSelection("categories", ids)}
+                />
+              </TabsContent>
+            </Tabs>
+          )}
 
-            <CollapsibleContent className="pt-4 space-y-6">
+          {/* Insights View */}
+          {mainView === 'insights' && (
+            <div className="space-y-6 animate-fade-in">
               <div data-tour="stats">
                 <StatsPanel keywords={currentKeywords} asins={currentASINs} categories={currentCategories} />
               </div>
@@ -1243,8 +1255,8 @@ export const AdvertisingResearch = ({ bookId }: AdvertisingResearchProps) => {
               <Separator />
 
               <CollapsibleEducation sections={educationSections} />
-            </CollapsibleContent>
-          </Collapsible>
+            </div>
+          )}
         </section>
       </div>
 

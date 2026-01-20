@@ -209,6 +209,7 @@ export function NewKeywordWizard({
   const [adsPedidos, setAdsPedidos] = useState<string>('');
   const [adsVentas, setAdsVentas] = useState<string>('');
   const [adsFase, setAdsFase] = useState<AdsFase | undefined>(undefined);
+  const [adsCampaignName, setAdsCampaignName] = useState<string>('');
   
   // ============ RESET FUNCTION ============
   const resetWizard = useCallback(() => {
@@ -225,6 +226,7 @@ export function NewKeywordWizard({
     setAdsPedidos('');
     setAdsVentas('');
     setAdsFase(undefined);
+    setAdsCampaignName('');
   }, [marketplaceId]);
   
   // Reset when dialog opens with new initial keyword
@@ -243,6 +245,7 @@ export function NewKeywordWizard({
       setAdsPedidos('');
       setAdsVentas('');
       setAdsFase(undefined);
+      setAdsCampaignName('');
     }
   }, [open, initialKeyword, marketplaceId]);
   
@@ -337,7 +340,7 @@ export function NewKeywordWizard({
   
   // Build adsData from form fields (only if at least one field is filled)
   const buildAdsDataFromForm = (): AdsData | undefined => {
-    const hasAnyData = adsClicks || adsGasto || adsCpc || adsPedidos || adsVentas || adsFase;
+    const hasAnyData = adsClicks || adsGasto || adsCpc || adsPedidos || adsVentas || adsFase || adsCampaignName;
     if (!hasAnyData) return undefined;
     
     const data: AdsData = {};
@@ -347,6 +350,7 @@ export function NewKeywordWizard({
     if (adsPedidos) data.pedidos = parseInt(adsPedidos);
     if (adsVentas) data.ventas = parseFloat(adsVentas);
     if (adsFase) data.faseActual = adsFase;
+    if (adsCampaignName) data.campaignName = adsCampaignName;
     return data;
   };
   
@@ -1041,6 +1045,18 @@ export function NewKeywordWizard({
                   </div>
                 </div>
               )}
+              
+              {/* Campaña */}
+              <div className="space-y-2">
+                <Label>Campaña (opcional)</Label>
+                <FieldTooltip content="Nombre de la campaña de Amazon Ads donde usarás esta keyword." />
+                <Input
+                  value={adsCampaignName}
+                  onChange={(e) => setAdsCampaignName(e.target.value)}
+                  placeholder="Ej: SP-Auto-Libro1"
+                  className="w-full"
+                />
+              </div>
               
               {/* Fase Actual */}
               <div className="space-y-2">
