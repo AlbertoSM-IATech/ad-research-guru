@@ -1,15 +1,57 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core';
-import { arrayMove, SortableContext, sortableKeyboardCoordinates, rectSortingStrategy } from '@dnd-kit/sortable';
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  rectSortingStrategy,
+} from '@dnd-kit/sortable';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger, DropdownMenuCheckboxItem } from '@/components/ui/dropdown-menu';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+  DropdownMenuCheckboxItem,
+} from '@/components/ui/dropdown-menu';
 import { Separator } from '@/components/ui/separator';
-import { Crosshair, BarChart3, Target, TrendingUp, Globe, Cloud, PieChart, LineChart, Package, RotateCcw, Settings2, Eye, EyeOff, ChevronDown } from 'lucide-react';
+import {
+  Crosshair,
+  BarChart3,
+  Target,
+  TrendingUp,
+  Globe,
+  Cloud,
+  PieChart,
+  LineChart,
+  Package,
+  RotateCcw,
+  Settings2,
+  Eye,
+  EyeOff,
+  ChevronDown,
+} from 'lucide-react';
 import { InfoTooltip } from '../InfoTooltip';
+
 import { ChartCard } from './ChartCard';
 import { OpportunityMap } from './OpportunityMap';
 import { VolumeDistribution } from './VolumeDistribution';
@@ -22,7 +64,9 @@ import { CampaignTypeDistribution } from './CampaignTypeDistribution';
 import { TemporalEvolution } from './TemporalEvolution';
 import { ASINComparison } from './ASINComparison';
 import { MarketScoreHistogram } from './MarketScoreHistogram';
+
 import type { Keyword, TargetASIN, AdvertisingCategory } from '@/types/advertising';
+
 interface ChartConfig {
   id: string;
   title: string;
@@ -32,48 +76,57 @@ interface ChartConfig {
   visible: boolean;
   size: 'normal' | 'compact' | 'expanded';
 }
-const DEFAULT_CHARTS: ChartConfig[] = [{
-  id: 'opportunity-map',
-  title: 'Mapa de Oportunidades',
-  description: 'Volumen vs Competencia por keyword',
-  tooltip: 'Cuadrante superior izquierdo = oportunidades (alto volumen, baja competencia). El color indica el tipo de campaña principal.',
-  icon: <Crosshair className="w-5 h-5" />,
-  visible: true,
-  size: 'expanded'
-}, {
-  id: 'top-keywords',
-  title: 'Top 10 Keywords',
-  description: 'Palabras con mayor volumen',
-  tooltip: 'Las 10 keywords con mayor volumen de búsqueda en este mercado. Estas son las más demandadas pero también las más competidas.',
-  icon: <TrendingUp className="w-5 h-5" />,
-  visible: true,
-  size: 'normal'
-}, {
-  id: 'opportunity-ranking',
-  title: 'Ranking de Oportunidad',
-  description: 'Mejor relación volumen/competencia',
-  tooltip: 'Puntuación = Volumen ÷ Competencia. Mayor puntuación indica keywords con alta demanda y baja competencia (oportunidades doradas).',
-  icon: <TrendingUp className="w-5 h-5" />,
-  visible: true,
-  size: 'normal'
-}, {
-  id: 'market-score-histogram',
-  title: 'Distribución Market Score',
-  description: 'Histograma de scores 0-100',
-  tooltip: 'Muestra cuántas keywords hay en cada rango de Market Score. Verde (≥70), Amarillo (40-69), Rojo (<40).',
-  icon: <BarChart3 className="w-5 h-5" />,
-  visible: true,
-  size: 'normal'
-}, {
-  id: 'market-comparison',
-  title: 'Comparador de Mercados',
-  description: 'Análisis radar multi-mercado',
-  tooltip: 'Compara métricas clave entre los mercados con datos: número de keywords, ASINs, categorías, volumen total y competencia media.',
-  icon: <Globe className="w-5 h-5" />,
-  visible: true,
-  size: 'normal'
-}];
+
+const DEFAULT_CHARTS: ChartConfig[] = [
+  {
+    id: 'opportunity-map',
+    title: 'Mapa de Oportunidades',
+    description: 'Volumen vs Competencia por keyword',
+    tooltip: 'Cuadrante superior izquierdo = oportunidades (alto volumen, baja competencia). El color indica el tipo de campaña principal.',
+    icon: <Crosshair className="w-5 h-5" />,
+    visible: true,
+    size: 'expanded',
+  },
+  {
+    id: 'top-keywords',
+    title: 'Top 10 Keywords',
+    description: 'Palabras con mayor volumen',
+    tooltip: 'Las 10 keywords con mayor volumen de búsqueda en este mercado. Estas son las más demandadas pero también las más competidas.',
+    icon: <TrendingUp className="w-5 h-5" />,
+    visible: true,
+    size: 'normal',
+  },
+  {
+    id: 'opportunity-ranking',
+    title: 'Ranking de Oportunidad',
+    description: 'Mejor relación volumen/competencia',
+    tooltip: 'Puntuación = Volumen ÷ Competencia. Mayor puntuación indica keywords con alta demanda y baja competencia (oportunidades doradas).',
+    icon: <TrendingUp className="w-5 h-5" />,
+    visible: true,
+    size: 'normal',
+  },
+  {
+    id: 'market-score-histogram',
+    title: 'Distribución Market Score',
+    description: 'Histograma de scores 0-100',
+    tooltip: 'Muestra cuántas keywords hay en cada rango de Market Score. Verde (≥70), Amarillo (40-69), Rojo (<40).',
+    icon: <BarChart3 className="w-5 h-5" />,
+    visible: true,
+    size: 'normal',
+  },
+  {
+    id: 'market-comparison',
+    title: 'Comparador de Mercados',
+    description: 'Análisis radar multi-mercado',
+    tooltip: 'Compara métricas clave entre los mercados con datos: número de keywords, ASINs, categorías, volumen total y competencia media.',
+    icon: <Globe className="w-5 h-5" />,
+    visible: true,
+    size: 'normal',
+  },
+];
+
 const STORAGE_KEY = 'publify-visualizations-config';
+
 interface VisualizationsTabProps {
   keywords: Keyword[];
   asins: TargetASIN[];
@@ -82,13 +135,14 @@ interface VisualizationsTabProps {
   asinsByMarket: Record<string, TargetASIN[]>;
   categoriesByMarket: Record<string, AdvertisingCategory[]>;
 }
+
 export const VisualizationsTab = ({
   keywords,
   asins,
   categories,
   keywordsByMarket,
   asinsByMarket,
-  categoriesByMarket
+  categoriesByMarket,
 }: VisualizationsTabProps) => {
   const [charts, setCharts] = useState<ChartConfig[]>(() => {
     const saved = localStorage.getItem(STORAGE_KEY);
@@ -98,11 +152,7 @@ export const VisualizationsTab = ({
         // Merge with defaults to ensure all charts exist
         return DEFAULT_CHARTS.map(defaultChart => {
           const savedChart = parsed.find((c: ChartConfig) => c.id === defaultChart.id);
-          return savedChart ? {
-            ...defaultChart,
-            ...savedChart,
-            icon: defaultChart.icon
-          } : defaultChart;
+          return savedChart ? { ...defaultChart, ...savedChart, icon: defaultChart.icon } : defaultChart;
         });
       } catch {
         return DEFAULT_CHARTS;
@@ -110,28 +160,22 @@ export const VisualizationsTab = ({
     }
     return DEFAULT_CHARTS;
   });
+
   const [globalSize, setGlobalSize] = useState<'normal' | 'compact' | 'expanded'>('normal');
-  const sensors = useSensors(useSensor(PointerSensor, {
-    activationConstraint: {
-      distance: 8
-    }
-  }), useSensor(KeyboardSensor, {
-    coordinateGetter: sortableKeyboardCoordinates
-  }));
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+  );
 
   // Save to localStorage
   useEffect(() => {
-    const toSave = charts.map(({
-      icon,
-      ...rest
-    }) => rest);
+    const toSave = charts.map(({ icon, ...rest }) => rest);
     localStorage.setItem(STORAGE_KEY, JSON.stringify(toSave));
   }, [charts]);
+
   const handleDragEnd = useCallback((event: DragEndEvent) => {
-    const {
-      active,
-      over
-    } = event;
+    const { active, over } = event;
     if (over && active.id !== over.id) {
       setCharts(items => {
         const oldIndex = items.findIndex(i => i.id === active.id);
@@ -140,41 +184,38 @@ export const VisualizationsTab = ({
       });
     }
   }, []);
+
   const toggleVisibility = useCallback((id: string) => {
-    setCharts(items => items.map(item => item.id === id ? {
-      ...item,
-      visible: !item.visible
-    } : item));
+    setCharts(items =>
+      items.map(item => (item.id === id ? { ...item, visible: !item.visible } : item))
+    );
   }, []);
+
   const setChartSize = useCallback((id: string, size: 'normal' | 'compact' | 'expanded') => {
-    setCharts(items => items.map(item => item.id === id ? {
-      ...item,
-      size
-    } : item));
+    setCharts(items =>
+      items.map(item => (item.id === id ? { ...item, size } : item))
+    );
   }, []);
+
   const showAll = useCallback(() => {
-    setCharts(items => items.map(item => ({
-      ...item,
-      visible: true
-    })));
+    setCharts(items => items.map(item => ({ ...item, visible: true })));
   }, []);
+
   const hideAll = useCallback(() => {
-    setCharts(items => items.map(item => ({
-      ...item,
-      visible: false
-    })));
+    setCharts(items => items.map(item => ({ ...item, visible: false })));
   }, []);
+
   const resetOrder = useCallback(() => {
     setCharts(DEFAULT_CHARTS);
     localStorage.removeItem(STORAGE_KEY);
   }, []);
+
   const applyGlobalSize = useCallback(() => {
-    setCharts(items => items.map(item => ({
-      ...item,
-      size: globalSize
-    })));
+    setCharts(items => items.map(item => ({ ...item, size: globalSize })));
   }, [globalSize]);
+
   const visibleCount = useMemo(() => charts.filter(c => c.visible).length, [charts]);
+
   const renderChart = useCallback((chartId: string) => {
     switch (chartId) {
       case 'opportunity-map':
@@ -188,7 +229,13 @@ export const VisualizationsTab = ({
       case 'opportunity-ranking':
         return <OpportunityRanking keywords={keywords} />;
       case 'market-comparison':
-        return <MarketComparison keywordsByMarket={keywordsByMarket} asinsByMarket={asinsByMarket} categoriesByMarket={categoriesByMarket} />;
+        return (
+          <MarketComparison
+            keywordsByMarket={keywordsByMarket}
+            asinsByMarket={asinsByMarket}
+            categoriesByMarket={categoriesByMarket}
+          />
+        );
       case 'word-cloud':
         return <WordCloud keywords={keywords} />;
       case 'campaign-distribution':
@@ -203,7 +250,9 @@ export const VisualizationsTab = ({
         return null;
     }
   }, [keywords, asins, keywordsByMarket, asinsByMarket, categoriesByMarket]);
-  return <div className="space-y-6">
+
+  return (
+    <div className="space-y-6">
       {/* Control Panel */}
       <Card className="bg-card border-border/50">
         <CardHeader className="pb-3">
@@ -239,16 +288,22 @@ export const VisualizationsTab = ({
                     Ocultar todas
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
-                  {charts.map(chart => <DropdownMenuCheckboxItem key={chart.id} checked={chart.visible} onCheckedChange={() => toggleVisibility(chart.id)}>
+                  {charts.map(chart => (
+                    <DropdownMenuCheckboxItem
+                      key={chart.id}
+                      checked={chart.visible}
+                      onCheckedChange={() => toggleVisibility(chart.id)}
+                    >
                       {chart.title}
-                    </DropdownMenuCheckboxItem>)}
+                    </DropdownMenuCheckboxItem>
+                  ))}
                 </DropdownMenuContent>
               </DropdownMenu>
 
               {/* Size Control */}
               <div className="flex items-center gap-2">
                 <Label className="text-xs text-muted-foreground">Tamaño:</Label>
-                <Select value={globalSize} onValueChange={v => setGlobalSize(v as any)}>
+                <Select value={globalSize} onValueChange={(v) => setGlobalSize(v as any)}>
                   <SelectTrigger className="w-28 h-8 text-xs">
                     <SelectValue />
                   </SelectTrigger>
@@ -276,20 +331,45 @@ export const VisualizationsTab = ({
       </Card>
 
       {/* Info Box */}
-      
+      <div className="bg-muted/30 border border-border/50 rounded-lg p-4 flex items-start gap-3">
+        <div className="p-1.5 rounded bg-accent/10">
+          <InfoTooltip content="Arrastra las tarjetas para reorganizar el dashboard. Tu configuración se guarda automáticamente." />
+        </div>
+        <div className="text-sm">
+          <p className="text-muted-foreground">
+            <span className="font-medium text-foreground">Arrastra y suelta</span> las tarjetas para personalizar el orden. 
+            Usa el menú <span className="font-medium">⋮</span> de cada gráfica para ocultar o cambiar su tamaño.
+            Los cambios se guardan automáticamente.
+          </p>
+        </div>
+      </div>
 
       {/* Charts Grid */}
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
         <SortableContext items={charts.map(c => c.id)} strategy={rectSortingStrategy}>
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-            {charts.map(chart => <ChartCard key={chart.id} id={chart.id} title={chart.title} description={chart.description} tooltip={chart.tooltip} icon={chart.icon} isVisible={chart.visible} size={chart.size} onToggleVisibility={() => toggleVisibility(chart.id)} onSizeChange={size => setChartSize(chart.id, size)}>
+            {charts.map(chart => (
+              <ChartCard
+                key={chart.id}
+                id={chart.id}
+                title={chart.title}
+                description={chart.description}
+                tooltip={chart.tooltip}
+                icon={chart.icon}
+                isVisible={chart.visible}
+                size={chart.size}
+                onToggleVisibility={() => toggleVisibility(chart.id)}
+                onSizeChange={(size) => setChartSize(chart.id, size)}
+              >
                 {renderChart(chart.id)}
-              </ChartCard>)}
+              </ChartCard>
+            ))}
           </div>
         </SortableContext>
       </DndContext>
 
-      {visibleCount === 0 && <Card className="bg-muted/20 border-dashed">
+      {visibleCount === 0 && (
+        <Card className="bg-muted/20 border-dashed">
           <CardContent className="py-12 text-center">
             <EyeOff className="w-12 h-12 mx-auto text-muted-foreground/50 mb-4" />
             <p className="text-muted-foreground">No hay gráficas visibles</p>
@@ -297,6 +377,8 @@ export const VisualizationsTab = ({
               Mostrar todas
             </Button>
           </CardContent>
-        </Card>}
-    </div>;
+        </Card>
+      )}
+    </div>
+  );
 };
