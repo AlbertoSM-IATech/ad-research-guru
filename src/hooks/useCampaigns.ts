@@ -1,4 +1,4 @@
-import { useMemo, useCallback } from 'react';
+import { useMemo, useCallback, useEffect, useState } from 'react';
 import type { Keyword } from '@/types/advertising';
 
 // Storage key for custom campaign names
@@ -49,9 +49,19 @@ function saveCustomCampaigns(campaigns: string[]): void {
 export function useCampaigns(keywords: Keyword[]): UseCampaignsReturn {
   // Extract unique campaigns from keywords
   const keywordCampaigns = useMemo(() => extractCampaignNames(keywords), [keywords]);
-  
-  // Load custom campaigns from storage
-  const customCampaigns = useMemo(() => loadCustomCampaigns(), []);
+
+  // Custom campaigns must be reactive (otherwise UI won't update until refresh)
+  const [customCampaigns, setCustomCampaigns] = useState<string[]>(() => loadCustomCampaigns());
+
+  // Keep in sync with other tabs/windows
+  useEffect(() => {
+    const onStorage = (e: StorageEvent) => {
+      if (e.key !== CAMPAIGNS_STORAGE_KEY) return;
+      setCustomCampaigns(loadCustomCampaigns());
+    };
+    window.addEventListener('storage', onStorage);
+    return () => window.removeEventListener('storage', onStorage);
+  }, []);
   
   // Merge and deduplicate
   const campaigns = useMemo(() => {
@@ -67,6 +77,7 @@ export function useCampaigns(keywords: Keyword[]): UseCampaignsReturn {
     if (!current.includes(trimmed)) {
       const updated = [...current, trimmed].sort();
       saveCustomCampaigns(updated);
+      setCustomCampaigns(updated);
     }
   }, []);
   
@@ -74,6 +85,7 @@ export function useCampaigns(keywords: Keyword[]): UseCampaignsReturn {
     const current = loadCustomCampaigns();
     const updated = current.filter(c => c !== name);
     saveCustomCampaigns(updated);
+    setCustomCampaigns(updated);
   }, []);
   
   return { campaigns, addCampaign, removeCampaign };

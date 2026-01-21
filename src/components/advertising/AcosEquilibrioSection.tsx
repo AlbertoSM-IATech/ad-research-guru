@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
@@ -7,6 +7,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Info, TrendingUp, TrendingDown, AlertCircle, CheckCircle2, Target, Calculator, MousePointerClick, ShoppingBag, Plus } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useToast } from '@/hooks/use-toast';
 import type { AdsData, AdsFase, BookEconomy } from '@/types/advertising';
 import { ADS_FASE_OPTIONS } from '@/types/advertising';
 import { CampaignSelect } from './CampaignSelect';
@@ -43,6 +44,8 @@ export const AcosEquilibrioSection = ({
   campaigns = [],
   onAddCampaign,
 }: AcosEquilibrioSectionProps) => {
+  const { toast } = useToast();
+
   // Local state for RELLENAR inputs (only clicks, cpcActual, pedidos, faseActual)
   const [clicks, setClicks] = useState<string>('');
   const [cpcActual, setCpcActual] = useState<string>('');
@@ -137,6 +140,19 @@ export const AcosEquilibrioSection = ({
     calcularAcosActualPorcentaje(gastoCalculado ?? undefined, ventasCalculadas ?? undefined),
     [gastoCalculado, ventasCalculadas]
   );
+
+  // Auto-alert when ACOS actual exceeds the book break-even (PE)
+  const prevAbovePeRef = useRef<boolean>(false);
+  useEffect(() => {
+    const abovePe = acosEquilibrio !== null && acosActual !== null && acosActual > acosEquilibrio;
+    if (abovePe && !prevAbovePeRef.current) {
+      toast({
+        title: 'ACOS por encima del PE',
+        description: `ACOS actual ${formatearPorcentaje(acosActual)} > PE ${formatearPorcentaje(acosEquilibrio)}.`,
+      });
+    }
+    prevAbovePeRef.current = abovePe;
+  }, [acosActual, acosEquilibrio, toast]);
 
   const acosSiguiente = useMemo(() => 
     calcularAcosSiguienteClickPorcentaje(

@@ -364,13 +364,19 @@ export const AdvertisingResearch = ({ bookId }: AdvertisingResearchProps) => {
 
   // Keywords handlers
   const handleAddKeyword = useCallback(
-    (keywordData: Omit<Keyword, "id" | "createdAt" | "updatedAt">) => {
+    (keywordData: Omit<Keyword, "id" | "createdAt" | "updatedAt"> | Keyword) => {
+      // IMPORTANT: when coming from the Wizard, keywordData already includes id/createdAt/updatedAt.
+      // If we overwrite the id here, the lateral panel (opened with the wizard keyword) will point
+      // to a non-existent keyword and Ads data will look "lost".
+      const incoming = keywordData as Partial<Keyword>;
+
       const newKeyword: Keyword = {
-        ...keywordData,
-        id: generateId(),
-        createdAt: new Date(),
+        ...(keywordData as any),
+        id: incoming.id ?? generateId(),
+        createdAt: incoming.createdAt ?? new Date(),
         updatedAt: new Date(),
       };
+
       setKeywordsByMarket((prev) => ({
         ...prev,
         [selectedMarketplace]: [...(prev[selectedMarketplace] || []), newKeyword],
