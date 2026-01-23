@@ -185,11 +185,25 @@ export const KeywordsSection = ({
   }, [isHydrated, persistedState]);
 
   // Sync validationKeyword with updated keywords (for inline edits sync)
+  // Use deep comparison for adsData to detect changes even when object reference is same
   useEffect(() => {
     if (validationKeyword) {
       const updatedKeyword = keywords.find(k => k.id === validationKeyword.id);
-      if (updatedKeyword && updatedKeyword !== validationKeyword) {
-        setValidationKeyword(updatedKeyword);
+      if (updatedKeyword) {
+        // Compare adsData by content, not reference
+        const currentAds = JSON.stringify(validationKeyword.adsData ?? {});
+        const newAds = JSON.stringify(updatedKeyword.adsData ?? {});
+        const hasAdsChanged = currentAds !== newAds;
+        
+        // Also check for other field changes
+        const hasTextChanged = updatedKeyword.keyword !== validationKeyword.keyword;
+        const hasScoreChanged = updatedKeyword.marketScore !== validationKeyword.marketScore;
+        const hasVolumeChanged = updatedKeyword.searchVolume !== validationKeyword.searchVolume;
+        const hasCompetitorsChanged = updatedKeyword.competitors !== validationKeyword.competitors;
+        
+        if (hasAdsChanged || hasTextChanged || hasScoreChanged || hasVolumeChanged || hasCompetitorsChanged) {
+          setValidationKeyword(updatedKeyword);
+        }
       }
     }
   }, [keywords, validationKeyword]);
@@ -213,7 +227,11 @@ export const KeywordsSection = ({
       title: 'Keyword creada',
       description: `Market Score: ${keyword.marketScore}/100`
     });
-    setValidationKeyword(keyword);
+    // Use setTimeout to ensure React has propagated the state update
+    // before opening the panel with the complete keyword data
+    setTimeout(() => {
+      setValidationKeyword(keyword);
+    }, 0);
   };
 
   // Handle opening existing keyword from wizard duplicate detection
@@ -763,6 +781,15 @@ export const KeywordsSection = ({
                 onUpdate(keyword.id, {
                   adsData: updatedAdsData
                 });
+                
+                // Force sync panel if it's open for this keyword
+                if (validationKeyword?.id === keyword.id) {
+                  setValidationKeyword({
+                    ...keyword,
+                    adsData: updatedAdsData,
+                    updatedAt: new Date()
+                  });
+                }
               };
 
               // Check for data inconsistency: clicks < pedidos
@@ -881,12 +908,21 @@ export const KeywordsSection = ({
                             <TableCell onClick={e => e.stopPropagation()}>
                               <CampaignSelect value={ads?.campaignName ?? ''} onChange={value => {
                       const baseAds = (ads ?? {}) as AdsData;
+                      const updatedAdsData = {
+                        ...baseAds,
+                        campaignName: value
+                      };
                       onUpdate(keyword.id, {
-                        adsData: {
-                          ...baseAds,
-                          campaignName: value
-                        }
+                        adsData: updatedAdsData
                       });
+                      // Force sync panel if open for this keyword
+                      if (validationKeyword?.id === keyword.id) {
+                        setValidationKeyword({
+                          ...keyword,
+                          adsData: updatedAdsData,
+                          updatedAt: new Date()
+                        });
+                      }
                     }} campaigns={campaigns} onAddCampaign={addCampaign} placeholder="Campaña..." className="h-7 text-xs max-w-[120px]" />
                             </TableCell>
                             {/* ACOS Equilibrio (PE) - Read only reference */}
