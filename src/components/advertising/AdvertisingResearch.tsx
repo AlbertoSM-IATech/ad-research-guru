@@ -1,5 +1,5 @@
 import { useState, useCallback, useMemo, useEffect, useRef } from "react";
-import { Search, Target, FolderOpen, BarChart3, Sparkles, Save } from "lucide-react";
+import { Search, Target, FolderOpen, BarChart3, Save } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
@@ -18,11 +18,9 @@ import { AdvancedImportModal } from "./AdvancedImportModal";
 import { CampaignPlanManager } from "./CampaignPlanManager";
 import { GuidedTour, useTourStatus, type UIStateRequest } from "./GuidedTour";
 import { KeyboardShortcutsManager } from "./KeyboardShortcutsManager";
-import { AIAssistantDrawer } from "./ai/AIAssistantDrawer";
 import { HeaderOverflowMenu } from "./HeaderOverflowMenu";
 import { MarketConfigModal } from "./MarketConfigModal";
 import { BackupImportModal } from "./BackupImportModal";
-import { isAIDemoMode, toggleAIDemoMode } from "@/lib/ai-demo-service";
 import { loadPersistedState, usePersistence, getLastSyncAt, getAdResearchStorageKey, clearBookStorage, DEFAULT_BOOK_ECONOMY } from "@/hooks/useLocalPersistence";
 import { type BackupSummary } from "./BackupImportModal";
 import { toast } from "sonner";
@@ -80,7 +78,6 @@ export const AdvertisingResearch = ({
   const [selectedMarketplace, setSelectedMarketplace] = useState("us");
   const [activeTab, setActiveTab] = useState<"keywords" | "asins" | "categories">("keywords");
   const [hasLoadedExamples, setHasLoadedExamples] = useState(false);
-  const [isDemoMode, setIsDemoMode] = useState(isAIDemoMode());
   const [showInsights, setShowInsights] = useState(false);
 
   // Derived mainView from showInsights for UI
@@ -105,9 +102,6 @@ export const AdvertisingResearch = ({
 
   // Book panel state - React controlled, no DOM hacks
   const [isBookPanelOpen, setIsBookPanelOpen] = useState(true);
-
-  // AI Assistant state - React controlled
-  const [isAIAssistantOpen, setIsAIAssistantOpen] = useState(false);
 
   // Selection states for each tab - lifted from sections for AIAssistant access
   const [selection, setSelection] = useState<{
@@ -529,12 +523,7 @@ export const AdvertisingResearch = ({
     searchInputRef.current?.focus();
   }, []);
 
-  // Toggle demo mode handler
-  const handleToggleDemo = useCallback(() => {
-    const newMode = !isDemoMode;
-    toggleAIDemoMode(newMode);
-    setIsDemoMode(newMode);
-  }, [isDemoMode]);
+  // (Demo mode handler removed - AI features removed)
 
   // Reset data handler - clears localStorage and resets all states to initial values
   const handleResetData = useCallback(() => {
@@ -571,8 +560,7 @@ export const AdvertisingResearch = ({
     setShowImportModal(false);
     setShowCampaignPlanner(false);
 
-    // 4. Close AI assistant and reopen book panel
-    setIsAIAssistantOpen(false);
+    // 4. Reopen book panel
     setIsBookPanelOpen(true);
 
     // 5. Show confirmation toast
@@ -811,21 +799,11 @@ export const AdvertisingResearch = ({
                 <MarketplaceSelector value={selectedMarketplace} onChange={setSelectedMarketplace} />
               </div>
 
-              {/* AI Assistant Button - Único punto de entrada, controlado por estado */}
-              <Button variant="default" size="sm" className="gap-2 relative" onClick={() => setIsAIAssistantOpen(true)}>
-                <Sparkles className="w-4 h-4" />
-                <span className="hidden sm:inline">Asistente IA</span>
-                {/* Pending changes badge */}
-                {pendingChangesCount > 0 && <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] px-1 flex items-center justify-center rounded-full bg-amber-500 text-white text-[10px] font-bold shadow-sm animate-pulse">
-                    {pendingChangesCount > 99 ? "99+" : pendingChangesCount}
-                  </span>}
-              </Button>
-
               {/* Theme Toggle - Discreto */}
               <ThemeToggle />
 
               {/* Overflow Menu */}
-              <HeaderOverflowMenu onImport={() => setShowImportModal(true)} onExport={() => setShowExportModal(true)} onStartTour={() => setShowTour(true)} onOpenCampaignPlanner={() => setShowCampaignPlanner(true)} onToggleDemo={handleToggleDemo} isDemoMode={isDemoMode} onResetData={handleResetData} onExportBackup={handleExportBackup} onImportBackup={() => setShowBackupImportModal(true)} onRegenerateDemo={handleRegenerateDemo} onOpenMarketConfig={() => setShowMarketConfigModal(true)} />
+              <HeaderOverflowMenu onImport={() => setShowImportModal(true)} onExport={() => setShowExportModal(true)} onStartTour={() => setShowTour(true)} onOpenCampaignPlanner={() => setShowCampaignPlanner(true)} onResetData={handleResetData} onExportBackup={handleExportBackup} onImportBackup={() => setShowBackupImportModal(true)} onRegenerateDemo={handleRegenerateDemo} onOpenMarketConfig={() => setShowMarketConfigModal(true)} />
             </div>
           </div>
 
@@ -997,11 +975,6 @@ export const AdvertisingResearch = ({
       {/* Campaign Plan Manager */}
       <CampaignPlanManager keywords={currentKeywords} plans={currentPlans} onCreatePlan={handleCreatePlan} onUpdatePlan={handleUpdatePlan} onDeletePlan={handleDeletePlan} onAssignKeywords={handleAssignKeywords} isOpen={showCampaignPlanner} onClose={() => setShowCampaignPlanner(false)} />
 
-      {/* AI Assistant Drawer - Único punto de IA */}
-      <AIAssistantDrawer open={isAIAssistantOpen} onOpenChange={setIsAIAssistantOpen} marketplaceId={selectedMarketplace} bookInfo={bookInfo} activeTab={activeTab as "keywords" | "asins" | "categories"} onChangeActiveTab={tab => setActiveTab(tab)} keywords={currentKeywords} asins={currentASINs} categories={currentCategories} selection={selection} onAddKeywords={handleAddBulkKeywords} onUpdateKeywordsBulk={handleUpdateBulkKeywords} onUpdateBookInfo={updates => setBookInfo(prev => ({
-      ...prev,
-      ...updates
-    }))} />
 
       {/* Backup Import Modal */}
       <BackupImportModal isOpen={showBackupImportModal} onClose={() => setShowBackupImportModal(false)} onImport={handleImportBackup} />

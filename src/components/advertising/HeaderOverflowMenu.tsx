@@ -38,8 +38,6 @@ interface HeaderOverflowMenuProps {
   onExport: () => void;
   onStartTour: () => void;
   onOpenCampaignPlanner: () => void;
-  onToggleDemo: () => void;
-  isDemoMode: boolean;
   onResetData: () => void;
   onExportBackup: () => void;
   onImportBackup: () => void;
@@ -52,8 +50,6 @@ export const HeaderOverflowMenu = ({
   onExport,
   onStartTour,
   onOpenCampaignPlanner,
-  onToggleDemo,
-  isDemoMode,
   onResetData,
   onExportBackup,
   onImportBackup,
@@ -137,14 +133,9 @@ export const HeaderOverflowMenu = ({
           <DropdownMenuSeparator />
           
           {/* Sección: Experimental */}
-          <DropdownMenuLabel className="text-xs text-muted-foreground">Experimental</DropdownMenuLabel>
           <DropdownMenuItem onClick={onRegenerateDemo} className="gap-2 cursor-pointer">
             <RefreshCw className="h-4 w-4" />
             Regenerar datos demo
-          </DropdownMenuItem>
-          <DropdownMenuItem onClick={onToggleDemo} className="gap-2 cursor-pointer">
-            <FlaskConical className="h-4 w-4" />
-            {isDemoMode ? 'Desactivar modo demo' : 'Activar modo demo'}
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>

@@ -220,18 +220,18 @@ export const KeywordsSection = ({
   };
 
   // Handle wizard completion - open detail panel immediately
+  // The keyword from wizard already has id, createdAt, adsData - use it directly
   const handleWizardComplete = (keyword: Keyword) => {
+    // Add to the list first
     onAdd(keyword);
     setWizardInitialKeyword('');
     toast({
       title: 'Keyword creada',
       description: `Market Score: ${keyword.marketScore}/100`
     });
-    // Use setTimeout to ensure React has propagated the state update
-    // before opening the panel with the complete keyword data
-    setTimeout(() => {
-      setValidationKeyword(keyword);
-    }, 0);
+    // Open the panel immediately with the complete keyword (including adsData)
+    // The keyword already has all data from the wizard, no need to wait for React
+    setValidationKeyword(keyword);
   };
 
   // Handle opening existing keyword from wizard duplicate detection
