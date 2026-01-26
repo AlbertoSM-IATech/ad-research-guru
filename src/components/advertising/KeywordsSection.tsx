@@ -566,7 +566,22 @@ export const KeywordsSection = ({
           <Input placeholder="Buscar keywords..." value={searchTerm} onChange={e => {
           onSearchTermChange(e.target.value);
           setCurrentPage(1);
-        }} className="pl-10" />
+        }} className="pl-10 pr-8" />
+          {searchTerm && (
+            <button
+              type="button"
+              onClick={() => {
+                onSearchTermChange('');
+                setCurrentPage(1);
+              }}
+              className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded-sm hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <line x1="18" y1="6" x2="6" y2="18" />
+                <line x1="6" y1="6" x2="18" y2="18" />
+              </svg>
+            </button>
+          )}
         </div>
       </div>
 

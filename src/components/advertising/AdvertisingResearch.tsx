@@ -866,27 +866,22 @@ export const AdvertisingResearch = ({
         </header>
 
         {/* === SECCIÓN 1: CONTEXTO COMPACTO === */}
-        {/* Full panel for editing when explicitly open or context incomplete */}
-        {(isBookPanelOpen || !bookContextComplete) && <section className="mb-4">
-            <BookInfoPanel bookInfo={bookInfo} onChange={setBookInfo} bookEconomy={bookEconomy} onBookEconomyChange={setBookEconomy} keywords={currentKeywords} />
-          </section>}
-
-        {/* Compact panel when context is complete and full panel closed */}
-        {bookContextComplete && !isBookPanelOpen && <section className="mb-4 space-y-3">
-            <BookInfoPanelCompact 
-              bookInfo={bookInfo} 
-              onChange={setBookInfo} 
-              bookEconomy={bookEconomy} 
-              onBookEconomyChange={setBookEconomy} 
-              keywords={currentKeywords} 
-            />
-            {/* ACOS Alerts Tray */}
-            <AcosAlertsTray 
-              keywords={currentKeywords}
-              bookEconomy={bookEconomy}
-              campaigns={campaigns}
-            />
-          </section>}
+        {/* Always show compact panel + alerts tray */}
+        <section className="mb-4 space-y-2">
+          <BookInfoPanelCompact 
+            bookInfo={bookInfo} 
+            onChange={setBookInfo} 
+            bookEconomy={bookEconomy} 
+            onBookEconomyChange={setBookEconomy} 
+            keywords={currentKeywords} 
+          />
+          {/* ACOS Alerts Tray - always visible when there are alerts */}
+          <AcosAlertsTray 
+            keywords={currentKeywords}
+            bookEconomy={bookEconomy}
+            campaigns={campaigns}
+          />
+        </section>
 
         {/* === SECCIÓN 2: PESTAÑAS PRINCIPALES (Datos / Insights) === */}
         <section className="mb-6" data-tour="tabs">
