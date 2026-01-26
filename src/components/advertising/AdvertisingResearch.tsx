@@ -12,6 +12,8 @@ import { GlobalSearch, type FilterType, type SortOption } from "./GlobalSearch";
 import { CollapsibleEducation } from "./CollapsibleEducation";
 import { VisualizationsTab } from "./visualizations/VisualizationsTab";
 import { BookInfoPanel } from "./BookInfoPanel";
+import { BookInfoPanelCompact } from "./BookInfoPanelCompact";
+import { AcosAlertsTray } from "./AcosAlertsTray";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { AdvancedExportModal } from "./AdvancedExportModal";
 import { AdvancedImportModal } from "./AdvancedImportModal";
@@ -22,6 +24,7 @@ import { HeaderOverflowMenu } from "./HeaderOverflowMenu";
 import { MarketConfigModal } from "./MarketConfigModal";
 import { BackupImportModal } from "./BackupImportModal";
 import { loadPersistedState, usePersistence, getLastSyncAt, getAdResearchStorageKey, clearBookStorage, DEFAULT_BOOK_ECONOMY } from "@/hooks/useLocalPersistence";
+import { useCampaigns } from "@/hooks/useCampaigns";
 import { type BackupSummary } from "./BackupImportModal";
 import { toast } from "sonner";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -308,6 +311,10 @@ export const AdvertisingResearch = ({
   const currentKeywords = keywordsByMarket[selectedMarketplace] || [];
   const currentASINs = asinsByMarket[selectedMarketplace] || [];
   const currentCategories = categoriesByMarket[selectedMarketplace] || [];
+  
+  // Campaigns hook for alerts tray
+  const { campaigns } = useCampaigns(currentKeywords);
+  
   const filteredKeywords = useMemo(() => currentKeywords.filter(k => globalSearchTerm ? k.keyword.toLowerCase().includes(globalSearchTerm.toLowerCase()) : true), [currentKeywords, globalSearchTerm]);
   const filteredASINs = useMemo(() => currentASINs.filter(a => globalSearchTerm ? a.asin.toLowerCase().includes(globalSearchTerm.toLowerCase()) : true), [currentASINs, globalSearchTerm]);
   const filteredCategories = useMemo(() => currentCategories.filter(c => globalSearchTerm ? c.name.toLowerCase().includes(globalSearchTerm.toLowerCase()) : true), [currentCategories, globalSearchTerm]);
@@ -858,26 +865,28 @@ export const AdvertisingResearch = ({
           </div>
         </header>
 
-        {/* === SECCIÓN 1: CONTEXTO === Controlado por estado, sin DOM hacks */}
-        {(isBookPanelOpen || !bookContextComplete) && <section className="mb-6">
+        {/* === SECCIÓN 1: CONTEXTO COMPACTO === */}
+        {/* Full panel for editing when explicitly open or context incomplete */}
+        {(isBookPanelOpen || !bookContextComplete) && <section className="mb-4">
             <BookInfoPanel bookInfo={bookInfo} onChange={setBookInfo} bookEconomy={bookEconomy} onBookEconomyChange={setBookEconomy} keywords={currentKeywords} />
           </section>}
 
-        {/* Context summary when complete and panel closed - Minimal */}
-        {bookContextComplete && !isBookPanelOpen && <div className="mb-6 p-3 rounded-lg border border-border/50 bg-muted/30 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-md bg-primary/10 flex items-center justify-center">
-                <Target className="w-4 h-4 text-primary" />
-              </div>
-              <div>
-                <p className="text-sm font-medium">{bookInfo.title}</p>
-                {bookInfo.subtitle && <p className="text-xs text-muted-foreground">{bookInfo.subtitle}</p>}
-              </div>
-            </div>
-            <Button variant="ghost" size="sm" onClick={() => setIsBookPanelOpen(true)} className="text-xs">
-              Editar contexto
-            </Button>
-          </div>}
+        {/* Compact panel when context is complete and full panel closed */}
+        {bookContextComplete && !isBookPanelOpen && <section className="mb-4 space-y-3">
+            <BookInfoPanelCompact 
+              bookInfo={bookInfo} 
+              onChange={setBookInfo} 
+              bookEconomy={bookEconomy} 
+              onBookEconomyChange={setBookEconomy} 
+              keywords={currentKeywords} 
+            />
+            {/* ACOS Alerts Tray */}
+            <AcosAlertsTray 
+              keywords={currentKeywords}
+              bookEconomy={bookEconomy}
+              campaigns={campaigns}
+            />
+          </section>}
 
         {/* === SECCIÓN 2: PESTAÑAS PRINCIPALES (Datos / Insights) === */}
         <section className="mb-6" data-tour="tabs">

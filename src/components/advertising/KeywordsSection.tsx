@@ -6,7 +6,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
 import { InfoTooltip } from './InfoTooltip';
 import { InlineSelectBadge } from './InlineSelectBadge';
 import { InlineEditableCell } from './InlineEditableCell';
@@ -979,11 +979,27 @@ export const KeywordsSection = ({
                             <TableCell className="tabular-nums text-xs text-muted-foreground">
                               {formatearMoneda(ventasCalculadas)}
                             </TableCell>
-                            {/* ACOS Actual */}
+                            {/* ACOS Actual with Alert Icon */}
                             <TableCell className="tabular-nums text-xs">
-                              <span className={cn(acosActual !== null && acosEquilibrio !== null ? acosActual <= acosEquilibrio ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400' : 'text-muted-foreground')}>
-                                {formatearPorcentaje(acosActual)}
-                              </span>
+                              <div className="flex items-center gap-1">
+                                {acosActual !== null && acosEquilibrio !== null && acosActual > acosEquilibrio && (
+                                  <TooltipProvider>
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <AlertTriangle className="w-3.5 h-3.5 text-red-500 shrink-0" />
+                                      </TooltipTrigger>
+                                      <TooltipContent side="left" className="text-xs">
+                                        <p className="font-medium">ACOS sobre equilibrio</p>
+                                        <p>Actual: {formatearPorcentaje(acosActual)}</p>
+                                        <p>Equilibrio: {formatearPorcentaje(acosEquilibrio)}</p>
+                                      </TooltipContent>
+                                    </Tooltip>
+                                  </TooltipProvider>
+                                )}
+                                <span className={cn(acosActual !== null && acosEquilibrio !== null ? acosActual <= acosEquilibrio ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400' : 'text-muted-foreground')}>
+                                  {formatearPorcentaje(acosActual)}
+                                </span>
+                              </div>
                             </TableCell>
                             {/* ACOS Siguiente Click */}
                             <TableCell className="tabular-nums text-xs">
