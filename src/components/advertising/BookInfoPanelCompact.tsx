@@ -1,12 +1,11 @@
-import { DollarSign, Star, TrendingUp, Users, Target, Info } from 'lucide-react';
+import { DollarSign, Star, TrendingUp, Users } from 'lucide-react';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { type BookInfo, type BookEconomy, type Keyword } from '@/types/advertising';
 import { useMemo } from 'react';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Badge } from '@/components/ui/badge';
-import { calcularGastoAcumulado, calcularVentasAcumuladas, calcularAcosActualPorcentaje, formatearPorcentaje, formatearMoneda } from '@/lib/acosEquilibrio';
+import { calcularGastoAcumulado, calcularVentasAcumuladas, calcularAcosActualPorcentaje, formatearPorcentaje } from '@/lib/acosEquilibrio';
 import { getKeywordMarketScore } from '@/lib/keyword-sorting';
 import { getMarketScoreInfo } from '@/lib/market-score';
 
@@ -52,8 +51,6 @@ export const BookInfoPanelCompact = ({
       scoreInfo,
       searchVolume: mainKeyword.searchVolume || 0,
       competitors: mainKeyword.competitors || 0,
-      clicks: ads?.clicks,
-      pedidos: ads?.pedidos,
       acosActual
     };
   }, [mainKeyword, bookEconomy]);
@@ -77,111 +74,101 @@ export const BookInfoPanelCompact = ({
   };
 
   return (
-    <div data-tour="book-info" className="rounded-lg border border-primary/20 bg-gradient-to-r from-primary/5 to-accent/5 p-3">
-      <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
-        {/* KW Principal - Compact */}
-        <div className="flex items-center gap-3 min-w-0">
-          <div className="flex items-center gap-1.5">
-            <Star className={cn("w-4 h-4", mainKeyword ? "text-amber-500 fill-amber-500" : "text-muted-foreground")} />
-            <span className="text-xs font-medium text-muted-foreground">KW:</span>
-          </div>
+    <div data-tour="book-info" className="rounded-lg border border-primary/20 bg-gradient-to-r from-primary/5 to-accent/5 px-4 py-2">
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+        {/* KW Principal */}
+        <div className="flex items-center gap-2 min-w-0">
+          <Star className={cn("w-3.5 h-3.5 shrink-0", mainKeyword ? "text-amber-500 fill-amber-500" : "text-muted-foreground")} />
           {mainKeyword && mainKeywordMetrics ? (
-            <div className="flex items-center gap-2 min-w-0">
-              <span className="font-medium text-sm truncate max-w-[200px]" title={mainKeyword.keyword}>
+            <div className="flex items-center gap-1.5 min-w-0">
+              <span className="font-medium text-xs truncate max-w-[140px]" title={mainKeyword.keyword}>
                 {mainKeyword.keyword}
               </span>
-              <Badge className={cn('text-[10px] px-1.5 py-0', mainKeywordMetrics.scoreInfo.bgColor, mainKeywordMetrics.scoreInfo.color)}>
+              <Badge className={cn('text-[9px] px-1 py-0 h-4', mainKeywordMetrics.scoreInfo.bgColor, mainKeywordMetrics.scoreInfo.color)}>
                 {mainKeywordMetrics.score}
               </Badge>
-              <div className="hidden sm:flex items-center gap-2 text-xs text-muted-foreground">
-                <span className="flex items-center gap-0.5">
-                  <TrendingUp className="w-3 h-3" />
-                  {mainKeywordMetrics.searchVolume.toLocaleString()}
+              <span className="hidden sm:flex items-center gap-0.5 text-[10px] text-muted-foreground">
+                <TrendingUp className="w-2.5 h-2.5" />
+                {mainKeywordMetrics.searchVolume.toLocaleString()}
+              </span>
+              <span className="hidden sm:flex items-center gap-0.5 text-[10px] text-muted-foreground">
+                <Users className="w-2.5 h-2.5" />
+                {mainKeywordMetrics.competitors.toLocaleString()}
+              </span>
+              {mainKeywordMetrics.acosActual !== null && (
+                <span className={cn(
+                  "text-[10px] font-mono",
+                  acosEquilibrio !== null && mainKeywordMetrics.acosActual <= acosEquilibrio
+                    ? 'text-green-600 dark:text-green-400'
+                    : 'text-red-600 dark:text-red-400'
+                )}>
+                  ACOS: {formatearPorcentaje(mainKeywordMetrics.acosActual)}
                 </span>
-                <span className="flex items-center gap-0.5">
-                  <Users className="w-3 h-3" />
-                  {mainKeywordMetrics.competitors.toLocaleString()}
-                </span>
-                {mainKeywordMetrics.acosActual !== null && (
-                  <span className={cn(
-                    "font-mono",
-                    acosEquilibrio !== null && mainKeywordMetrics.acosActual <= acosEquilibrio
-                      ? 'text-green-600 dark:text-green-400'
-                      : 'text-red-600 dark:text-red-400'
-                  )}>
-                    ACOS: {formatearPorcentaje(mainKeywordMetrics.acosActual)}
-                  </span>
-                )}
-              </div>
+              )}
             </div>
           ) : (
-            <span className="text-xs text-muted-foreground italic">Clic en ★ para seleccionar</span>
+            <span className="text-[10px] text-muted-foreground italic">★ para seleccionar KW</span>
           )}
         </div>
 
         {/* Separator */}
-        <div className="hidden md:block h-6 w-px bg-border" />
+        <div className="h-4 w-px bg-border" />
 
-        {/* Economía del Libro - Compact */}
+        {/* Economía del Libro - Ultra compact */}
         {bookEconomy && onBookEconomyChange && (
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-1.5">
-              <DollarSign className="w-4 h-4 text-primary" />
-              <span className="text-xs font-medium text-muted-foreground">Libro:</span>
-            </div>
-            <div className="flex items-center gap-2">
-              {/* Precio */}
-              <div className="flex items-center gap-1">
-                <span className="text-[10px] text-muted-foreground">PVP</span>
-                <div className="relative w-16">
-                  <span className="absolute left-1.5 top-1/2 -translate-y-1/2 text-muted-foreground text-xs">$</span>
-                  <Input
-                    type="number"
-                    min={0}
-                    step={0.01}
-                    value={bookEconomy.precioLibro || ''}
-                    onChange={(e) => handlePrecioChange(e.target.value)}
-                    placeholder="0"
-                    className="pl-4 h-6 text-xs w-full"
-                  />
-                </div>
+          <div className="flex items-center gap-2">
+            <DollarSign className="w-3.5 h-3.5 text-primary shrink-0" />
+            {/* Precio */}
+            <div className="flex items-center gap-0.5">
+              <span className="text-[10px] text-muted-foreground">PVP</span>
+              <div className="relative w-12">
+                <span className="absolute left-1 top-1/2 -translate-y-1/2 text-muted-foreground text-[10px]">$</span>
+                <Input
+                  type="number"
+                  min={0}
+                  step={0.01}
+                  value={bookEconomy.precioLibro || ''}
+                  onChange={(e) => handlePrecioChange(e.target.value)}
+                  placeholder="0"
+                  className="pl-3 h-5 text-[10px] w-full"
+                />
               </div>
-              {/* Regalías */}
-              <div className="flex items-center gap-1">
-                <span className="text-[10px] text-muted-foreground">Regalía</span>
-                <div className="relative w-16">
-                  <span className="absolute left-1.5 top-1/2 -translate-y-1/2 text-muted-foreground text-xs">$</span>
-                  <Input
-                    type="number"
-                    min={0}
-                    step={0.01}
-                    value={bookEconomy.regaliasPorVenta || ''}
-                    onChange={(e) => handleRegaliasChange(e.target.value)}
-                    placeholder="0"
-                    className="pl-4 h-6 text-xs w-full"
-                  />
-                </div>
-              </div>
-              {/* ACOS PE */}
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <div className="flex items-center gap-1 px-2 py-0.5 rounded bg-background/50 border border-border cursor-help">
-                      <span className="text-[10px] text-muted-foreground">ACOS PE</span>
-                      <span className={cn(
-                        "font-mono text-xs font-semibold",
-                        acosEquilibrio !== null ? 'text-primary' : 'text-muted-foreground'
-                      )}>
-                        {acosEquilibrio !== null ? `${acosEquilibrio.toFixed(1)}%` : '—'}
-                      </span>
-                    </div>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    Punto de equilibrio: si ACOS supera este valor, pierdes dinero.
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
             </div>
+            {/* Regalías */}
+            <div className="flex items-center gap-0.5">
+              <span className="text-[10px] text-muted-foreground">Reg</span>
+              <div className="relative w-12">
+                <span className="absolute left-1 top-1/2 -translate-y-1/2 text-muted-foreground text-[10px]">$</span>
+                <Input
+                  type="number"
+                  min={0}
+                  step={0.01}
+                  value={bookEconomy.regaliasPorVenta || ''}
+                  onChange={(e) => handleRegaliasChange(e.target.value)}
+                  placeholder="0"
+                  className="pl-3 h-5 text-[10px] w-full"
+                />
+              </div>
+            </div>
+            {/* ACOS PE */}
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className="flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-background/50 border border-border cursor-help">
+                    <span className="text-[9px] text-muted-foreground">PE</span>
+                    <span className={cn(
+                      "font-mono text-[10px] font-semibold",
+                      acosEquilibrio !== null ? 'text-primary' : 'text-muted-foreground'
+                    )}>
+                      {acosEquilibrio !== null ? `${acosEquilibrio.toFixed(1)}%` : '—'}
+                    </span>
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent>
+                  Punto de equilibrio: si ACOS supera este valor, pierdes dinero.
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           </div>
         )}
       </div>
