@@ -194,13 +194,12 @@ export const KeywordsSection = ({
         const currentAds = JSON.stringify(validationKeyword.adsData ?? {});
         const newAds = JSON.stringify(updatedKeyword.adsData ?? {});
         const hasAdsChanged = currentAds !== newAds;
-        
+
         // Also check for other field changes
         const hasTextChanged = updatedKeyword.keyword !== validationKeyword.keyword;
         const hasScoreChanged = updatedKeyword.marketScore !== validationKeyword.marketScore;
         const hasVolumeChanged = updatedKeyword.searchVolume !== validationKeyword.searchVolume;
         const hasCompetitorsChanged = updatedKeyword.competitors !== validationKeyword.competitors;
-        
         if (hasAdsChanged || hasTextChanged || hasScoreChanged || hasVolumeChanged || hasCompetitorsChanged) {
           setValidationKeyword(updatedKeyword);
         }
@@ -503,7 +502,7 @@ export const KeywordsSection = ({
             updateFunctionalView('editorial');
           }} className={cn("gap-2 transition-all", functionalView === 'editorial' && "bg-primary text-primary-foreground")}>
               <BookOpen className="w-4 h-4" />
-              Estudio de Nicho
+              Estudio de Keywords
             </Button>
             <Button variant={functionalView === 'ads' ? 'default' : 'ghost'} size="sm" onClick={() => {
             if (!hasAdsAccess) {
@@ -567,21 +566,15 @@ export const KeywordsSection = ({
           onSearchTermChange(e.target.value);
           setCurrentPage(1);
         }} className="pl-10 pr-8" />
-          {searchTerm && (
-            <button
-              type="button"
-              onClick={() => {
-                onSearchTermChange('');
-                setCurrentPage(1);
-              }}
-              className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded-sm hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
-            >
+          {searchTerm && <button type="button" onClick={() => {
+          onSearchTermChange('');
+          setCurrentPage(1);
+        }} className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded-sm hover:bg-muted text-muted-foreground hover:text-foreground transition-colors">
               <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <line x1="18" y1="6" x2="6" y2="18" />
                 <line x1="6" y1="6" x2="18" y2="18" />
               </svg>
-            </button>
-          )}
+            </button>}
         </div>
       </div>
 
@@ -796,7 +789,7 @@ export const KeywordsSection = ({
                 onUpdate(keyword.id, {
                   adsData: updatedAdsData
                 });
-                
+
                 // Force sync panel if it's open for this keyword
                 if (validationKeyword?.id === keyword.id) {
                   setValidationKeyword({
@@ -997,8 +990,7 @@ export const KeywordsSection = ({
                             {/* ACOS Actual with Alert Icon */}
                             <TableCell className="tabular-nums text-xs">
                               <div className="flex items-center gap-1">
-                                {acosActual !== null && acosEquilibrio !== null && acosActual > acosEquilibrio && (
-                                  <TooltipProvider>
+                                {acosActual !== null && acosEquilibrio !== null && acosActual > acosEquilibrio && <TooltipProvider>
                                     <Tooltip>
                                       <TooltipTrigger asChild>
                                         <AlertTriangle className="w-3.5 h-3.5 text-red-500 shrink-0" />
@@ -1009,8 +1001,7 @@ export const KeywordsSection = ({
                                         <p>Equilibrio: {formatearPorcentaje(acosEquilibrio)}</p>
                                       </TooltipContent>
                                     </Tooltip>
-                                  </TooltipProvider>
-                                )}
+                                  </TooltipProvider>}
                                 <span className={cn(acosActual !== null && acosEquilibrio !== null ? acosActual <= acosEquilibrio ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400' : 'text-muted-foreground')}>
                                   {formatearPorcentaje(acosActual)}
                                 </span>
@@ -1033,12 +1024,12 @@ export const KeywordsSection = ({
                                   <TooltipTrigger asChild>
                                     <span className="cursor-help">
                                       {(() => {
-                                        const beneficio = gastoCalculado !== null && ventasCalculadas !== null ? ventasCalculadas - gastoCalculado : null;
-                                        if (beneficio === null) return '—';
-                                        return <span className={beneficio >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}>
+                              const beneficio = gastoCalculado !== null && ventasCalculadas !== null ? ventasCalculadas - gastoCalculado : null;
+                              if (beneficio === null) return '—';
+                              return <span className={beneficio >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}>
                                           {formatearMoneda(beneficio)}
                                         </span>;
-                                      })()}
+                            })()}
                                     </span>
                                   </TooltipTrigger>
                                   <TooltipContent side="left" className="max-w-xs">

@@ -311,10 +311,11 @@ export const AdvertisingResearch = ({
   const currentKeywords = keywordsByMarket[selectedMarketplace] || [];
   const currentASINs = asinsByMarket[selectedMarketplace] || [];
   const currentCategories = categoriesByMarket[selectedMarketplace] || [];
-  
+
   // Campaigns hook for alerts tray
-  const { campaigns } = useCampaigns(currentKeywords);
-  
+  const {
+    campaigns
+  } = useCampaigns(currentKeywords);
   const filteredKeywords = useMemo(() => currentKeywords.filter(k => globalSearchTerm ? k.keyword.toLowerCase().includes(globalSearchTerm.toLowerCase()) : true), [currentKeywords, globalSearchTerm]);
   const filteredASINs = useMemo(() => currentASINs.filter(a => globalSearchTerm ? a.asin.toLowerCase().includes(globalSearchTerm.toLowerCase()) : true), [currentASINs, globalSearchTerm]);
   const filteredCategories = useMemo(() => currentCategories.filter(c => globalSearchTerm ? c.name.toLowerCase().includes(globalSearchTerm.toLowerCase()) : true), [currentCategories, globalSearchTerm]);
@@ -747,7 +748,7 @@ export const AdvertisingResearch = ({
             {/* Title + Sync indicator */}
             <div className="flex flex-col gap-1">
               <div className="flex items-center gap-3">
-                <h1 className="font-heading text-2xl font-bold text-foreground">Análisis de Mercado y Gestión de ADS </h1>
+                <h1 className="font-heading text-2xl font-bold text-foreground">Análisis de Keywords y Gestión de ADS</h1>
               </div>
               <p className="text-xs text-muted-foreground max-w-2xl">
                 <span className="text-amber-600 dark:text-amber-400 font-medium">⚠️ Aviso:</span> Este panel es un
@@ -868,19 +869,9 @@ export const AdvertisingResearch = ({
         {/* === SECCIÓN 1: CONTEXTO COMPACTO === */}
         {/* Always show compact panel + alerts tray */}
         <section className="mb-4 space-y-2">
-          <BookInfoPanelCompact 
-            bookInfo={bookInfo} 
-            onChange={setBookInfo} 
-            bookEconomy={bookEconomy} 
-            onBookEconomyChange={setBookEconomy} 
-            keywords={currentKeywords} 
-          />
+          <BookInfoPanelCompact bookInfo={bookInfo} onChange={setBookInfo} bookEconomy={bookEconomy} onBookEconomyChange={setBookEconomy} keywords={currentKeywords} />
           {/* ACOS Alerts Tray - always visible when there are alerts */}
-          <AcosAlertsTray 
-            keywords={currentKeywords}
-            bookEconomy={bookEconomy}
-            campaigns={campaigns}
-          />
+          <AcosAlertsTray keywords={currentKeywords} bookEconomy={bookEconomy} campaigns={campaigns} />
         </section>
 
         {/* === SECCIÓN 2: PESTAÑAS PRINCIPALES (Datos / Insights) === */}
@@ -893,7 +884,7 @@ export const AdvertisingResearch = ({
             </Button>
             <Button variant={mainView === 'insights' ? 'default' : 'ghost'} size="sm" onClick={() => setMainView('insights')} className={cn("gap-2 transition-all", mainView === 'insights' && "bg-primary text-primary-foreground")}>
               <TrendingUp className="w-4 h-4" />
-              Insights y Visualizaciones
+              Visualizaciones
             </Button>
           </div>
 
