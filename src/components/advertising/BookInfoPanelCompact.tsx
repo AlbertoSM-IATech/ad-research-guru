@@ -11,7 +11,6 @@ import { calcularGastoAcumulado, calcularVentasAcumuladas, calcularAcosActualPor
 import { getKeywordMarketScore } from '@/lib/keyword-sorting';
 import { getMarketScoreInfo } from '@/lib/market-score';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-
 interface BookInfoPanelCompactProps {
   bookInfo: BookInfo;
   onChange: (bookInfo: BookInfo) => void;
@@ -19,9 +18,8 @@ interface BookInfoPanelCompactProps {
   onBookEconomyChange?: (economy: BookEconomy) => void;
   keywords?: Keyword[];
 }
-
-export const BookInfoPanelCompact = ({ 
-  bookInfo, 
+export const BookInfoPanelCompact = ({
+  bookInfo,
   onChange,
   bookEconomy,
   onBookEconomyChange,
@@ -36,21 +34,17 @@ export const BookInfoPanelCompact = ({
   }, [keywords, bookInfo.mainKeywordId]);
 
   // Calculate ACOS equilibrio
-  const acosEquilibrio = bookEconomy && bookEconomy.precioLibro > 0
-    ? (bookEconomy.regaliasPorVenta / bookEconomy.precioLibro) * 100
-    : null;
+  const acosEquilibrio = bookEconomy && bookEconomy.precioLibro > 0 ? bookEconomy.regaliasPorVenta / bookEconomy.precioLibro * 100 : null;
 
   // Calculate main keyword metrics
   const mainKeywordMetrics = useMemo(() => {
     if (!mainKeyword || !bookEconomy) return null;
-    
     const ads = mainKeyword.adsData;
     const score = getKeywordMarketScore(mainKeyword);
     const scoreInfo = getMarketScoreInfo(score);
     const gastoCalculado = calcularGastoAcumulado(ads?.clicks, ads?.cpcActual);
     const ventasCalculadas = calcularVentasAcumuladas(ads?.pedidos, bookEconomy.precioLibro);
     const acosActual = calcularAcosActualPorcentaje(gastoCalculado ?? undefined, ventasCalculadas ?? undefined);
-    
     return {
       score,
       scoreInfo,
@@ -59,43 +53,32 @@ export const BookInfoPanelCompact = ({
       acosActual
     };
   }, [mainKeyword, bookEconomy]);
-
   const handlePrecioChange = (value: string) => {
     if (!onBookEconomyChange || !bookEconomy) return;
     const numValue = parseFloat(value) || 0;
     onBookEconomyChange({
       ...bookEconomy,
-      precioLibro: Math.max(0, numValue),
+      precioLibro: Math.max(0, numValue)
     });
   };
-
   const handleRegaliasChange = (value: string) => {
     if (!onBookEconomyChange || !bookEconomy) return;
     const numValue = parseFloat(value) || 0;
     onBookEconomyChange({
       ...bookEconomy,
-      regaliasPorVenta: Math.max(0, numValue),
+      regaliasPorVenta: Math.max(0, numValue)
     });
   };
-
-  return (
-    <Collapsible open={isOpen} onOpenChange={setIsOpen}>
+  return <Collapsible open={isOpen} onOpenChange={setIsOpen}>
       <CollapsibleTrigger asChild>
-        <div 
-          data-tour="book-info" 
-          className={cn(
-            "flex items-center justify-between rounded-lg border border-primary/20 bg-gradient-to-r from-primary/5 to-accent/5 px-4 py-2 cursor-pointer hover:bg-primary/10 transition-colors",
-            isOpen && "rounded-b-none"
-          )}
-        >
+        <div data-tour="book-info" className={cn("flex items-center justify-between rounded-lg border border-primary/20 bg-gradient-to-r from-primary/5 to-accent/5 px-4 py-2 cursor-pointer hover:bg-primary/10 transition-colors", isOpen && "rounded-b-none")}>
           {/* Left side: Summary */}
           <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
             {/* KW Principal */}
             <div className="flex items-center gap-2 min-w-0">
               <Star className={cn("w-4 h-4 shrink-0", mainKeyword ? "text-amber-500 fill-amber-500" : "text-muted-foreground")} />
-              {mainKeyword && mainKeywordMetrics ? (
-                <div className="flex items-center gap-2 min-w-0">
-                  <span className="font-medium text-sm truncate max-w-[180px]" title={mainKeyword.keyword}>
+              {mainKeyword && mainKeywordMetrics ? <div className="flex items-center gap-2 min-w-0">
+                  <span className="font-medium text-sm truncate max-w-[500px]" title={mainKeyword.keyword}>
                     {mainKeyword.keyword}
                   </span>
                   <Badge className={cn('text-xs px-1.5 py-0', mainKeywordMetrics.scoreInfo.bgColor, mainKeywordMetrics.scoreInfo.color)}>
@@ -109,28 +92,17 @@ export const BookInfoPanelCompact = ({
                     <Users className="w-3 h-3" />
                     {mainKeywordMetrics.competitors.toLocaleString()}
                   </span>
-                  {mainKeywordMetrics.acosActual !== null && (
-                    <span className={cn(
-                      "text-xs font-mono",
-                      acosEquilibrio !== null && mainKeywordMetrics.acosActual <= acosEquilibrio
-                        ? 'text-green-600 dark:text-green-400'
-                        : 'text-red-600 dark:text-red-400'
-                    )}>
+                  {mainKeywordMetrics.acosActual !== null && <span className={cn("text-xs font-mono", acosEquilibrio !== null && mainKeywordMetrics.acosActual <= acosEquilibrio ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400')}>
                       ACOS: {formatearPorcentaje(mainKeywordMetrics.acosActual)}
-                    </span>
-                  )}
-                </div>
-              ) : (
-                <span className="text-xs text-muted-foreground italic">★ para seleccionar KW principal</span>
-              )}
+                    </span>}
+                </div> : <span className="text-xs text-muted-foreground italic">★ para seleccionar KW principal</span>}
             </div>
 
             {/* Separator */}
             <div className="h-5 w-px bg-border" />
 
             {/* Economía del Libro - Summary */}
-            {bookEconomy && (
-              <div className="flex items-center gap-3">
+            {bookEconomy && <div className="flex items-center gap-3">
                 <DollarSign className="w-4 h-4 text-primary shrink-0" />
                 <span className="text-sm">
                   <span className="text-muted-foreground">PVP:</span> ${bookEconomy.precioLibro.toFixed(2)}
@@ -150,8 +122,7 @@ export const BookInfoPanelCompact = ({
                     </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
-              </div>
-            )}
+              </div>}
           </div>
 
           {/* Right side: expand indicator */}
@@ -175,8 +146,7 @@ export const BookInfoPanelCompact = ({
                 Keyword Principal
               </h4>
               
-              {mainKeyword && mainKeywordMetrics ? (
-                <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/20 space-y-2">
+              {mainKeyword && mainKeywordMetrics ? <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/20 space-y-2">
                   <p className="font-medium">{mainKeyword.keyword}</p>
                   <div className="grid grid-cols-3 gap-2 text-sm">
                     <div>
@@ -194,34 +164,27 @@ export const BookInfoPanelCompact = ({
                       </Badge>
                     </div>
                   </div>
-                </div>
-              ) : (
-                <div className="p-4 rounded-lg bg-muted/50 border border-border text-center">
+                </div> : <div className="p-4 rounded-lg bg-muted/50 border border-border text-center">
                   <p className="text-sm text-muted-foreground">
                     Haz clic en la ★ de una keyword para establecerla como principal
                   </p>
-                </div>
-              )}
+                </div>}
 
               {/* Book Info fields */}
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
                   <label className="text-xs text-muted-foreground">Título del libro</label>
-                  <Input
-                    value={bookInfo.title || ''}
-                    onChange={(e) => onChange({ ...bookInfo, title: e.target.value })}
-                    placeholder="Mi libro..."
-                    className="h-8 text-sm"
-                  />
+                  <Input value={bookInfo.title || ''} onChange={e => onChange({
+                  ...bookInfo,
+                  title: e.target.value
+                })} placeholder="Mi libro..." className="h-8 text-sm" />
                 </div>
                 <div className="space-y-1">
                   <label className="text-xs text-muted-foreground">Subtítulo</label>
-                  <Input
-                    value={bookInfo.subtitle || ''}
-                    onChange={(e) => onChange({ ...bookInfo, subtitle: e.target.value })}
-                    placeholder="Subtítulo..."
-                    className="h-8 text-sm"
-                  />
+                  <Input value={bookInfo.subtitle || ''} onChange={e => onChange({
+                  ...bookInfo,
+                  subtitle: e.target.value
+                })} placeholder="Subtítulo..." className="h-8 text-sm" />
                 </div>
               </div>
             </div>
@@ -233,36 +196,19 @@ export const BookInfoPanelCompact = ({
                 Economía del Libro
               </h4>
               
-              {bookEconomy && onBookEconomyChange && (
-                <div className="grid grid-cols-2 gap-3">
+              {bookEconomy && onBookEconomyChange && <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1">
                     <label className="text-xs text-muted-foreground">Precio (PVP)</label>
                     <div className="relative">
                       <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">$</span>
-                      <Input
-                        type="number"
-                        min={0}
-                        step={0.01}
-                        value={bookEconomy.precioLibro || ''}
-                        onChange={(e) => handlePrecioChange(e.target.value)}
-                        placeholder="0.00"
-                        className="pl-7 h-8 text-sm"
-                      />
+                      <Input type="number" min={0} step={0.01} value={bookEconomy.precioLibro || ''} onChange={e => handlePrecioChange(e.target.value)} placeholder="0.00" className="pl-7 h-8 text-sm" />
                     </div>
                   </div>
                   <div className="space-y-1">
                     <label className="text-xs text-muted-foreground">Regalías por venta</label>
                     <div className="relative">
                       <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">$</span>
-                      <Input
-                        type="number"
-                        min={0}
-                        step={0.01}
-                        value={bookEconomy.regaliasPorVenta || ''}
-                        onChange={(e) => handleRegaliasChange(e.target.value)}
-                        placeholder="0.00"
-                        className="pl-7 h-8 text-sm"
-                      />
+                      <Input type="number" min={0} step={0.01} value={bookEconomy.regaliasPorVenta || ''} onChange={e => handleRegaliasChange(e.target.value)} placeholder="0.00" className="pl-7 h-8 text-sm" />
                     </div>
                   </div>
                   <div className="col-span-2 p-3 rounded-lg bg-primary/10 border border-primary/20">
@@ -279,12 +225,10 @@ export const BookInfoPanelCompact = ({
                       </div>
                     </div>
                   </div>
-                </div>
-              )}
+                </div>}
             </div>
           </div>
         </div>
       </CollapsibleContent>
-    </Collapsible>
-  );
+    </Collapsible>;
 };
