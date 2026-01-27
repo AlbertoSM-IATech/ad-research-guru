@@ -1028,13 +1028,28 @@ export const KeywordsSection = ({
                             </TableCell>
                             {/* Beneficio */}
                             <TableCell className="tabular-nums text-xs">
-                              {(() => {
-                      const beneficio = gastoCalculado !== null && ventasCalculadas !== null ? ventasCalculadas - gastoCalculado : null;
-                      if (beneficio === null) return '—';
-                      return <span className={beneficio >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}>
-                                    {formatearMoneda(beneficio)}
-                                  </span>;
-                    })()}
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <span className="cursor-help">
+                                      {(() => {
+                                        const beneficio = gastoCalculado !== null && ventasCalculadas !== null ? ventasCalculadas - gastoCalculado : null;
+                                        if (beneficio === null) return '—';
+                                        return <span className={beneficio >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}>
+                                          {formatearMoneda(beneficio)}
+                                        </span>;
+                                      })()}
+                                    </span>
+                                  </TooltipTrigger>
+                                  <TooltipContent side="left" className="max-w-xs">
+                                    <p className="font-medium">Beneficio = Ventas - Gasto</p>
+                                    <p className="text-xs text-muted-foreground mt-1">
+                                      ⚠️ Este NO es el beneficio real. Se calcula con ventas totales (PVP × Pedidos), no con las regalías.
+                                      El ACOS te indica si realmente tienes beneficio: si ACOS &lt; PE = beneficio real.
+                                    </p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
                             </TableCell>
                           </>}
                       </TableRow>;
@@ -1067,7 +1082,7 @@ export const KeywordsSection = ({
       <KeywordDetailPanel keyword={validationKeyword} isOpen={!!validationKeyword} onClose={() => setValidationKeyword(null)} onSave={handleKeywordDetailSave} marketplaceId={marketplaceId} bookEconomy={bookEconomy} defaultTab={functionalView === 'ads' ? 'ads' : 'nicho'} allKeywords={keywords} />
       
       {/* New Keyword Wizard */}
-      <NewKeywordWizard open={isWizardOpen} onOpenChange={setIsWizardOpen} onComplete={handleWizardComplete} marketplaceId={marketplaceId} bookInfo={bookInfo} bookEconomy={bookEconomy} existingKeywords={keywords} initialKeyword={wizardInitialKeyword} onOpenExistingKeyword={handleOpenExistingKeyword} />
+      <NewKeywordWizard open={isWizardOpen} onOpenChange={setIsWizardOpen} onComplete={handleWizardComplete} marketplaceId={marketplaceId} bookInfo={bookInfo} bookEconomy={bookEconomy} existingKeywords={keywords} initialKeyword={wizardInitialKeyword} onOpenExistingKeyword={handleOpenExistingKeyword} campaigns={campaigns} onAddCampaign={addCampaign} />
       
       {/* Keyword Comparison Panel */}
       <KeywordComparisonPanel items={keywords.filter(k => selectedIds.has(k.id)).slice(0, 2)} type="keyword" isOpen={isComparisonOpen} onClose={() => setIsComparisonOpen(false)} onRemove={id => {
