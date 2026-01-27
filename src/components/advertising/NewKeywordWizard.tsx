@@ -81,6 +81,7 @@ import {
 } from '@/lib/keyword-builder';
 import { getMarketScoreConfig, loadUserConfigOverrides, MARKET_SCORE_CONFIG_BY_MARKETPLACE } from '@/lib/market-score-config';
 import { MarketConfigModal } from './MarketConfigModal';
+import { CampaignSelect } from './CampaignSelect';
 import { cn } from '@/lib/utils';
 
 // ============ TOOLTIPS ============
@@ -142,6 +143,8 @@ interface NewKeywordWizardProps {
   existingKeywords: Keyword[];
   initialKeyword?: string;
   onOpenExistingKeyword?: (keyword: Keyword) => void;
+  campaigns?: string[];
+  onAddCampaign?: (name: string) => void;
 }
 
 type WizardStep = 1 | 2 | 3 | 4 | 5;
@@ -188,6 +191,8 @@ export function NewKeywordWizard({
   existingKeywords,
   initialKeyword = '',
   onOpenExistingKeyword,
+  campaigns = [],
+  onAddCampaign,
 }: NewKeywordWizardProps) {
   // Use passed bookEconomy or fall back to defaults
   const effectiveBookEconomy = bookEconomy ?? DEFAULT_BOOK_ECONOMY;
@@ -1048,13 +1053,13 @@ export function NewKeywordWizard({
               
               {/* Campaña */}
               <div className="space-y-2">
-                <Label>Campaña (opcional)</Label>
-                <FieldTooltip content="Nombre de la campaña de Amazon Ads donde usarás esta keyword." />
-                <Input
+                <Label>Campaña</Label>
+                <CampaignSelect
                   value={adsCampaignName}
-                  onChange={(e) => setAdsCampaignName(e.target.value)}
-                  placeholder="Ej: SP-Auto-Libro1"
-                  className="w-full"
+                  onChange={(value) => setAdsCampaignName(value)}
+                  campaigns={campaigns}
+                  onAddCampaign={onAddCampaign}
+                  placeholder="Seleccionar o crear campaña..."
                 />
               </div>
               
