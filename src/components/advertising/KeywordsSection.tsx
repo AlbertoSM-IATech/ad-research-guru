@@ -644,6 +644,7 @@ export const KeywordsSection = ({
         <BulkEditorialStatusToolbar
           selectedCount={selectedIds.size}
           onChangeStatus={handleBulkChangeKeywordStatus}
+          onQuickValidate={() => handleBulkChangeKeywordStatus('valid')}
         />
       )}
 

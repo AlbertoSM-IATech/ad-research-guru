@@ -1,4 +1,4 @@
-import { ChevronDown } from 'lucide-react';
+import { ChevronDown, CheckCircle2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -12,11 +12,13 @@ import { KEYWORD_STATUS_OPTIONS, type KeywordStatus } from '@/lib/market-score';
 interface BulkEditorialStatusToolbarProps {
   selectedCount: number;
   onChangeStatus: (status: KeywordStatus) => void;
+  onQuickValidate: () => void;
 }
 
 export function BulkEditorialStatusToolbar({
   selectedCount,
   onChangeStatus,
+  onQuickValidate,
 }: BulkEditorialStatusToolbarProps) {
   if (selectedCount === 0) return null;
 
@@ -43,6 +45,16 @@ export function BulkEditorialStatusToolbar({
           ))}
         </DropdownMenuContent>
       </DropdownMenu>
+
+      <Button
+        variant="default"
+        size="sm"
+        onClick={onQuickValidate}
+        className="gap-2"
+      >
+        <CheckCircle2 className="w-4 h-4" />
+        Validar
+      </Button>
     </div>
   );
 }
