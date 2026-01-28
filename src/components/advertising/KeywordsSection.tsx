@@ -12,7 +12,7 @@ import { InlineSelectBadge } from './InlineSelectBadge';
 import { InlineEditableCell } from './InlineEditableCell';
 import { BulkKeywordImport } from './BulkKeywordImport';
 import { BulkCopyTools } from './BulkCopyTools';
-import { BulkActionsToolbar } from './BulkActionsToolbar';
+import { BulkEditorialStatusToolbar } from './BulkEditorialStatusToolbar';
 import { AdvancedFilters, AdvancedFiltersContent, type AdvancedFiltersState } from './AdvancedFilters';
 import { AdvancedFiltersAds, AdsFiltersContent, defaultAdsFiltersState, type AdsFiltersState } from './AdvancedFiltersAds';
 import { FilterPresetsDropdown } from './FilterPresetsDropdown';
@@ -309,6 +309,14 @@ export const KeywordsSection = ({
     });
     onSelectedIdsChange(new Set());
   };
+
+  const handleBulkChangeKeywordStatus = (status: KeywordStatus) => {
+    onUpdateBulk(Array.from(selectedIds), {
+      status,
+      statusManuallySet: true,
+    });
+    onSelectedIdsChange(new Set());
+  };
   const handleBulkChangeRelevance = (relevance: RelevanceLevel) => {
     onUpdateBulk(Array.from(selectedIds), {
       relevance
@@ -319,6 +327,20 @@ export const KeywordsSection = ({
   // Handle keyword update from detail panel (silent save for auto-sync)
   const handleKeywordDetailSave = (keywordId: string, updates: Partial<Keyword>) => {
     onUpdate(keywordId, updates);
+
+    // Keep the open lateral panel keyword in sync immediately (no waiting for parent state)
+    // This avoids the perception that changes only apply after pressing "Guardar".
+    if (validationKeyword?.id === keywordId) {
+      setValidationKeyword(prev => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          ...updates,
+          updatedAt: new Date(),
+        };
+      });
+    }
+
     // Only show toast when saving full keyword data (with marketScore)
     if (updates.marketScore !== undefined) {
       toast({
@@ -616,6 +638,14 @@ export const KeywordsSection = ({
             </Button>}
         </div>
       </div>
+
+      {/* Bulk actions (Editorial) */}
+      {functionalView === 'editorial' && (
+        <BulkEditorialStatusToolbar
+          selectedCount={selectedIds.size}
+          onChangeStatus={handleBulkChangeKeywordStatus}
+        />
+      )}
 
       {/* Content - Table */}
       <div className="rounded-lg border border-border overflow-hidden">
