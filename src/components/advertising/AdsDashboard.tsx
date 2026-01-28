@@ -79,8 +79,10 @@ export function AdsDashboard({
     let totalGasto = 0;
     let totalVentas = 0;
     let keywordsWithAdsData = 0;
-    let profitableKeywords = 0;
-    let losingKeywords = 0;
+    let belowPeKeywords = 0;
+    let abovePeKeywords = 0;
+
+    const acosEquilibrio = calcularAcosEquilibrioPorcentaje(bookEconomy.precioLibro, bookEconomy.regaliasPorVenta);
     keywords.forEach(k => {
       if (k.adsData) {
         const ads = k.adsData;
@@ -105,11 +107,12 @@ export function AdsDashboard({
           const ventas = calcularVentasAcumuladas(pedidos, bookEconomy.precioLibro) ?? 0;
           totalGasto += gasto;
           totalVentas += ventas;
-          const beneficio = ventas - gasto;
-          if (beneficio >= 0) {
-            profitableKeywords++;
-          } else {
-            losingKeywords++;
+
+          // Distribución basada en ACOS vs ACOS PE (no en "beneficio" por ventas)
+          const acosActual = calcularAcosActualPorcentaje(gasto, ventas);
+          if (acosEquilibrio !== null && acosActual !== null) {
+            if (acosActual <= acosEquilibrio) belowPeKeywords++;
+            else abovePeKeywords++;
           }
         }
       }
@@ -117,7 +120,6 @@ export function AdsDashboard({
     const totalBeneficio = totalVentas - totalGasto;
     const avgConversion = totalClicks > 0 ? totalPedidos / totalClicks * 100 : 0;
     const acosTotal = totalVentas > 0 ? totalGasto / totalVentas * 100 : null;
-    const acosEquilibrio = calcularAcosEquilibrioPorcentaje(bookEconomy.precioLibro, bookEconomy.regaliasPorVenta);
     return {
       totalClicks,
       totalPedidos,
@@ -128,8 +130,8 @@ export function AdsDashboard({
       acosTotal,
       acosEquilibrio,
       keywordsWithAdsData,
-      profitableKeywords,
-      losingKeywords
+      belowPeKeywords,
+      abovePeKeywords
     };
   }, [keywords, bookEconomy]);
   const acosVsEquilibrio = useMemo(() => {
@@ -173,23 +175,23 @@ export function AdsDashboard({
         
         <MetricCard title="Conversión Media" value={`${metrics.avgConversion.toFixed(1)}%`} icon={<Percent className="w-5 h-5 text-muted-foreground" />} tooltip="Porcentaje de clicks que resultan en pedido" />
         
-        <MetricCard title="KW Rentables" value={metrics.profitableKeywords.toString()} subtitle={`${(metrics.profitableKeywords / Math.max(metrics.keywordsWithAdsData, 1) * 100).toFixed(0)}% del total`} icon={<CheckCircle2 className="w-5 h-5 text-green-500" />} valueClassName="text-green-600 dark:text-green-400" tooltip="Keywords con beneficio positivo" />
+        <MetricCard title="KW Bajo PE" value={metrics.belowPeKeywords.toString()} subtitle={`${(metrics.belowPeKeywords / Math.max(metrics.keywordsWithAdsData, 1) * 100).toFixed(0)}% del total`} icon={<CheckCircle2 className="w-5 h-5 text-green-500" />} valueClassName="text-green-600 dark:text-green-400" tooltip="Keywords con ACOS actual por debajo del ACOS PE (punto de equilibrio)." />
         
-        <MetricCard title="KW En pérdidas" value={metrics.losingKeywords.toString()} subtitle={`${(metrics.losingKeywords / Math.max(metrics.keywordsWithAdsData, 1) * 100).toFixed(0)}% del total`} icon={<XCircle className="w-5 h-5 text-red-500" />} valueClassName="text-red-600 dark:text-red-400" tooltip="Keywords con beneficio negativo" />
+        <MetricCard title="KW Sobre PE" value={metrics.abovePeKeywords.toString()} subtitle={`${(metrics.abovePeKeywords / Math.max(metrics.keywordsWithAdsData, 1) * 100).toFixed(0)}% del total`} icon={<XCircle className="w-5 h-5 text-red-500" />} valueClassName="text-red-600 dark:text-red-400" tooltip="Keywords con ACOS actual por encima del ACOS PE (requieren atención)." />
       </div>
 
       {/* Rentability Distribution */}
       {metrics.keywordsWithAdsData > 0 && <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium flex items-center gap-2">
-              Distribución de Rentabilidad
+              Distribución ACOS vs PE
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <Info className="w-3 h-3 text-muted-foreground cursor-help" />
                   </TooltipTrigger>
                   <TooltipContent>
-                    Proporción de keywords rentables vs en pérdidas
+                    Proporción de keywords con ACOS por debajo vs por encima del ACOS PE.
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
@@ -198,18 +200,18 @@ export function AdsDashboard({
           <CardContent className="space-y-3">
             <div className="flex items-center justify-between text-sm">
               <span className="text-green-600 dark:text-green-400">
-                {metrics.profitableKeywords} rentables
+                {metrics.belowPeKeywords} bajo PE
               </span>
               <span className="text-red-600 dark:text-red-400">
-                {metrics.losingKeywords} en pérdidas
+                {metrics.abovePeKeywords} sobre PE
               </span>
             </div>
             <div className="flex gap-1 h-4 rounded-full overflow-hidden">
               <div className="bg-green-500 transition-all" style={{
-            width: `${metrics.profitableKeywords / metrics.keywordsWithAdsData * 100}%`
+            width: `${metrics.belowPeKeywords / metrics.keywordsWithAdsData * 100}%`
           }} />
               <div className="bg-red-500 transition-all" style={{
-            width: `${metrics.losingKeywords / metrics.keywordsWithAdsData * 100}%`
+            width: `${metrics.abovePeKeywords / metrics.keywordsWithAdsData * 100}%`
           }} />
             </div>
           </CardContent>
