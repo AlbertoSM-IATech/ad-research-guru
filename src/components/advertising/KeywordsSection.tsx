@@ -132,7 +132,8 @@ export const KeywordsSection = ({
   const [historyKeyword, setHistoryKeyword] = useState<Keyword | null>(null);
   const [isWizardOpen, setIsWizardOpen] = useState(false);
   const [wizardInitialKeyword, setWizardInitialKeyword] = useState('');
-  const [validationKeyword, setValidationKeyword] = useState<Keyword | null>(null);
+  // Single source of truth: store only the ID, derive the keyword from keywords array
+  const [selectedKeywordId, setSelectedKeywordId] = useState<string | null>(null);
   const [advancedFiltersExpanded, setAdvancedFiltersExpanded] = useState(false);
   const [isComparisonOpen, setIsComparisonOpen] = useState(false);
   const [adsHistoryKeyword, setAdsHistoryKeyword] = useState<Keyword | null>(null);
@@ -184,28 +185,11 @@ export const KeywordsSection = ({
     }
   }, [isHydrated, persistedState]);
 
-  // Sync validationKeyword with updated keywords (for inline edits sync)
-  // Use deep comparison for adsData to detect changes even when object reference is same
-  useEffect(() => {
-    if (validationKeyword) {
-      const updatedKeyword = keywords.find(k => k.id === validationKeyword.id);
-      if (updatedKeyword) {
-        // Compare adsData by content, not reference
-        const currentAds = JSON.stringify(validationKeyword.adsData ?? {});
-        const newAds = JSON.stringify(updatedKeyword.adsData ?? {});
-        const hasAdsChanged = currentAds !== newAds;
-
-        // Also check for other field changes
-        const hasTextChanged = updatedKeyword.keyword !== validationKeyword.keyword;
-        const hasScoreChanged = updatedKeyword.marketScore !== validationKeyword.marketScore;
-        const hasVolumeChanged = updatedKeyword.searchVolume !== validationKeyword.searchVolume;
-        const hasCompetitorsChanged = updatedKeyword.competitors !== validationKeyword.competitors;
-        if (hasAdsChanged || hasTextChanged || hasScoreChanged || hasVolumeChanged || hasCompetitorsChanged) {
-          setValidationKeyword(updatedKeyword);
-        }
-      }
-    }
-  }, [keywords, validationKeyword]);
+  // Derive selected keyword from keywords array (single source of truth - no sync patches!)
+  const selectedKeyword = useMemo(() => 
+    keywords.find(k => k.id === selectedKeywordId) ?? null, 
+    [keywords, selectedKeywordId]
+  );
 
   // Memoize callback to avoid infinite loops
   const stableOnSelectedIdsChange = useCallback(onSelectedIdsChange, [onSelectedIdsChange]);
@@ -228,14 +212,13 @@ export const KeywordsSection = ({
       title: 'Keyword creada',
       description: `Market Score: ${keyword.marketScore}/100`
     });
-    // Open the panel immediately with the complete keyword (including adsData)
-    // The keyword already has all data from the wizard, no need to wait for React
-    setValidationKeyword(keyword);
+    // Open panel by ID - the keyword is already in the store, derivation will sync automatically
+    setSelectedKeywordId(keyword.id);
   };
 
   // Handle opening existing keyword from wizard duplicate detection
   const handleOpenExistingKeyword = (keyword: Keyword) => {
-    setValidationKeyword(keyword);
+    setSelectedKeywordId(keyword.id);
   };
 
   // Open wizard for new keyword
@@ -324,22 +307,9 @@ export const KeywordsSection = ({
     onSelectedIdsChange(new Set());
   };
 
-  // Handle keyword update from detail panel (silent save for auto-sync)
+  // Handle keyword update from detail panel (no local state patch needed - derivation handles sync)
   const handleKeywordDetailSave = (keywordId: string, updates: Partial<Keyword>) => {
     onUpdate(keywordId, updates);
-
-    // Keep the open lateral panel keyword in sync immediately (no waiting for parent state)
-    // This avoids the perception that changes only apply after pressing "Guardar".
-    if (validationKeyword?.id === keywordId) {
-      setValidationKeyword(prev => {
-        if (!prev) return prev;
-        return {
-          ...prev,
-          ...updates,
-          updatedAt: new Date(),
-        };
-      });
-    }
 
     // Only show toast when saving full keyword data (with marketScore)
     if (updates.marketScore !== undefined) {
@@ -820,15 +790,7 @@ export const KeywordsSection = ({
                 onUpdate(keyword.id, {
                   adsData: updatedAdsData
                 });
-
-                // Force sync panel if it's open for this keyword
-                if (validationKeyword?.id === keyword.id) {
-                  setValidationKeyword({
-                    ...keyword,
-                    adsData: updatedAdsData,
-                    updatedAt: new Date()
-                  });
-                }
+                // No need to patch local state - derivation from keywords handles sync automatically
               };
 
               // Check for data inconsistency: clicks < pedidos
@@ -867,7 +829,7 @@ export const KeywordsSection = ({
                             {/* Primary action: Open detail panel */}
                             <Tooltip>
                               <TooltipTrigger asChild>
-                                <Button variant="ghost" size="sm" onClick={() => setValidationKeyword(keyword)} className="h-7 w-7 p-0 bg-primary/10 hover:bg-primary/20 text-primary">
+                                <Button variant="ghost" size="sm" onClick={() => setSelectedKeywordId(keyword.id)} className="h-7 w-7 p-0 bg-primary/10 hover:bg-primary/20 text-primary">
                                   <Eye className="w-4 h-4" />
                                 </Button>
                               </TooltipTrigger>
@@ -882,16 +844,11 @@ export const KeywordsSection = ({
                           const normalizedAds: AdsData = {
                             ...baseAds
                           };
-                          // Trigger a new object reference to ensure side panel sync
+                          // Trigger a new object reference to ensure sync
                           onUpdate(keyword.id, {
                             adsData: normalizedAds
                           });
-                          if (validationKeyword?.id === keyword.id) {
-                            setValidationKeyword({
-                              ...keyword,
-                              adsData: normalizedAds
-                            });
-                          }
+                          // No local state patch needed - derivation handles sync
                           toast({
                             title: 'Guardado',
                             description: 'Datos de Ads sincronizados.'
@@ -930,7 +887,7 @@ export const KeywordsSection = ({
                         {/* Columnas específicas por vista */}
                         {functionalView === 'editorial' ? <>
                             <TableCell>
-                              <MarketScoreCell marketData={keyword.marketData} score={score} isIncomplete={incomplete} onValidate={() => setValidationKeyword(keyword)} />
+                              <MarketScoreCell marketData={keyword.marketData} score={score} isIncomplete={incomplete} onValidate={() => setSelectedKeywordId(keyword.id)} />
                             </TableCell>
                             <TableCell onClick={e => e.stopPropagation()}>
                               <InlineSelectBadge value={keyword.status || 'pending'} options={KEYWORD_STATUS_OPTIONS.map(s => ({
@@ -954,14 +911,7 @@ export const KeywordsSection = ({
                       onUpdate(keyword.id, {
                         adsData: updatedAdsData
                       });
-                      // Force sync panel if open for this keyword
-                      if (validationKeyword?.id === keyword.id) {
-                        setValidationKeyword({
-                          ...keyword,
-                          adsData: updatedAdsData,
-                          updatedAt: new Date()
-                        });
-                      }
+                      // No local state patch needed - derivation handles sync
                     }} campaigns={campaigns} onAddCampaign={addCampaign} placeholder="Campaña..." className="h-7 text-xs max-w-[120px]" />
                             </TableCell>
                             {/* ACOS Equilibrio (PE) - Read only reference */}
@@ -1101,7 +1051,7 @@ export const KeywordsSection = ({
       <KeywordHistoryModal keyword={historyKeyword} isOpen={!!historyKeyword} onClose={() => setHistoryKeyword(null)} />
 
       {/* Keyword Detail Panel */}
-      <KeywordDetailPanel keyword={validationKeyword} isOpen={!!validationKeyword} onClose={() => setValidationKeyword(null)} onSave={handleKeywordDetailSave} marketplaceId={marketplaceId} bookEconomy={bookEconomy} defaultTab={functionalView === 'ads' ? 'ads' : 'nicho'} allKeywords={keywords} />
+      <KeywordDetailPanel keyword={selectedKeyword} isOpen={!!selectedKeywordId} onClose={() => setSelectedKeywordId(null)} onSave={handleKeywordDetailSave} marketplaceId={marketplaceId} bookEconomy={bookEconomy} defaultTab={functionalView === 'ads' ? 'ads' : 'nicho'} allKeywords={keywords} />
       
       {/* New Keyword Wizard */}
       <NewKeywordWizard open={isWizardOpen} onOpenChange={setIsWizardOpen} onComplete={handleWizardComplete} marketplaceId={marketplaceId} bookInfo={bookInfo} bookEconomy={bookEconomy} existingKeywords={keywords} initialKeyword={wizardInitialKeyword} onOpenExistingKeyword={handleOpenExistingKeyword} campaigns={campaigns} onAddCampaign={addCampaign} />
