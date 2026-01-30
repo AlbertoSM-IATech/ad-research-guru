@@ -202,19 +202,23 @@ export const KeywordsSection = ({
     setQuickAddKeyword('');
   };
 
+  // State to track newly created keyword for visibility check
+  const [pendingKeywordId, setPendingKeywordId] = useState<string | null>(null);
+
   // Handle wizard completion - open detail panel immediately
   // The keyword from wizard already has id, createdAt, adsData - use it directly
   const handleWizardComplete = (keyword: Keyword) => {
     // Add to the list first
     onAdd(keyword);
     setWizardInitialKeyword('');
-    toast({
-      title: 'Keyword creada',
-      description: `Market Score: ${keyword.marketScore}/100`
-    });
+    
     // Open panel by ID - the keyword is already in the store, derivation will sync automatically
     setSelectedKeywordId(keyword.id);
+    
+    // Mark for visibility check after keywords update
+    setPendingKeywordId(keyword.id);
   };
+
 
   // Handle opening existing keyword from wizard duplicate detection
   const handleOpenExistingKeyword = (keyword: Keyword) => {
@@ -456,6 +460,80 @@ export const KeywordsSection = ({
     }
     return sortKeywords(result, sortField, sortOrder, bookEconomy.precioLibro);
   }, [keywords, searchTerm, filters, adsFilters, sortField, sortOrder, functionalView, bookEconomy.precioLibro]);
+
+  // Check visibility of newly created keyword and show appropriate toast
+  useEffect(() => {
+    if (!pendingKeywordId) return;
+    
+    // Find keyword in the updated keywords array
+    const keyword = keywords.find(k => k.id === pendingKeywordId);
+    if (!keyword) return; // Keyword not yet in the list
+    
+    // Find index in filtered list
+    const indexInFiltered = filteredKeywords.findIndex(k => k.id === pendingKeywordId);
+    
+    // Clear pending state
+    setPendingKeywordId(null);
+    
+    if (indexInFiltered === -1) {
+      // Keyword is filtered out by search/filters
+      toast({
+        title: 'Keyword creada',
+        description: `Market Score: ${keyword.marketScore}/100 — Puede estar oculta por filtros activos`,
+        action: (
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={() => {
+              onSearchTermChange('');
+              setFilters({
+                status: null,
+                minVolume: '',
+                maxVolume: '',
+                minCompetition: '',
+                maxCompetition: '',
+                campaignName: '',
+                marketScoreRanges: [],
+                has200PlusReviews: false,
+                hasUnder100Reviews: false
+              });
+              setAdsFilters(defaultAdsFiltersState);
+              setCurrentPage(1);
+            }}
+          >
+            Limpiar filtros
+          </Button>
+        ),
+      });
+      return;
+    }
+    
+    // Calculate which page the keyword is on
+    const targetPage = Math.floor(indexInFiltered / ITEMS_PER_PAGE) + 1;
+    
+    if (targetPage === currentPage) {
+      // Keyword is visible on current page - simple toast
+      toast({
+        title: 'Keyword creada',
+        description: `Market Score: ${keyword.marketScore}/100`
+      });
+    } else {
+      // Keyword is on a different page
+      toast({
+        title: 'Keyword creada',
+        description: `Market Score: ${keyword.marketScore}/100 — Está en página ${targetPage}`,
+        action: (
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={() => setCurrentPage(targetPage)}
+          >
+            Ver keyword
+          </Button>
+        ),
+      });
+    }
+  }, [keywords, pendingKeywordId, filteredKeywords, currentPage, toast, onSearchTermChange]);
 
   // Purge invalid selection IDs when filtered list changes
   useEffect(() => {
