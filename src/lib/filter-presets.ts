@@ -38,6 +38,7 @@ const defaultAdsFilters: AdsFiltersState = {
   minBeneficio: '',
   maxBeneficio: '',
   rentabilidad: 'all',
+  needsAttention: false,
 };
 
 // ========== EDITORIAL (NICHO) PRESETS ==========

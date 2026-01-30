@@ -455,6 +455,18 @@ export const KeywordsSection = ({
         // Beneficio range
         if (adsFilters.minBeneficio && (beneficio === null || beneficio < parseFloat(adsFilters.minBeneficio))) return false;
         if (adsFilters.maxBeneficio && (beneficio === null || beneficio > parseFloat(adsFilters.maxBeneficio))) return false;
+
+        // Needs Attention filter (ACOS > ACOS PE)
+        if (adsFilters.needsAttention) {
+          const acosEquilibrioVal = bookEconomy.precioLibro > 0 && bookEconomy.regaliasPorVenta > 0 
+            ? (bookEconomy.regaliasPorVenta / bookEconomy.precioLibro) * 100 
+            : null;
+          // Only pass if ACOS actual > ACOS equilibrio
+          if (acosEquilibrioVal === null || acosActual === null || acosActual <= acosEquilibrioVal) {
+            return false;
+          }
+        }
+
         return true;
       });
     }
@@ -648,11 +660,46 @@ export const KeywordsSection = ({
         </div>
       </div>
 
-      {/* Toolbar + Results count */}
+      {/* Toolbar + Results count + Needs Attention indicator */}
       <div className="flex items-center justify-between">
-        <div className="text-sm text-muted-foreground">
-          {filteredKeywords.length} de {keywords.length} keywords
-          {selectedIds.size > 0 && ` • ${selectedIds.size} seleccionadas`}
+        <div className="flex items-center gap-4">
+          <div className="text-sm text-muted-foreground">
+            {filteredKeywords.length} de {keywords.length} keywords
+            {selectedIds.size > 0 && ` • ${selectedIds.size} seleccionadas`}
+          </div>
+          
+          {/* Needs Attention counter and toggle - only in ads view */}
+          {functionalView === 'ads' && (() => {
+            const acosEquilibrioVal = bookEconomy.precioLibro > 0 && bookEconomy.regaliasPorVenta > 0 
+              ? (bookEconomy.regaliasPorVenta / bookEconomy.precioLibro) * 100 
+              : null;
+            const needsAttentionCount = acosEquilibrioVal !== null ? keywords.filter(k => {
+              const ads = k.adsData;
+              const gastoCalculado = calcularGastoAcumulado(ads?.clicks, ads?.cpcActual);
+              const ventasCalculadas = calcularVentasAcumuladas(ads?.pedidos, bookEconomy.precioLibro);
+              const acosActual = calcularAcosActualPorcentaje(gastoCalculado ?? undefined, ventasCalculadas ?? undefined);
+              return acosActual !== null && acosActual > acosEquilibrioVal;
+            }).length : 0;
+            
+            if (needsAttentionCount === 0) return null;
+            
+            return (
+              <Button
+                variant={adsFilters.needsAttention ? "default" : "outline"}
+                size="sm"
+                onClick={() => handleAdsFiltersChange({ ...adsFilters, needsAttention: !adsFilters.needsAttention })}
+                className={cn(
+                  "gap-2 text-xs",
+                  adsFilters.needsAttention 
+                    ? "bg-red-500 hover:bg-red-600 text-white" 
+                    : "border-red-500/50 text-red-600 hover:bg-red-500/10"
+                )}
+              >
+                <AlertTriangle className="w-3.5 h-3.5" />
+                Necesitan atención: {needsAttentionCount}
+              </Button>
+            );
+          })()}
         </div>
         <div className="flex items-center gap-2">
           {/* Reset Column Widths */}
@@ -904,6 +951,25 @@ export const KeywordsSection = ({
                                   <p className="text-xs text-muted-foreground">Clicks ({ads?.clicks}) &lt; Pedidos ({ads?.pedidos})</p>
                                 </TooltipContent>
                               </Tooltip>}
+                            
+                            {/* Needs Attention badge - ACOS > PE */}
+                            {functionalView === 'ads' && acosEquilibrio !== null && acosActual !== null && acosActual > acosEquilibrio && (
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Badge variant="destructive" className="h-5 px-1.5 text-[10px] gap-0.5 flex-shrink-0">
+                                    <AlertTriangle className="w-3 h-3" />
+                                    Atención
+                                  </Badge>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p className="font-medium">ACOS sobre equilibrio</p>
+                                  <p className="text-xs text-muted-foreground">
+                                    ACOS: {formatearPorcentaje(acosActual)} vs PE: {formatearPorcentaje(acosEquilibrio)}
+                                  </p>
+                                </TooltipContent>
+                              </Tooltip>
+                            )}
+                            
                             {/* Primary action: Open detail panel */}
                             <Tooltip>
                               <TooltipTrigger asChild>

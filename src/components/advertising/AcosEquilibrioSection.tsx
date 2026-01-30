@@ -5,12 +5,17 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Info, TrendingUp, TrendingDown, AlertCircle, CheckCircle2, Target, Calculator, MousePointerClick, ShoppingBag, Plus } from 'lucide-react';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Badge } from '@/components/ui/badge';
+import { Info, TrendingUp, TrendingDown, AlertCircle, CheckCircle2, Target, Calculator, MousePointerClick, ShoppingBag, Plus, History, ChevronDown, ChevronUp, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
-import type { AdsData, AdsFase, BookEconomy } from '@/types/advertising';
+import type { AdsData, AdsFase, BookEconomy, AdsHistoryEntry } from '@/types/advertising';
 import { ADS_FASE_OPTIONS } from '@/types/advertising';
 import { CampaignSelect } from './CampaignSelect';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, ReferenceLine } from 'recharts';
+import { format } from 'date-fns';
+import { es } from 'date-fns/locale';
 import {
   calcularAcosEquilibrioPorcentaje,
   calcularGastoAcumulado,
@@ -723,6 +728,308 @@ export const AcosEquilibrioSection = ({
           </AlertDescription>
         </Alert>
       )}
+
+      {/* HISTORIAL DE MÉTRICAS ADS */}
+      <AdsHistorySection 
+        adsData={adsData}
+        bookEconomy={bookEconomy}
+        onAdsDataChange={onAdsDataChange}
+        acosEquilibrio={acosEquilibrio}
+        isExpanded={isExpanded}
+      />
     </div>
+  );
+};
+
+// ============ ADS HISTORY SECTION (integrated) ============
+interface AdsHistorySectionProps {
+  adsData: AdsData | undefined;
+  bookEconomy: BookEconomy;
+  onAdsDataChange: (adsData: AdsData) => void;
+  acosEquilibrio: number | null;
+  isExpanded?: boolean;
+}
+
+const AdsHistorySection = ({
+  adsData,
+  bookEconomy,
+  onAdsDataChange,
+  acosEquilibrio,
+  isExpanded = false,
+}: AdsHistorySectionProps) => {
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+  const [selectedRange, setSelectedRange] = useState<'7d' | '30d' | '90d' | 'all'>('30d');
+  
+  const history = adsData?.history ?? [];
+
+  // Add current snapshot to history
+  const handleAddSnapshot = () => {
+    if (!adsData) return;
+
+    const gasto = calcularGastoAcumulado(adsData.clicks, adsData.cpcActual) ?? 0;
+    const ventas = calcularVentasAcumuladas(adsData.pedidos, bookEconomy.precioLibro) ?? 0;
+    const acosActual = calcularAcosActualPorcentaje(gasto, ventas);
+    const beneficio = ventas - gasto;
+
+    // Check if there's already a snapshot today
+    const today = new Date().toDateString();
+    const existingTodayIndex = history.findIndex(h => 
+      new Date(h.timestamp).toDateString() === today
+    );
+
+    const newEntry: AdsHistoryEntry = {
+      id: `ads-history-${Date.now()}`,
+      timestamp: new Date(),
+      clicks: adsData.clicks ?? 0,
+      cpcActual: adsData.cpcActual ?? 0,
+      pedidos: adsData.pedidos ?? 0,
+      gasto,
+      ventas,
+      acosActual,
+      beneficio,
+    };
+
+    let updatedHistory: AdsHistoryEntry[];
+    if (existingTodayIndex >= 0) {
+      // Update existing today's snapshot
+      updatedHistory = [...history];
+      updatedHistory[existingTodayIndex] = { ...newEntry, id: history[existingTodayIndex].id };
+    } else {
+      // Add new snapshot
+      updatedHistory = [...history, newEntry];
+    }
+
+    onAdsDataChange({
+      ...adsData,
+      history: updatedHistory,
+    });
+  };
+
+  // Delete a snapshot
+  const handleDeleteSnapshot = (id: string) => {
+    if (!adsData) return;
+    const updatedHistory = history.filter(h => h.id !== id);
+    onAdsDataChange({
+      ...adsData,
+      history: updatedHistory,
+    });
+  };
+
+  // Filter history by range
+  const filteredHistory = useMemo(() => {
+    const now = new Date();
+    const cutoffDays = selectedRange === '7d' ? 7 : selectedRange === '30d' ? 30 : selectedRange === '90d' ? 90 : Infinity;
+    const cutoffDate = new Date(now.getTime() - cutoffDays * 24 * 60 * 60 * 1000);
+    
+    return history.filter(h => new Date(h.timestamp) >= cutoffDate);
+  }, [history, selectedRange]);
+
+  // Chart data
+  const chartData = useMemo(() => {
+    return filteredHistory.map(entry => ({
+      date: format(new Date(entry.timestamp), 'dd/MM', { locale: es }),
+      clicks: entry.clicks,
+      pedidos: entry.pedidos,
+      acos: entry.acosActual ?? 0,
+    }));
+  }, [filteredHistory]);
+
+  // Calculate trends
+  const trends = useMemo(() => {
+    if (filteredHistory.length < 2) return null;
+    const first = filteredHistory[0];
+    const last = filteredHistory[filteredHistory.length - 1];
+    
+    return {
+      clicksDelta: last.clicks - first.clicks,
+      pedidosDelta: last.pedidos - first.pedidos,
+      acosDelta: (last.acosActual ?? 0) - (first.acosActual ?? 0),
+    };
+  }, [filteredHistory]);
+
+  return (
+    <Collapsible open={isHistoryOpen} onOpenChange={setIsHistoryOpen}>
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <CollapsibleTrigger asChild>
+            <Button variant="ghost" className="gap-2 p-0 h-auto hover:bg-transparent">
+              <History className="w-4 h-4 text-muted-foreground" />
+              <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+                Historial de Métricas
+              </h4>
+              <Badge variant="outline" className="text-xs">
+                {history.length} snapshots
+              </Badge>
+              {isHistoryOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+            </Button>
+          </CollapsibleTrigger>
+          
+          <Button onClick={handleAddSnapshot} size="sm" variant="outline" className="gap-2 h-7 text-xs">
+            <Plus className="w-3 h-3" />
+            Guardar snapshot
+          </Button>
+        </div>
+
+        <CollapsibleContent className="space-y-4">
+          {/* Range selector */}
+          <div className="flex items-center gap-2">
+            {(['7d', '30d', '90d', 'all'] as const).map((range) => (
+              <Button
+                key={range}
+                variant={selectedRange === range ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setSelectedRange(range)}
+                className="h-7 text-xs"
+              >
+                {range === 'all' ? 'Todo' : range}
+              </Button>
+            ))}
+          </div>
+
+          {/* Trends summary */}
+          {trends && (
+            <div className="grid grid-cols-3 gap-3">
+              <div className="p-2 rounded-lg border border-border bg-muted/30">
+                <p className="text-[10px] text-muted-foreground uppercase">Δ Clicks</p>
+                <p className={cn("text-sm font-bold", trends.clicksDelta >= 0 ? "text-blue-600" : "text-muted-foreground")}>
+                  {trends.clicksDelta >= 0 ? '+' : ''}{trends.clicksDelta}
+                </p>
+              </div>
+              <div className="p-2 rounded-lg border border-border bg-muted/30">
+                <p className="text-[10px] text-muted-foreground uppercase">Δ Pedidos</p>
+                <p className={cn("text-sm font-bold", trends.pedidosDelta >= 0 ? "text-green-600" : "text-muted-foreground")}>
+                  {trends.pedidosDelta >= 0 ? '+' : ''}{trends.pedidosDelta}
+                </p>
+              </div>
+              <div className="p-2 rounded-lg border border-border bg-muted/30">
+                <p className="text-[10px] text-muted-foreground uppercase">Δ ACOS</p>
+                <div className="flex items-center gap-1">
+                  {trends.acosDelta <= 0 ? (
+                    <TrendingDown className="w-3 h-3 text-green-500" />
+                  ) : (
+                    <TrendingUp className="w-3 h-3 text-red-500" />
+                  )}
+                  <p className={cn("text-sm font-bold", trends.acosDelta <= 0 ? "text-green-600" : "text-red-600")}>
+                    {trends.acosDelta >= 0 ? '+' : ''}{trends.acosDelta.toFixed(1)}%
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Chart */}
+          {chartData.length >= 2 && (
+            <div className="h-40 w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={chartData}>
+                  <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                  <XAxis dataKey="date" className="text-[10px]" tick={{ fontSize: 10 }} />
+                  <YAxis yAxisId="left" className="text-[10px]" tick={{ fontSize: 10 }} />
+                  <YAxis yAxisId="right" orientation="right" className="text-[10px]" tick={{ fontSize: 10 }} />
+                  <RechartsTooltip 
+                    contentStyle={{ 
+                      backgroundColor: 'hsl(var(--popover))', 
+                      border: '1px solid hsl(var(--border))',
+                      borderRadius: '8px',
+                      fontSize: '12px',
+                    }} 
+                  />
+                  {acosEquilibrio !== null && (
+                    <ReferenceLine 
+                      yAxisId="right" 
+                      y={acosEquilibrio} 
+                      stroke="hsl(var(--primary))" 
+                      strokeDasharray="5 5" 
+                      label={{ value: 'PE', position: 'right', fontSize: 10 }} 
+                    />
+                  )}
+                  <Line 
+                    yAxisId="left"
+                    type="monotone" 
+                    dataKey="clicks" 
+                    stroke="hsl(217.2 91.2% 59.8%)" 
+                    strokeWidth={2}
+                    dot={false}
+                    name="Clicks"
+                  />
+                  <Line 
+                    yAxisId="left"
+                    type="monotone" 
+                    dataKey="pedidos" 
+                    stroke="#22c55e" 
+                    strokeWidth={2}
+                    dot={false}
+                    name="Pedidos"
+                  />
+                  <Line 
+                    yAxisId="right"
+                    type="monotone" 
+                    dataKey="acos" 
+                    stroke="#f59e0b" 
+                    strokeWidth={2}
+                    dot={false}
+                    name="ACOS %"
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          )}
+
+          {/* History table (compact) */}
+          {filteredHistory.length > 0 ? (
+            <div className="rounded-lg border border-border overflow-hidden max-h-40 overflow-y-auto">
+              <table className="w-full text-xs">
+                <thead className="bg-muted/50 sticky top-0">
+                  <tr>
+                    <th className="text-left p-2 font-medium">Fecha</th>
+                    <th className="text-right p-2 font-medium">Clicks</th>
+                    <th className="text-right p-2 font-medium">Pedidos</th>
+                    <th className="text-right p-2 font-medium">ACOS</th>
+                    <th className="w-8 p-2"></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {[...filteredHistory].reverse().slice(0, 10).map((entry) => (
+                    <tr key={entry.id} className="border-t border-border hover:bg-muted/30">
+                      <td className="p-2 text-muted-foreground">
+                        {format(new Date(entry.timestamp), 'dd/MM/yy', { locale: es })}
+                      </td>
+                      <td className="p-2 text-right tabular-nums">{entry.clicks}</td>
+                      <td className="p-2 text-right tabular-nums">{entry.pedidos}</td>
+                      <td className={cn(
+                        "p-2 text-right tabular-nums",
+                        entry.acosActual !== null && acosEquilibrio !== null
+                          ? entry.acosActual <= acosEquilibrio
+                            ? 'text-green-600'
+                            : 'text-red-600'
+                          : 'text-muted-foreground'
+                      )}>
+                        {formatearPorcentaje(entry.acosActual)}
+                      </td>
+                      <td className="p-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-5 w-5 p-0 text-muted-foreground hover:text-destructive"
+                          onClick={() => handleDeleteSnapshot(entry.id)}
+                        >
+                          <Trash2 className="w-3 h-3" />
+                        </Button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div className="text-center py-6 text-sm text-muted-foreground">
+              <History className="w-8 h-8 mx-auto mb-2 opacity-30" />
+              <p>No hay snapshots guardados.</p>
+              <p className="text-xs mt-1">Haz clic en "Guardar snapshot" para registrar el estado actual.</p>
+            </div>
+          )}
+        </CollapsibleContent>
+      </div>
+    </Collapsible>
   );
 };
