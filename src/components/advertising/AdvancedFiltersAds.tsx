@@ -21,6 +21,7 @@ export interface AdsFiltersState {
   minBeneficio: string;
   maxBeneficio: string;
   rentabilidad: 'all' | 'profitable' | 'unprofitable';
+  needsAttention: boolean; // Filter to show only keywords with ACOS > PE
 }
 export const defaultAdsFiltersState: AdsFiltersState = {
   campaignName: '',
@@ -34,7 +35,8 @@ export const defaultAdsFiltersState: AdsFiltersState = {
   maxAcos: '',
   minBeneficio: '',
   maxBeneficio: '',
-  rentabilidad: 'all'
+  rentabilidad: 'all',
+  needsAttention: false
 };
 interface AdvancedFiltersAdsProps {
   filters: AdsFiltersState;

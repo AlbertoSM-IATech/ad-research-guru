@@ -1,92 +1,77 @@
+# Plan: Needs Attention & Ads History - COMPLETED
 
-# Plan: Toast Notification for Keywords Outside Pagination
+## A) Fix: Keywords con "necesita atención" - DONE ✅
 
-## Verification Results
+### Problema Resuelto
+Las keywords con ACOS > PE ahora son visibles en ambos módulos con badge visual.
 
-The synchronization system has been **successfully verified**:
+### Implementación
+1. **Filtro `needsAttention`** añadido a `AdsFiltersState` en `AdvancedFiltersAds.tsx`
+2. **Badge visual "Atención"** en las filas de la tabla cuando ACOS > PE
+3. **Contador y toggle** "Necesitan atención: X" en la barra de herramientas (vista Ads)
+4. **Lógica de filtrado** implementada en `KeywordsSection.tsx`
 
-1. **Wizard to Table/Panel Sync**: Created "test keyword sync" with Ads data (Clicks: 25, CPC: $0.35, Pedidos: 3) - all values appeared correctly in both the table and lateral panel
-2. **Panel to Table Sync**: Changed Clicks from 25 to 30 in the side panel - table immediately reflected the change
-3. **Quick Action Sync**: Used "+1 Click" button in panel - both panel and table updated to 31 instantly
-4. **Dashboard Sync**: All metrics (Gasto Total, Clicks Totales, Conversion) updated in real-time
+### Archivos Modificados
+- `src/components/advertising/AdvancedFiltersAds.tsx` - Añadido campo `needsAttention: boolean`
+- `src/components/advertising/KeywordsSection.tsx` - Badge visual + contador + filtro
+- `src/lib/filter-presets.ts` - Actualizado default state
+
+### Criterios de Aceptación ✅
+- [x] KW con ACOS > PE sigue visible en tabla
+- [x] Muestra badge "Atención" en rojo
+- [x] Puedo editar sus métricas Ads
+- [x] Toggle "Necesitan atención" filtra solo esas KW
+- [x] No hay filtros ocultos que excluyan keywords
 
 ---
 
-## New Feature: Pagination Toast with "Ver Keyword" Button
+## B) Feature: Historial de métricas Ads - DONE ✅
 
-### Problem
-When a new keyword is created via the wizard, it may not be visible due to:
-- Current page showing different items (pagination)
-- Active search term filtering it out
-- Sorting placing it on another page
+### Implementación
+1. **Sección "Historial de Métricas"** integrada en `AcosEquilibrioSection.tsx`
+2. **Snapshots manuales** con botón "Guardar snapshot"
+3. **Gráfico de evolución** con líneas para Clicks, Pedidos, ACOS
+4. **Línea de referencia** para ACOS PE
+5. **Selector de rango** (7d / 30d / 90d / Todo)
+6. **Deltas de tendencia** (Δ Clicks, Δ Pedidos, Δ ACOS)
+7. **Tabla compacta** de snapshots con eliminación
 
-### Solution
-After creating a keyword, detect if it's visible on the current page. If not, show a toast with a button to navigate to it.
+### Archivos Modificados
+- `src/components/advertising/AcosEquilibrioSection.tsx` - Añadido componente `AdsHistorySection`
 
-### Implementation Steps
-
-**1. Calculate keyword visibility after creation**
-
-In `handleWizardComplete`, after adding the keyword:
-- Find the index of the new keyword in `filteredKeywords`
-- Calculate which page it would appear on: `Math.floor(index / ITEMS_PER_PAGE) + 1`
-- Compare with `currentPage`
-
-**2. Show toast with action button when keyword is not visible**
-
-```text
-+---------------------------------------------+
-|  Keyword creada                        [X]  |
-|  Market Score: 68/100                       |
-|  [Ver keyword] - La keyword esta en pag. 8  |
-+---------------------------------------------+
+### Modelo de Datos (ya existente)
+```typescript
+interface AdsHistoryEntry {
+  id: string;
+  timestamp: Date;
+  clicks: number;
+  cpcActual: number;
+  pedidos: number;
+  gasto: number;
+  ventas: number;
+  acosActual: number | null;
+  beneficio: number | null;
+}
 ```
 
-**3. Button behavior options (prioritized)**
+### Criterios de Aceptación ✅
+- [x] Puedo guardar snapshot del estado actual
+- [x] Veo histórico de ACOS, clicks, pedidos
+- [x] Evolución por rango (7/30/90/todo)
+- [x] Gráfico con línea de referencia PE
+- [x] Puedo eliminar snapshots individuales
 
-| Option | Action | Pros |
-|--------|--------|------|
-| A (Recommended) | Navigate to keyword's page | Simple, preserves filters |
-| B | Clear filters + go to page 1 | Ensures visibility but loses context |
-| C | Show option to choose | More control but extra clicks |
+---
 
-### Files to Modify
+## Notas Técnicas
 
-| File | Changes |
-|------|---------|
-| `src/components/advertising/KeywordsSection.tsx` | Add visibility check and enhanced toast with action |
+### Lógica de "Needs Attention"
+- Es un **flag derivado**, no un estado persistido
+- Se calcula como: `acosActual > acosEquilibrio`
+- El campo `status` (pending/valid/discarded) no cambia automáticamente
+- Las keywords nunca desaparecen por tener mal ACOS
 
-### Technical Details
-
-```text
-handleWizardComplete(keyword):
-  1. onAdd(keyword)
-  2. setSelectedKeywordId(keyword.id)
-  
-  3. useEffect after keywords update:
-     - Find keyword in filteredKeywords by ID
-     - If found: calculate targetPage
-     - If targetPage !== currentPage:
-       - Show toast with action button "Ver keyword"
-       - Button onClick: setCurrentPage(targetPage)
-     - If not found (filtered out):
-       - Show toast: "Keyword creada - puede estar oculta por filtros"
-       - Button: "Mostrar" -> clear search/filters and go to page 1
-```
-
-### Edge Cases
-
-| Scenario | Behavior |
-|----------|----------|
-| Keyword on current page | Normal toast (no action button) |
-| Keyword on different page | Toast + "Ver keyword" button |
-| Keyword filtered out by search | Toast + "Limpiar filtros" button |
-| Keyword filtered out by advanced filters | Toast + "Limpiar filtros" button |
-
-### Acceptance Criteria
-
-1. Create keyword via wizard while on page 3 with 150 keywords
-2. If new keyword lands on page 8 (due to sorting), toast shows "Ver keyword" button
-3. Clicking button navigates to page 8
-4. Keyword is visible in table after navigation
-5. Panel remains open showing the new keyword
+### Historial
+- Los snapshots se guardan en `keyword.adsData.history[]`
+- Si ya existe snapshot del día, se actualiza en lugar de duplicar
+- Los gráficos usan Recharts con línea de referencia PE
