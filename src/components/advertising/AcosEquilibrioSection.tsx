@@ -16,22 +16,7 @@ import { CampaignSelect } from './CampaignSelect';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, ReferenceLine } from 'recharts';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
-import {
-  calcularAcosEquilibrioPorcentaje,
-  calcularGastoAcumulado,
-  calcularVentasAcumuladas,
-  calcularAcosActualPorcentaje,
-  calcularAcosSiguienteClickPorcentaje,
-  calcularConversionPorcentaje,
-  calcularBeneficioAhora,
-  calcularBeneficioSiguienteClick,
-  calcularGuiasFase,
-  determinarAcosBadge,
-  obtenerDatosFaltantes,
-  formatearPorcentaje,
-  formatearMoneda,
-} from '@/lib/acosEquilibrio';
-
+import { calcularAcosEquilibrioPorcentaje, calcularGastoAcumulado, calcularVentasAcumuladas, calcularAcosActualPorcentaje, calcularAcosSiguienteClickPorcentaje, calcularConversionPorcentaje, calcularBeneficioAhora, calcularBeneficioSiguienteClick, calcularGuiasFase, determinarAcosBadge, obtenerDatosFaltantes, formatearPorcentaje, formatearMoneda } from '@/lib/acosEquilibrio';
 interface AcosEquilibrioSectionProps {
   adsData: AdsData | undefined;
   bookEconomy: BookEconomy;
@@ -40,16 +25,17 @@ interface AcosEquilibrioSectionProps {
   campaigns?: string[];
   onAddCampaign?: (name: string) => void;
 }
-
 export const AcosEquilibrioSection = ({
   adsData,
   bookEconomy,
   onAdsDataChange,
   isExpanded = false,
   campaigns = [],
-  onAddCampaign,
+  onAddCampaign
 }: AcosEquilibrioSectionProps) => {
-  const { toast } = useToast();
+  const {
+    toast
+  } = useToast();
 
   // Local state for RELLENAR inputs (only clicks, cpcActual, pedidos, faseActual)
   const [clicks, setClicks] = useState<string>('');
@@ -80,11 +66,10 @@ export const AcosEquilibrioSection = ({
     const baseAds = (adsData ?? {}) as AdsData;
     const newAdsData: AdsData = {
       ...baseAds,
-      [field]: value,
+      [field]: value
     };
     onAdsDataChange(newAdsData);
   };
-
   const handleNumberChange = (field: keyof AdsData, value: string, setter: (v: string) => void) => {
     setter(value);
     if (value === '') {
@@ -104,7 +89,7 @@ export const AcosEquilibrioSection = ({
             const newAdsData: AdsData = {
               ...baseAds,
               clicks: nextClicks,
-              pedidos: numValue,
+              pedidos: numValue
             };
             onAdsDataChange(newAdsData);
             return;
@@ -114,37 +99,26 @@ export const AcosEquilibrioSection = ({
           if (prevClicks < numValue) {
             setClicks(String(numValue));
             const baseAds = (adsData ?? {}) as AdsData;
-            onAdsDataChange({ ...baseAds, clicks: numValue, pedidos: numValue });
+            onAdsDataChange({
+              ...baseAds,
+              clicks: numValue,
+              pedidos: numValue
+            });
             return;
           }
         }
-
         updateAdsData(field, numValue);
       }
     }
   };
 
   // Auto-calculated values
-  const gastoCalculado = useMemo(() => 
-    calcularGastoAcumulado(adsData?.clicks, adsData?.cpcActual),
-    [adsData?.clicks, adsData?.cpcActual]
-  );
-
-  const ventasCalculadas = useMemo(() => 
-    calcularVentasAcumuladas(adsData?.pedidos, bookEconomy.precioLibro),
-    [adsData?.pedidos, bookEconomy.precioLibro]
-  );
+  const gastoCalculado = useMemo(() => calcularGastoAcumulado(adsData?.clicks, adsData?.cpcActual), [adsData?.clicks, adsData?.cpcActual]);
+  const ventasCalculadas = useMemo(() => calcularVentasAcumuladas(adsData?.pedidos, bookEconomy.precioLibro), [adsData?.pedidos, bookEconomy.precioLibro]);
 
   // ACOS Calculations
-  const acosEquilibrio = useMemo(() => 
-    calcularAcosEquilibrioPorcentaje(bookEconomy.precioLibro, bookEconomy.regaliasPorVenta),
-    [bookEconomy]
-  );
-
-  const acosActual = useMemo(() => 
-    calcularAcosActualPorcentaje(gastoCalculado ?? undefined, ventasCalculadas ?? undefined),
-    [gastoCalculado, ventasCalculadas]
-  );
+  const acosEquilibrio = useMemo(() => calcularAcosEquilibrioPorcentaje(bookEconomy.precioLibro, bookEconomy.regaliasPorVenta), [bookEconomy]);
+  const acosActual = useMemo(() => calcularAcosActualPorcentaje(gastoCalculado ?? undefined, ventasCalculadas ?? undefined), [gastoCalculado, ventasCalculadas]);
 
   // Auto-alert when ACOS actual exceeds the book break-even (PE)
   const prevAbovePeRef = useRef<boolean>(false);
@@ -153,60 +127,20 @@ export const AcosEquilibrioSection = ({
     if (abovePe && !prevAbovePeRef.current) {
       toast({
         title: 'ACOS por encima del PE',
-        description: `ACOS actual ${formatearPorcentaje(acosActual)} > PE ${formatearPorcentaje(acosEquilibrio)}.`,
+        description: `ACOS actual ${formatearPorcentaje(acosActual)} > PE ${formatearPorcentaje(acosEquilibrio)}.`
       });
     }
     prevAbovePeRef.current = abovePe;
   }, [acosActual, acosEquilibrio, toast]);
-
-  const acosSiguiente = useMemo(() => 
-    calcularAcosSiguienteClickPorcentaje(
-      gastoCalculado ?? undefined, 
-      adsData?.cpcActual, 
-      ventasCalculadas ?? undefined, 
-      bookEconomy.precioLibro
-    ),
-    [gastoCalculado, adsData?.cpcActual, ventasCalculadas, bookEconomy.precioLibro]
-  );
-
-  const conversion = useMemo(() => 
-    calcularConversionPorcentaje(adsData?.pedidos, adsData?.clicks),
-    [adsData?.pedidos, adsData?.clicks]
-  );
+  const acosSiguiente = useMemo(() => calcularAcosSiguienteClickPorcentaje(gastoCalculado ?? undefined, adsData?.cpcActual, ventasCalculadas ?? undefined, bookEconomy.precioLibro), [gastoCalculado, adsData?.cpcActual, ventasCalculadas, bookEconomy.precioLibro]);
+  const conversion = useMemo(() => calcularConversionPorcentaje(adsData?.pedidos, adsData?.clicks), [adsData?.pedidos, adsData?.clicks]);
 
   // Beneficio = Ventas - Gasto (corrected)
-  const beneficioAhora = useMemo(() => 
-    calcularBeneficioAhora(ventasCalculadas ?? undefined, gastoCalculado ?? undefined),
-    [ventasCalculadas, gastoCalculado]
-  );
-
-  const beneficioSiguiente = useMemo(() => 
-    calcularBeneficioSiguienteClick(
-      adsData?.pedidos,
-      bookEconomy.precioLibro,
-      gastoCalculado ?? undefined,
-      adsData?.cpcActual
-    ),
-    [adsData?.pedidos, bookEconomy.precioLibro, gastoCalculado, adsData?.cpcActual]
-  );
-
+  const beneficioAhora = useMemo(() => calcularBeneficioAhora(ventasCalculadas ?? undefined, gastoCalculado ?? undefined), [ventasCalculadas, gastoCalculado]);
+  const beneficioSiguiente = useMemo(() => calcularBeneficioSiguienteClick(adsData?.pedidos, bookEconomy.precioLibro, gastoCalculado ?? undefined, adsData?.cpcActual), [adsData?.pedidos, bookEconomy.precioLibro, gastoCalculado, adsData?.cpcActual]);
   const guiasPrecalculadas = useMemo(() => calcularGuiasFase(acosEquilibrio), [acosEquilibrio]);
-
-  const badgeType = useMemo(() => 
-    determinarAcosBadge(acosEquilibrio, acosActual, acosSiguiente),
-    [acosEquilibrio, acosActual, acosSiguiente]
-  );
-
-  const datosFaltantes = useMemo(() => 
-    obtenerDatosFaltantes(
-      bookEconomy.precioLibro, 
-      bookEconomy.regaliasPorVenta, 
-      adsData?.clicks, 
-      adsData?.cpcActual,
-      adsData?.pedidos
-    ),
-    [bookEconomy, adsData]
-  );
+  const badgeType = useMemo(() => determinarAcosBadge(acosEquilibrio, acosActual, acosSiguiente), [acosEquilibrio, acosActual, acosSiguiente]);
+  const datosFaltantes = useMemo(() => obtenerDatosFaltantes(bookEconomy.precioLibro, bookEconomy.regaliasPorVenta, adsData?.clicks, adsData?.cpcActual, adsData?.pedidos), [bookEconomy, adsData]);
 
   // Precalculate guides when ACOS equilibrio is available
   useEffect(() => {
@@ -224,9 +158,8 @@ export const AcosEquilibrioSection = ({
         updateAdsData('guiaBeneficio', guiasPrecalculadas.beneficio);
       }
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [acosEquilibrio]);
-
   const getBadgeContent = () => {
     switch (badgeType) {
       case 'bajo-pe':
@@ -234,36 +167,33 @@ export const AcosEquilibrioSection = ({
           icon: <CheckCircle2 className="w-4 h-4" />,
           label: 'Bajo PE',
           description: 'ACOS actual por debajo del punto de equilibrio',
-          className: 'bg-green-500/20 text-green-700 dark:text-green-300 border-green-500/30',
+          className: 'bg-green-500/20 text-green-700 dark:text-green-300 border-green-500/30'
         };
       case 'recuperable':
         return {
           icon: <TrendingUp className="w-4 h-4" />,
           label: 'Recuperable con 1 compra',
           description: 'El siguiente click con venta volvería al equilibrio',
-          className: 'bg-amber-500/20 text-amber-700 dark:text-amber-300 border-amber-500/30',
+          className: 'bg-amber-500/20 text-amber-700 dark:text-amber-300 border-amber-500/30'
         };
       case 'en-perdida':
         return {
           icon: <TrendingDown className="w-4 h-4" />,
           label: 'En pérdida',
           description: 'Ni con 1 compra se alcanzaría el equilibrio',
-          className: 'bg-red-500/20 text-red-700 dark:text-red-300 border-red-500/30',
+          className: 'bg-red-500/20 text-red-700 dark:text-red-300 border-red-500/30'
         };
       default:
         return {
           icon: <AlertCircle className="w-4 h-4" />,
           label: 'Sin datos',
           description: `Falta: ${datosFaltantes.join(', ')}`,
-          className: 'bg-muted text-muted-foreground border-border',
+          className: 'bg-muted text-muted-foreground border-border'
         };
     }
   };
-
   const badge = getBadgeContent();
-
-  return (
-    <div className="space-y-6">
+  return <div className="space-y-6">
       {/* Header */}
       <div className="space-y-2">
         <div className="flex items-center justify-between">
@@ -278,10 +208,7 @@ export const AcosEquilibrioSection = ({
       </div>
 
       {/* Badge informativo */}
-      <div className={cn(
-        "flex items-center gap-2 p-3 rounded-lg border",
-        badge.className
-      )}>
+      <div className={cn("flex items-center gap-2 p-3 rounded-lg border", badge.className)}>
         {badge.icon}
         <div className="flex-1">
           <p className="text-sm font-medium">{badge.label}</p>
@@ -292,53 +219,38 @@ export const AcosEquilibrioSection = ({
       {/* Quick Action Buttons */}
       <div className="flex flex-wrap items-center gap-2 p-3 rounded-lg border border-border bg-muted/30">
         <span className="text-xs text-muted-foreground font-medium">Acciones rápidas:</span>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => {
-            const prevClicks = adsData?.clicks ?? 0;
-            const newClicks = prevClicks + 1;
-            setClicks(String(newClicks));
-            updateAdsData('clicks', newClicks);
-          }}
-          className="h-7 gap-1.5 text-xs"
-        >
+        <Button variant="outline" size="sm" onClick={() => {
+        const prevClicks = adsData?.clicks ?? 0;
+        const newClicks = prevClicks + 1;
+        setClicks(String(newClicks));
+        updateAdsData('clicks', newClicks);
+      }} className="h-7 gap-1.5 text-xs bg-primary">
           <MousePointerClick className="w-3 h-3" />
           +1 Click
         </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => {
-            const prevCpc = adsData?.cpcActual ?? 0;
-            const newCpc = Math.round((prevCpc + 0.01) * 100) / 100;
-            setCpcActual(String(newCpc));
-            updateAdsData('cpcActual', newCpc);
-          }}
-          className="h-7 gap-1.5 text-xs"
-        >
+        <Button variant="outline" size="sm" onClick={() => {
+        const prevCpc = adsData?.cpcActual ?? 0;
+        const newCpc = Math.round((prevCpc + 0.01) * 100) / 100;
+        setCpcActual(String(newCpc));
+        updateAdsData('cpcActual', newCpc);
+      }} className="h-7 gap-1.5 text-xs bg-primary">
           <TrendingUp className="w-3 h-3" />
           +0.01 CPC
         </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => {
-            const prevPedidos = adsData?.pedidos ?? 0;
-            const prevClicks = adsData?.clicks ?? 0;
-            const newPedidos = prevPedidos + 1;
-            const newClicks = Math.max(prevClicks + 1, newPedidos);
-            setPedidos(String(newPedidos));
-            setClicks(String(newClicks));
-            const baseAds = (adsData ?? {}) as AdsData;
-            onAdsDataChange({
-              ...baseAds,
-              pedidos: newPedidos,
-              clicks: newClicks,
-            });
-          }}
-          className="h-7 gap-1.5 text-xs"
-        >
+        <Button variant="outline" size="sm" onClick={() => {
+        const prevPedidos = adsData?.pedidos ?? 0;
+        const prevClicks = adsData?.clicks ?? 0;
+        const newPedidos = prevPedidos + 1;
+        const newClicks = Math.max(prevClicks + 1, newPedidos);
+        setPedidos(String(newPedidos));
+        setClicks(String(newClicks));
+        const baseAds = (adsData ?? {}) as AdsData;
+        onAdsDataChange({
+          ...baseAds,
+          pedidos: newPedidos,
+          clicks: newClicks
+        });
+      }} className="h-7 gap-1.5 text-xs bg-primary">
           <ShoppingBag className="w-3 h-3" />
           +1 Pedido
         </Button>
@@ -351,10 +263,7 @@ export const AcosEquilibrioSection = ({
           Rellenar
         </h4>
         
-        <div className={cn(
-          "grid gap-4",
-          isExpanded ? "grid-cols-2 lg:grid-cols-5" : "grid-cols-2"
-        )}>
+        <div className={cn("grid gap-4", isExpanded ? "grid-cols-2 lg:grid-cols-5" : "grid-cols-2")}>
           {/* Campaña */}
           <div className="space-y-1.5">
             <Label className="text-xs flex items-center gap-1">
@@ -368,17 +277,10 @@ export const AcosEquilibrioSection = ({
                 </Tooltip>
               </TooltipProvider>
             </Label>
-            <CampaignSelect
-              value={campaignName}
-              onChange={(value) => {
-                setCampaignName(value);
-                updateAdsData('campaignName', value);
-              }}
-              campaigns={campaigns}
-              onAddCampaign={onAddCampaign}
-              placeholder="Seleccionar..."
-              className="h-9"
-            />
+            <CampaignSelect value={campaignName} onChange={value => {
+            setCampaignName(value);
+            updateAdsData('campaignName', value);
+          }} campaigns={campaigns} onAddCampaign={onAddCampaign} placeholder="Seleccionar..." className="h-9" />
           </div>
           
           {/* Clicks */}
@@ -394,16 +296,7 @@ export const AcosEquilibrioSection = ({
                 </Tooltip>
               </TooltipProvider>
             </Label>
-            <Input
-              id="ads-clicks"
-              type="number"
-              min={0}
-              step={1}
-              value={clicks}
-              onChange={(e) => handleNumberChange('clicks', e.target.value, setClicks)}
-              placeholder="0"
-              className="h-9"
-            />
+            <Input id="ads-clicks" type="number" min={0} step={1} value={clicks} onChange={e => handleNumberChange('clicks', e.target.value, setClicks)} placeholder="0" className="h-9" />
           </div>
 
           {/* CPC Actual */}
@@ -421,16 +314,7 @@ export const AcosEquilibrioSection = ({
             </Label>
             <div className="relative">
               <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">$</span>
-              <Input
-                id="ads-cpc"
-                type="number"
-                min={0}
-                step={0.01}
-                value={cpcActual}
-                onChange={(e) => handleNumberChange('cpcActual', e.target.value, setCpcActual)}
-                placeholder="0.00"
-                className="h-9 pl-7"
-              />
+              <Input id="ads-cpc" type="number" min={0} step={0.01} value={cpcActual} onChange={e => handleNumberChange('cpcActual', e.target.value, setCpcActual)} placeholder="0.00" className="h-9 pl-7" />
             </div>
           </div>
 
@@ -447,38 +331,24 @@ export const AcosEquilibrioSection = ({
                 </Tooltip>
               </TooltipProvider>
             </Label>
-            <Input
-              id="ads-pedidos"
-              type="number"
-              min={0}
-              step={1}
-              value={pedidos}
-              onChange={(e) => handleNumberChange('pedidos', e.target.value, setPedidos)}
-              placeholder="0"
-              className="h-9"
-            />
+            <Input id="ads-pedidos" type="number" min={0} step={1} value={pedidos} onChange={e => handleNumberChange('pedidos', e.target.value, setPedidos)} placeholder="0" className="h-9" />
           </div>
 
           {/* Fase Actual */}
           <div className="space-y-1.5">
             <Label className="text-xs">Fase actual</Label>
-            <Select
-              value={faseActual ?? ''}
-              onValueChange={(value) => {
-                const fase = value as AdsFase;
-                setFaseActual(fase);
-                updateAdsData('faseActual', fase);
-              }}
-            >
+            <Select value={faseActual ?? ''} onValueChange={value => {
+            const fase = value as AdsFase;
+            setFaseActual(fase);
+            updateAdsData('faseActual', fase);
+          }}>
               <SelectTrigger className="h-9">
                 <SelectValue placeholder="Seleccionar..." />
               </SelectTrigger>
               <SelectContent>
-                {ADS_FASE_OPTIONS.map((opt) => (
-                  <SelectItem key={opt.value} value={opt.value}>
+                {ADS_FASE_OPTIONS.map(opt => <SelectItem key={opt.value} value={opt.value}>
                     {opt.label}
-                  </SelectItem>
-                ))}
+                  </SelectItem>)}
               </SelectContent>
             </Select>
           </div>
@@ -486,8 +356,7 @@ export const AcosEquilibrioSection = ({
       </div>
 
       {/* Guías de fase (colapsable) */}
-      {acosEquilibrio !== null && (
-        <div className="p-3 rounded-lg border border-border bg-muted/30 space-y-3">
+      {acosEquilibrio !== null && <div className="p-3 rounded-lg border border-border bg-muted/30 space-y-3">
           <div className="flex items-center justify-between">
             <Label className="text-xs text-muted-foreground">Guías de fase (orientativas)</Label>
             <TooltipProvider>
@@ -505,48 +374,26 @@ export const AcosEquilibrioSection = ({
             <div className="space-y-1">
               <Label className="text-[10px] text-muted-foreground">Lanzamiento</Label>
               <div className="relative">
-                <Input
-                  type="number"
-                  min={0}
-                  step={0.1}
-                  value={guiaLanzamiento}
-                  onChange={(e) => handleNumberChange('guiaLanzamiento', e.target.value, setGuiaLanzamiento)}
-                  className="h-7 text-xs pr-6"
-                />
+                <Input type="number" min={0} step={0.1} value={guiaLanzamiento} onChange={e => handleNumberChange('guiaLanzamiento', e.target.value, setGuiaLanzamiento)} className="h-7 text-xs pr-6" />
                 <span className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground text-xs">%</span>
               </div>
             </div>
             <div className="space-y-1">
               <Label className="text-[10px] text-muted-foreground">Dominio</Label>
               <div className="relative">
-                <Input
-                  type="number"
-                  min={0}
-                  step={0.1}
-                  value={guiaDominio}
-                  onChange={(e) => handleNumberChange('guiaDominio', e.target.value, setGuiaDominio)}
-                  className="h-7 text-xs pr-6"
-                />
+                <Input type="number" min={0} step={0.1} value={guiaDominio} onChange={e => handleNumberChange('guiaDominio', e.target.value, setGuiaDominio)} className="h-7 text-xs pr-6" />
                 <span className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground text-xs">%</span>
               </div>
             </div>
             <div className="space-y-1">
               <Label className="text-[10px] text-muted-foreground">Beneficio</Label>
               <div className="relative">
-                <Input
-                  type="number"
-                  min={0}
-                  step={0.1}
-                  value={guiaBeneficio}
-                  onChange={(e) => handleNumberChange('guiaBeneficio', e.target.value, setGuiaBeneficio)}
-                  className="h-7 text-xs pr-6"
-                />
+                <Input type="number" min={0} step={0.1} value={guiaBeneficio} onChange={e => handleNumberChange('guiaBeneficio', e.target.value, setGuiaBeneficio)} className="h-7 text-xs pr-6" />
                 <span className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground text-xs">%</span>
               </div>
             </div>
           </div>
-        </div>
-      )}
+        </div>}
 
       {/* BLOQUE 2: RESULTADOS */}
       <div className="space-y-3">
@@ -555,10 +402,7 @@ export const AcosEquilibrioSection = ({
           Resultados (auto-calculados)
         </h4>
         
-        <div className={cn(
-          "grid gap-3",
-          isExpanded ? "grid-cols-2 lg:grid-cols-4" : "grid-cols-2"
-        )}>
+        <div className={cn("grid gap-3", isExpanded ? "grid-cols-2 lg:grid-cols-4" : "grid-cols-2")}>
           {/* Gasto Acumulado (auto-calculado) */}
           <div className="p-3 rounded-lg border border-border bg-background space-y-1">
             <Label className="text-[10px] text-muted-foreground uppercase flex items-center gap-1">
@@ -575,11 +419,9 @@ export const AcosEquilibrioSection = ({
             <p className="text-lg font-bold text-foreground">
               {formatearMoneda(gastoCalculado)}
             </p>
-            {gastoCalculado !== null && (
-              <p className="text-[10px] text-muted-foreground">
+            {gastoCalculado !== null && <p className="text-[10px] text-muted-foreground">
                 = {adsData?.clicks ?? 0} × ${adsData?.cpcActual?.toFixed(2) ?? '0.00'}
-              </p>
-            )}
+              </p>}
           </div>
 
           {/* Ventas Acumuladas (auto-calculado) */}
@@ -598,11 +440,9 @@ export const AcosEquilibrioSection = ({
             <p className="text-lg font-bold text-foreground">
               {formatearMoneda(ventasCalculadas)}
             </p>
-            {ventasCalculadas !== null && (
-              <p className="text-[10px] text-muted-foreground">
+            {ventasCalculadas !== null && <p className="text-[10px] text-muted-foreground">
                 = {adsData?.pedidos ?? 0} × ${bookEconomy.precioLibro?.toFixed(2) ?? '0.00'}
-              </p>
-            )}
+              </p>}
           </div>
 
           {/* Beneficio Ahora */}
@@ -618,14 +458,7 @@ export const AcosEquilibrioSection = ({
                 </Tooltip>
               </TooltipProvider>
             </Label>
-            <p className={cn(
-              "text-lg font-bold",
-              beneficioAhora !== null
-                ? beneficioAhora >= 0
-                  ? "text-green-600 dark:text-green-400"
-                  : "text-red-600 dark:text-red-400"
-                : "text-muted-foreground"
-            )}>
+            <p className={cn("text-lg font-bold", beneficioAhora !== null ? beneficioAhora >= 0 ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400" : "text-muted-foreground")}>
               {formatearMoneda(beneficioAhora)}
             </p>
           </div>
@@ -643,14 +476,7 @@ export const AcosEquilibrioSection = ({
                 </Tooltip>
               </TooltipProvider>
             </Label>
-            <p className={cn(
-              "text-lg font-bold",
-              beneficioSiguiente !== null
-                ? beneficioSiguiente >= 0
-                  ? "text-green-600 dark:text-green-400"
-                  : "text-amber-600 dark:text-amber-400"
-                : "text-muted-foreground"
-            )}>
+            <p className={cn("text-lg font-bold", beneficioSiguiente !== null ? beneficioSiguiente >= 0 ? "text-green-600 dark:text-green-400" : "text-amber-600 dark:text-amber-400" : "text-muted-foreground")}>
               {formatearMoneda(beneficioSiguiente)}
             </p>
           </div>
@@ -669,34 +495,18 @@ export const AcosEquilibrioSection = ({
           {/* ACOS Actual */}
           <div className="p-3 rounded-lg border border-border bg-background space-y-1">
             <Label className="text-[10px] text-muted-foreground uppercase">ACOS Actual</Label>
-            <p className={cn(
-              "text-lg font-bold",
-              acosActual !== null && acosEquilibrio !== null
-                ? acosActual <= acosEquilibrio
-                  ? "text-green-600 dark:text-green-400"
-                  : "text-red-600 dark:text-red-400"
-                : "text-muted-foreground"
-            )}>
+            <p className={cn("text-lg font-bold", acosActual !== null && acosEquilibrio !== null ? acosActual <= acosEquilibrio ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400" : "text-muted-foreground")}>
               {formatearPorcentaje(acosActual)}
             </p>
-            {acosActual !== null && (
-              <p className="text-[10px] text-muted-foreground">
+            {acosActual !== null && <p className="text-[10px] text-muted-foreground">
                 Gasto / Ventas
-              </p>
-            )}
+              </p>}
           </div>
 
           {/* ACOS Siguiente Click - ÉNFASIS */}
           <div className="p-3 rounded-lg border-2 border-amber-500/30 bg-amber-500/5 space-y-1">
             <Label className="text-[10px] text-muted-foreground uppercase">ACOS Sig. Click ⭐</Label>
-            <p className={cn(
-              "text-xl font-bold",
-              acosSiguiente !== null && acosEquilibrio !== null
-                ? acosSiguiente <= acosEquilibrio
-                  ? "text-green-600 dark:text-green-400"
-                  : "text-amber-600 dark:text-amber-400"
-                : "text-muted-foreground"
-            )}>
+            <p className={cn("text-xl font-bold", acosSiguiente !== null && acosEquilibrio !== null ? acosSiguiente <= acosEquilibrio ? "text-green-600 dark:text-green-400" : "text-amber-600 dark:text-amber-400" : "text-muted-foreground")}>
               {formatearPorcentaje(acosSiguiente)}
             </p>
             <p className="text-[10px] text-muted-foreground">
@@ -710,35 +520,24 @@ export const AcosEquilibrioSection = ({
             <p className="text-xl font-bold text-blue-600 dark:text-blue-400">
               {formatearPorcentaje(conversion)}
             </p>
-            {conversion !== null && (
-              <p className="text-[10px] text-muted-foreground">
+            {conversion !== null && <p className="text-[10px] text-muted-foreground">
                 Pedidos / Clicks
-              </p>
-            )}
+              </p>}
           </div>
         </div>
       </div>
 
       {/* Warning si faltan datos de economía */}
-      {(bookEconomy.precioLibro <= 0 || bookEconomy.regaliasPorVenta <= 0) && (
-        <Alert className="border-amber-500/30 bg-amber-500/10">
+      {(bookEconomy.precioLibro <= 0 || bookEconomy.regaliasPorVenta <= 0) && <Alert className="border-amber-500/30 bg-amber-500/10">
           <AlertCircle className="h-4 w-4 text-amber-600 dark:text-amber-400" />
           <AlertDescription className="text-amber-700 dark:text-amber-300 text-sm">
             Configura el precio y regalías del libro en el panel "Economía del libro" para calcular el ACOS de equilibrio.
           </AlertDescription>
-        </Alert>
-      )}
+        </Alert>}
 
       {/* HISTORIAL DE MÉTRICAS ADS */}
-      <AdsHistorySection 
-        adsData={adsData}
-        bookEconomy={bookEconomy}
-        onAdsDataChange={onAdsDataChange}
-        acosEquilibrio={acosEquilibrio}
-        isExpanded={isExpanded}
-      />
-    </div>
-  );
+      <AdsHistorySection adsData={adsData} bookEconomy={bookEconomy} onAdsDataChange={onAdsDataChange} acosEquilibrio={acosEquilibrio} isExpanded={isExpanded} />
+    </div>;
 };
 
 // ============ ADS HISTORY SECTION (integrated) ============
@@ -749,23 +548,20 @@ interface AdsHistorySectionProps {
   acosEquilibrio: number | null;
   isExpanded?: boolean;
 }
-
 const AdsHistorySection = ({
   adsData,
   bookEconomy,
   onAdsDataChange,
   acosEquilibrio,
-  isExpanded = false,
+  isExpanded = false
 }: AdsHistorySectionProps) => {
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [selectedRange, setSelectedRange] = useState<'7d' | '30d' | '90d' | 'all'>('30d');
-  
   const history = adsData?.history ?? [];
 
   // Add current snapshot to history
   const handleAddSnapshot = () => {
     if (!adsData) return;
-
     const gasto = calcularGastoAcumulado(adsData.clicks, adsData.cpcActual) ?? 0;
     const ventas = calcularVentasAcumuladas(adsData.pedidos, bookEconomy.precioLibro) ?? 0;
     const acosActual = calcularAcosActualPorcentaje(gasto, ventas);
@@ -773,10 +569,7 @@ const AdsHistorySection = ({
 
     // Check if there's already a snapshot today
     const today = new Date().toDateString();
-    const existingTodayIndex = history.findIndex(h => 
-      new Date(h.timestamp).toDateString() === today
-    );
-
+    const existingTodayIndex = history.findIndex(h => new Date(h.timestamp).toDateString() === today);
     const newEntry: AdsHistoryEntry = {
       id: `ads-history-${Date.now()}`,
       timestamp: new Date(),
@@ -786,22 +579,23 @@ const AdsHistorySection = ({
       gasto,
       ventas,
       acosActual,
-      beneficio,
+      beneficio
     };
-
     let updatedHistory: AdsHistoryEntry[];
     if (existingTodayIndex >= 0) {
       // Update existing today's snapshot
       updatedHistory = [...history];
-      updatedHistory[existingTodayIndex] = { ...newEntry, id: history[existingTodayIndex].id };
+      updatedHistory[existingTodayIndex] = {
+        ...newEntry,
+        id: history[existingTodayIndex].id
+      };
     } else {
       // Add new snapshot
       updatedHistory = [...history, newEntry];
     }
-
     onAdsDataChange({
       ...adsData,
-      history: updatedHistory,
+      history: updatedHistory
     });
   };
 
@@ -811,7 +605,7 @@ const AdsHistorySection = ({
     const updatedHistory = history.filter(h => h.id !== id);
     onAdsDataChange({
       ...adsData,
-      history: updatedHistory,
+      history: updatedHistory
     });
   };
 
@@ -820,17 +614,18 @@ const AdsHistorySection = ({
     const now = new Date();
     const cutoffDays = selectedRange === '7d' ? 7 : selectedRange === '30d' ? 30 : selectedRange === '90d' ? 90 : Infinity;
     const cutoffDate = new Date(now.getTime() - cutoffDays * 24 * 60 * 60 * 1000);
-    
     return history.filter(h => new Date(h.timestamp) >= cutoffDate);
   }, [history, selectedRange]);
 
   // Chart data
   const chartData = useMemo(() => {
     return filteredHistory.map(entry => ({
-      date: format(new Date(entry.timestamp), 'dd/MM', { locale: es }),
+      date: format(new Date(entry.timestamp), 'dd/MM', {
+        locale: es
+      }),
       clicks: entry.clicks,
       pedidos: entry.pedidos,
-      acos: entry.acosActual ?? 0,
+      acos: entry.acosActual ?? 0
     }));
   }, [filteredHistory]);
 
@@ -839,16 +634,13 @@ const AdsHistorySection = ({
     if (filteredHistory.length < 2) return null;
     const first = filteredHistory[0];
     const last = filteredHistory[filteredHistory.length - 1];
-    
     return {
       clicksDelta: last.clicks - first.clicks,
       pedidosDelta: last.pedidos - first.pedidos,
-      acosDelta: (last.acosActual ?? 0) - (first.acosActual ?? 0),
+      acosDelta: (last.acosActual ?? 0) - (first.acosActual ?? 0)
     };
   }, [filteredHistory]);
-
-  return (
-    <Collapsible open={isHistoryOpen} onOpenChange={setIsHistoryOpen}>
+  return <Collapsible open={isHistoryOpen} onOpenChange={setIsHistoryOpen}>
       <div className="space-y-3">
         <div className="flex items-center justify-between">
           <CollapsibleTrigger asChild>
@@ -864,7 +656,7 @@ const AdsHistorySection = ({
             </Button>
           </CollapsibleTrigger>
           
-          <Button onClick={handleAddSnapshot} size="sm" variant="outline" className="gap-2 h-7 text-xs">
+          <Button onClick={handleAddSnapshot} size="sm" variant="outline" className="gap-2 h-7 text-xs bg-primary">
             <Plus className="w-3 h-3" />
             Guardar snapshot
           </Button>
@@ -873,22 +665,13 @@ const AdsHistorySection = ({
         <CollapsibleContent className="space-y-4">
           {/* Range selector */}
           <div className="flex items-center gap-2">
-            {(['7d', '30d', '90d', 'all'] as const).map((range) => (
-              <Button
-                key={range}
-                variant={selectedRange === range ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setSelectedRange(range)}
-                className="h-7 text-xs"
-              >
+            {(['7d', '30d', '90d', 'all'] as const).map(range => <Button key={range} variant={selectedRange === range ? 'default' : 'outline'} size="sm" onClick={() => setSelectedRange(range)} className="h-7 text-xs">
                 {range === 'all' ? 'Todo' : range}
-              </Button>
-            ))}
+              </Button>)}
           </div>
 
           {/* Trends summary */}
-          {trends && (
-            <div className="grid grid-cols-3 gap-3">
+          {trends && <div className="grid grid-cols-3 gap-3">
               <div className="p-2 rounded-lg border border-border bg-muted/30">
                 <p className="text-[10px] text-muted-foreground uppercase">Δ Clicks</p>
                 <p className={cn("text-sm font-bold", trends.clicksDelta >= 0 ? "text-blue-600" : "text-muted-foreground")}>
@@ -904,80 +687,48 @@ const AdsHistorySection = ({
               <div className="p-2 rounded-lg border border-border bg-muted/30">
                 <p className="text-[10px] text-muted-foreground uppercase">Δ ACOS</p>
                 <div className="flex items-center gap-1">
-                  {trends.acosDelta <= 0 ? (
-                    <TrendingDown className="w-3 h-3 text-green-500" />
-                  ) : (
-                    <TrendingUp className="w-3 h-3 text-red-500" />
-                  )}
+                  {trends.acosDelta <= 0 ? <TrendingDown className="w-3 h-3 text-green-500" /> : <TrendingUp className="w-3 h-3 text-red-500" />}
                   <p className={cn("text-sm font-bold", trends.acosDelta <= 0 ? "text-green-600" : "text-red-600")}>
                     {trends.acosDelta >= 0 ? '+' : ''}{trends.acosDelta.toFixed(1)}%
                   </p>
                 </div>
               </div>
-            </div>
-          )}
+            </div>}
 
           {/* Chart */}
-          {chartData.length >= 2 && (
-            <div className="h-40 w-full">
+          {chartData.length >= 2 && <div className="h-40 w-full">
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={chartData}>
                   <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                  <XAxis dataKey="date" className="text-[10px]" tick={{ fontSize: 10 }} />
-                  <YAxis yAxisId="left" className="text-[10px]" tick={{ fontSize: 10 }} />
-                  <YAxis yAxisId="right" orientation="right" className="text-[10px]" tick={{ fontSize: 10 }} />
-                  <RechartsTooltip 
-                    contentStyle={{ 
-                      backgroundColor: 'hsl(var(--popover))', 
-                      border: '1px solid hsl(var(--border))',
-                      borderRadius: '8px',
-                      fontSize: '12px',
-                    }} 
-                  />
-                  {acosEquilibrio !== null && (
-                    <ReferenceLine 
-                      yAxisId="right" 
-                      y={acosEquilibrio} 
-                      stroke="hsl(var(--primary))" 
-                      strokeDasharray="5 5" 
-                      label={{ value: 'PE', position: 'right', fontSize: 10 }} 
-                    />
-                  )}
-                  <Line 
-                    yAxisId="left"
-                    type="monotone" 
-                    dataKey="clicks" 
-                    stroke="hsl(217.2 91.2% 59.8%)" 
-                    strokeWidth={2}
-                    dot={false}
-                    name="Clicks"
-                  />
-                  <Line 
-                    yAxisId="left"
-                    type="monotone" 
-                    dataKey="pedidos" 
-                    stroke="#22c55e" 
-                    strokeWidth={2}
-                    dot={false}
-                    name="Pedidos"
-                  />
-                  <Line 
-                    yAxisId="right"
-                    type="monotone" 
-                    dataKey="acos" 
-                    stroke="#f59e0b" 
-                    strokeWidth={2}
-                    dot={false}
-                    name="ACOS %"
-                  />
+                  <XAxis dataKey="date" className="text-[10px]" tick={{
+                fontSize: 10
+              }} />
+                  <YAxis yAxisId="left" className="text-[10px]" tick={{
+                fontSize: 10
+              }} />
+                  <YAxis yAxisId="right" orientation="right" className="text-[10px]" tick={{
+                fontSize: 10
+              }} />
+                  <RechartsTooltip contentStyle={{
+                backgroundColor: 'hsl(var(--popover))',
+                border: '1px solid hsl(var(--border))',
+                borderRadius: '8px',
+                fontSize: '12px'
+              }} />
+                  {acosEquilibrio !== null && <ReferenceLine yAxisId="right" y={acosEquilibrio} stroke="hsl(var(--primary))" strokeDasharray="5 5" label={{
+                value: 'PE',
+                position: 'right',
+                fontSize: 10
+              }} />}
+                  <Line yAxisId="left" type="monotone" dataKey="clicks" stroke="hsl(217.2 91.2% 59.8%)" strokeWidth={2} dot={false} name="Clicks" />
+                  <Line yAxisId="left" type="monotone" dataKey="pedidos" stroke="#22c55e" strokeWidth={2} dot={false} name="Pedidos" />
+                  <Line yAxisId="right" type="monotone" dataKey="acos" stroke="#f59e0b" strokeWidth={2} dot={false} name="ACOS %" />
                 </LineChart>
               </ResponsiveContainer>
-            </div>
-          )}
+            </div>}
 
           {/* History table (compact) */}
-          {filteredHistory.length > 0 ? (
-            <div className="rounded-lg border border-border overflow-hidden max-h-40 overflow-y-auto">
+          {filteredHistory.length > 0 ? <div className="rounded-lg border border-border overflow-hidden max-h-40 overflow-y-auto">
               <table className="w-full text-xs">
                 <thead className="bg-muted/50 sticky top-0">
                   <tr>
@@ -989,47 +740,31 @@ const AdsHistorySection = ({
                   </tr>
                 </thead>
                 <tbody>
-                  {[...filteredHistory].reverse().slice(0, 10).map((entry) => (
-                    <tr key={entry.id} className="border-t border-border hover:bg-muted/30">
+                  {[...filteredHistory].reverse().slice(0, 10).map(entry => <tr key={entry.id} className="border-t border-border hover:bg-muted/30">
                       <td className="p-2 text-muted-foreground">
-                        {format(new Date(entry.timestamp), 'dd/MM/yy', { locale: es })}
+                        {format(new Date(entry.timestamp), 'dd/MM/yy', {
+                    locale: es
+                  })}
                       </td>
                       <td className="p-2 text-right tabular-nums">{entry.clicks}</td>
                       <td className="p-2 text-right tabular-nums">{entry.pedidos}</td>
-                      <td className={cn(
-                        "p-2 text-right tabular-nums",
-                        entry.acosActual !== null && acosEquilibrio !== null
-                          ? entry.acosActual <= acosEquilibrio
-                            ? 'text-green-600'
-                            : 'text-red-600'
-                          : 'text-muted-foreground'
-                      )}>
+                      <td className={cn("p-2 text-right tabular-nums", entry.acosActual !== null && acosEquilibrio !== null ? entry.acosActual <= acosEquilibrio ? 'text-green-600' : 'text-red-600' : 'text-muted-foreground')}>
                         {formatearPorcentaje(entry.acosActual)}
                       </td>
                       <td className="p-2">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-5 w-5 p-0 text-muted-foreground hover:text-destructive"
-                          onClick={() => handleDeleteSnapshot(entry.id)}
-                        >
+                        <Button variant="ghost" size="sm" className="h-5 w-5 p-0 text-muted-foreground hover:text-destructive" onClick={() => handleDeleteSnapshot(entry.id)}>
                           <Trash2 className="w-3 h-3" />
                         </Button>
                       </td>
-                    </tr>
-                  ))}
+                    </tr>)}
                 </tbody>
               </table>
-            </div>
-          ) : (
-            <div className="text-center py-6 text-sm text-muted-foreground">
+            </div> : <div className="text-center py-6 text-sm text-muted-foreground">
               <History className="w-8 h-8 mx-auto mb-2 opacity-30" />
               <p>No hay snapshots guardados.</p>
               <p className="text-xs mt-1">Haz clic en "Guardar snapshot" para registrar el estado actual.</p>
-            </div>
-          )}
+            </div>}
         </CollapsibleContent>
       </div>
-    </Collapsible>
-  );
+    </Collapsible>;
 };
