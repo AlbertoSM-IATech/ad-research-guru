@@ -186,10 +186,7 @@ export const KeywordsSection = ({
   }, [isHydrated, persistedState]);
 
   // Derive selected keyword from keywords array (single source of truth - no sync patches!)
-  const selectedKeyword = useMemo(() => 
-    keywords.find(k => k.id === selectedKeywordId) ?? null, 
-    [keywords, selectedKeywordId]
-  );
+  const selectedKeyword = useMemo(() => keywords.find(k => k.id === selectedKeywordId) ?? null, [keywords, selectedKeywordId]);
 
   // Memoize callback to avoid infinite loops
   const stableOnSelectedIdsChange = useCallback(onSelectedIdsChange, [onSelectedIdsChange]);
@@ -211,14 +208,13 @@ export const KeywordsSection = ({
     // Add to the list first
     onAdd(keyword);
     setWizardInitialKeyword('');
-    
+
     // Open panel by ID - the keyword is already in the store, derivation will sync automatically
     setSelectedKeywordId(keyword.id);
-    
+
     // Mark for visibility check after keywords update
     setPendingKeywordId(keyword.id);
   };
-
 
   // Handle opening existing keyword from wizard duplicate detection
   const handleOpenExistingKeyword = (keyword: Keyword) => {
@@ -296,11 +292,10 @@ export const KeywordsSection = ({
     });
     onSelectedIdsChange(new Set());
   };
-
   const handleBulkChangeKeywordStatus = (status: KeywordStatus) => {
     onUpdateBulk(Array.from(selectedIds), {
       status,
-      statusManuallySet: true,
+      statusManuallySet: true
     });
     onSelectedIdsChange(new Set());
   };
@@ -458,15 +453,12 @@ export const KeywordsSection = ({
 
         // Needs Attention filter (ACOS > ACOS PE)
         if (adsFilters.needsAttention) {
-          const acosEquilibrioVal = bookEconomy.precioLibro > 0 && bookEconomy.regaliasPorVenta > 0 
-            ? (bookEconomy.regaliasPorVenta / bookEconomy.precioLibro) * 100 
-            : null;
+          const acosEquilibrioVal = bookEconomy.precioLibro > 0 && bookEconomy.regaliasPorVenta > 0 ? bookEconomy.regaliasPorVenta / bookEconomy.precioLibro * 100 : null;
           // Only pass if ACOS actual > ACOS equilibrio
           if (acosEquilibrioVal === null || acosActual === null || acosActual <= acosEquilibrioVal) {
             return false;
           }
         }
-
         return true;
       });
     }
@@ -476,53 +468,45 @@ export const KeywordsSection = ({
   // Check visibility of newly created keyword and show appropriate toast
   useEffect(() => {
     if (!pendingKeywordId) return;
-    
+
     // Find keyword in the updated keywords array
     const keyword = keywords.find(k => k.id === pendingKeywordId);
     if (!keyword) return; // Keyword not yet in the list
-    
+
     // Find index in filtered list
     const indexInFiltered = filteredKeywords.findIndex(k => k.id === pendingKeywordId);
-    
+
     // Clear pending state
     setPendingKeywordId(null);
-    
     if (indexInFiltered === -1) {
       // Keyword is filtered out by search/filters
       toast({
         title: 'Keyword creada',
         description: `Market Score: ${keyword.marketScore}/100 — Puede estar oculta por filtros activos`,
-        action: (
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={() => {
-              onSearchTermChange('');
-              setFilters({
-                status: null,
-                minVolume: '',
-                maxVolume: '',
-                minCompetition: '',
-                maxCompetition: '',
-                campaignName: '',
-                marketScoreRanges: [],
-                has200PlusReviews: false,
-                hasUnder100Reviews: false
-              });
-              setAdsFilters(defaultAdsFiltersState);
-              setCurrentPage(1);
-            }}
-          >
+        action: <Button variant="outline" size="sm" onClick={() => {
+          onSearchTermChange('');
+          setFilters({
+            status: null,
+            minVolume: '',
+            maxVolume: '',
+            minCompetition: '',
+            maxCompetition: '',
+            campaignName: '',
+            marketScoreRanges: [],
+            has200PlusReviews: false,
+            hasUnder100Reviews: false
+          });
+          setAdsFilters(defaultAdsFiltersState);
+          setCurrentPage(1);
+        }}>
             Limpiar filtros
           </Button>
-        ),
       });
       return;
     }
-    
+
     // Calculate which page the keyword is on
     const targetPage = Math.floor(indexInFiltered / ITEMS_PER_PAGE) + 1;
-    
     if (targetPage === currentPage) {
       // Keyword is visible on current page - simple toast
       toast({
@@ -534,15 +518,9 @@ export const KeywordsSection = ({
       toast({
         title: 'Keyword creada',
         description: `Market Score: ${keyword.marketScore}/100 — Está en página ${targetPage}`,
-        action: (
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={() => setCurrentPage(targetPage)}
-          >
+        action: <Button variant="outline" size="sm" onClick={() => setCurrentPage(targetPage)}>
             Ver keyword
           </Button>
-        ),
       });
     }
   }, [keywords, pendingKeywordId, filteredKeywords, currentPage, toast, onSearchTermChange]);
@@ -574,8 +552,8 @@ export const KeywordsSection = ({
   return <div data-tour="keywords-section" className="space-y-6 animate-fade-in">
       {/* Functional View Toggle */}
       <div className="flex flex-col gap-4">
-        <div className="flex items-center justify-between">
-          <h3 className="font-heading font-semibold text-xl">Palabras Clave</h3>
+        <div className="items-start justify-between flex flex-col px-0 mx-0 my-0 py-0 gap-[13px]">
+          <h3 className="font-heading font-semibold text-xl text-center">Palabras Clave</h3>
           
           {/* View Toggle: Editorial / Ads */}
           <div className="flex items-center gap-2 p-1 bg-muted rounded-lg">
@@ -670,36 +648,23 @@ export const KeywordsSection = ({
           
           {/* Needs Attention counter and toggle - only in ads view */}
           {functionalView === 'ads' && (() => {
-            const acosEquilibrioVal = bookEconomy.precioLibro > 0 && bookEconomy.regaliasPorVenta > 0 
-              ? (bookEconomy.regaliasPorVenta / bookEconomy.precioLibro) * 100 
-              : null;
-            const needsAttentionCount = acosEquilibrioVal !== null ? keywords.filter(k => {
-              const ads = k.adsData;
-              const gastoCalculado = calcularGastoAcumulado(ads?.clicks, ads?.cpcActual);
-              const ventasCalculadas = calcularVentasAcumuladas(ads?.pedidos, bookEconomy.precioLibro);
-              const acosActual = calcularAcosActualPorcentaje(gastoCalculado ?? undefined, ventasCalculadas ?? undefined);
-              return acosActual !== null && acosActual > acosEquilibrioVal;
-            }).length : 0;
-            
-            if (needsAttentionCount === 0) return null;
-            
-            return (
-              <Button
-                variant={adsFilters.needsAttention ? "default" : "outline"}
-                size="sm"
-                onClick={() => handleAdsFiltersChange({ ...adsFilters, needsAttention: !adsFilters.needsAttention })}
-                className={cn(
-                  "gap-2 text-xs",
-                  adsFilters.needsAttention 
-                    ? "bg-red-500 hover:bg-red-600 text-white" 
-                    : "border-red-500/50 text-red-600 hover:bg-red-500/10"
-                )}
-              >
+          const acosEquilibrioVal = bookEconomy.precioLibro > 0 && bookEconomy.regaliasPorVenta > 0 ? bookEconomy.regaliasPorVenta / bookEconomy.precioLibro * 100 : null;
+          const needsAttentionCount = acosEquilibrioVal !== null ? keywords.filter(k => {
+            const ads = k.adsData;
+            const gastoCalculado = calcularGastoAcumulado(ads?.clicks, ads?.cpcActual);
+            const ventasCalculadas = calcularVentasAcumuladas(ads?.pedidos, bookEconomy.precioLibro);
+            const acosActual = calcularAcosActualPorcentaje(gastoCalculado ?? undefined, ventasCalculadas ?? undefined);
+            return acosActual !== null && acosActual > acosEquilibrioVal;
+          }).length : 0;
+          if (needsAttentionCount === 0) return null;
+          return <Button variant={adsFilters.needsAttention ? "default" : "outline"} size="sm" onClick={() => handleAdsFiltersChange({
+            ...adsFilters,
+            needsAttention: !adsFilters.needsAttention
+          })} className={cn("gap-2 text-xs", adsFilters.needsAttention ? "bg-red-500 hover:bg-red-600 text-white" : "border-red-500/50 text-red-600 hover:bg-red-500/10")}>
                 <AlertTriangle className="w-3.5 h-3.5" />
                 Necesitan atención: {needsAttentionCount}
-              </Button>
-            );
-          })()}
+              </Button>;
+        })()}
         </div>
         <div className="flex items-center gap-2">
           {/* Reset Column Widths */}
@@ -735,13 +700,7 @@ export const KeywordsSection = ({
       </div>
 
       {/* Bulk actions (Editorial) */}
-      {functionalView === 'editorial' && (
-        <BulkEditorialStatusToolbar
-          selectedCount={selectedIds.size}
-          onChangeStatus={handleBulkChangeKeywordStatus}
-          onQuickValidate={() => handleBulkChangeKeywordStatus('valid')}
-        />
-      )}
+      {functionalView === 'editorial' && <BulkEditorialStatusToolbar selectedCount={selectedIds.size} onChangeStatus={handleBulkChangeKeywordStatus} onQuickValidate={() => handleBulkChangeKeywordStatus('valid')} />}
 
       {/* Content - Table */}
       <div className="rounded-lg border border-border overflow-hidden">
@@ -953,8 +912,7 @@ export const KeywordsSection = ({
                               </Tooltip>}
                             
                             {/* Needs Attention badge - ACOS > PE */}
-                            {functionalView === 'ads' && acosEquilibrio !== null && acosActual !== null && acosActual > acosEquilibrio && (
-                              <Tooltip>
+                            {functionalView === 'ads' && acosEquilibrio !== null && acosActual !== null && acosActual > acosEquilibrio && <Tooltip>
                                 <TooltipTrigger asChild>
                                   <Badge variant="destructive" className="h-5 px-1.5 text-[10px] gap-0.5 flex-shrink-0">
                                     <AlertTriangle className="w-3 h-3" />
@@ -967,8 +925,7 @@ export const KeywordsSection = ({
                                     ACOS: {formatearPorcentaje(acosActual)} vs PE: {formatearPorcentaje(acosEquilibrio)}
                                   </p>
                                 </TooltipContent>
-                              </Tooltip>
-                            )}
+                              </Tooltip>}
                             
                             {/* Primary action: Open detail panel */}
                             <Tooltip>
