@@ -265,7 +265,6 @@ export const AdvancedImportModal = ({
         searchVolume: r.mappedData.searchVolume || 0,
         competitionLevel: r.mappedData.competitionLevel || 'medium',
         notes: r.mappedData.notes || '',
-        relevance: r.mappedData.relevance,
         intent: r.mappedData.intent,
         state: 'pending',
         campaignTypes: ['SP'],

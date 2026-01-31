@@ -169,6 +169,10 @@ function generateKeyword(marketplaceId: string, usedKeywords: Set<string>): Omit
       ])
     : '';
 
+  // Generate random ADS data for about 60% of keywords
+  const hasAdsData = Math.random() > 0.4;
+  const adsData = hasAdsData ? generateRandomAdsData() : undefined;
+
   return createKeywordDefaults({
     keyword,
     searchVolume: randomVolume(),
@@ -177,15 +181,73 @@ function generateKeyword(marketplaceId: string, usedKeywords: Set<string>): Omit
     campaignTypes: randomFrom(campaignTypeOptions),
     notes,
     marketplaceId,
-    relevance: randomFrom(relevanceLevels),
     intent: randomFrom(intentTypes),
     state: randomFrom(keywordStates),
+    adsData,
   });
+}
+
+// Generate random ADS data for demo purposes
+function generateRandomAdsData(): import('@/types/advertising').AdsData {
+  const clicks = Math.floor(Math.random() * 200);
+  const cpcActual = parseFloat((0.15 + Math.random() * 0.85).toFixed(2)); // $0.15 - $1.00
+  const conversionRate = 0.02 + Math.random() * 0.08; // 2% - 10%
+  const pedidos = Math.floor(clicks * conversionRate);
+  
+  const campaigns = ['Campaña Principal', 'Auto', 'Manual Exacto', 'Broad Test', 'Discovery', 'Libro #1', 'Nichos Q1'];
+  
+  return {
+    clicks,
+    cpcActual,
+    pedidos,
+    campaignName: randomFrom(campaigns),
+    history: generateRandomAdsHistory(clicks, cpcActual, pedidos),
+  };
+}
+
+// Generate random ADS history for sparklines
+function generateRandomAdsHistory(currentClicks: number, currentCpc: number, currentPedidos: number): import('@/types/advertising').AdsHistoryEntry[] {
+  const history: import('@/types/advertising').AdsHistoryEntry[] = [];
+  const numEntries = Math.floor(Math.random() * 10) + 3; // 3-12 entries
+  
+  let cumulativeClicks = Math.max(0, currentClicks - Math.floor(Math.random() * 100));
+  let cumulativePedidos = Math.max(0, currentPedidos - Math.floor(Math.random() * 10));
+  
+  for (let i = numEntries; i >= 0; i--) {
+    const date = new Date();
+    date.setDate(date.getDate() - i);
+    
+    const dayClicks = Math.floor(Math.random() * 20) + 1;
+    const dayPedidos = Math.random() > 0.7 ? Math.floor(Math.random() * 3) : 0;
+    const dayCpc = currentCpc * (0.8 + Math.random() * 0.4); // ±20% variation
+    
+    cumulativeClicks += dayClicks;
+    cumulativePedidos += dayPedidos;
+    
+    const gasto = cumulativeClicks * dayCpc;
+    const ventas = cumulativePedidos * 12.99; // Assume $12.99 price
+    const acosActual = ventas > 0 ? (gasto / ventas) * 100 : null;
+    const beneficio = ventas > 0 ? ventas - gasto : null;
+    
+    history.push({
+      id: `demo-${Date.now()}-${i}`,
+      timestamp: date,
+      clicks: cumulativeClicks,
+      cpcActual: parseFloat(dayCpc.toFixed(2)),
+      pedidos: cumulativePedidos,
+      gasto: parseFloat(gasto.toFixed(2)),
+      ventas: parseFloat(ventas.toFixed(2)),
+      acosActual: acosActual !== null ? parseFloat(acosActual.toFixed(1)) : null,
+      beneficio: beneficio !== null ? parseFloat(beneficio.toFixed(2)) : null,
+    });
+  }
+  
+  return history;
 }
 
 export function generateDemoKeywords(
   marketplaceId: string, 
-  count: number = 150
+  count: number = 40
 ): Omit<Keyword, 'id' | 'createdAt' | 'updatedAt'>[] {
   const usedKeywords = new Set<string>();
   const keywords: Omit<Keyword, 'id' | 'createdAt' | 'updatedAt'>[] = [];

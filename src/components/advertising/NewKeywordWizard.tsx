@@ -147,14 +147,13 @@ interface NewKeywordWizardProps {
   onAddCampaign?: (name: string) => void;
 }
 
-type WizardStep = 1 | 2 | 3 | 4 | 5;
+type WizardStep = 1 | 2 | 3 | 4;
 
 const STEPS = [
   { number: 1, title: 'Básico', icon: FileText },
   { number: 2, title: 'Mercado', icon: BarChart3 },
   { number: 3, title: 'Editorial', icon: Lightbulb },
-  { number: 4, title: 'Ads', icon: Megaphone },
-  { number: 5, title: 'Resumen', icon: ClipboardCheck },
+  { number: 4, title: 'Resumen', icon: ClipboardCheck },
 ] as const;
 
 // Tooltip component wrapper
@@ -327,7 +326,7 @@ export function NewKeywordWizard({
   
   // ============ NAVIGATION ============
   const handleNext = () => {
-    if (currentStep < 5) {
+    if (currentStep < 4) {
       setCurrentStep((prev) => (prev + 1) as WizardStep);
     }
   };
@@ -336,11 +335,6 @@ export function NewKeywordWizard({
     if (currentStep > 1) {
       setCurrentStep((prev) => (prev - 1) as WizardStep);
     }
-  };
-  
-  const handleSkipAdsStep = () => {
-    // Skip from step 4 (Ads) to step 5 (Summary)
-    setCurrentStep(5);
   };
   
   // Build adsData from form fields (only if at least one field is filled)
@@ -836,7 +830,7 @@ export function NewKeywordWizard({
                   <Button 
                     variant="outline" 
                     size="sm"
-                    onClick={() => setCurrentStep(5)}
+                    onClick={() => setCurrentStep(4)}
                     className="text-xs gap-1"
                   >
                     <SkipForward className="w-3 h-3" />
@@ -882,211 +876,8 @@ export function NewKeywordWizard({
             </div>
           )}
           
-          {/* ============ STEP 4: DATOS DE ADS (Opcional) ============ */}
+          {/* ============ STEP 4: RESUMEN ============ */}
           {currentStep === 4 && (
-            <div className="space-y-6">
-              <div className="flex items-center justify-between">
-                <h3 className="text-lg font-medium flex items-center gap-2">
-                  <Megaphone className="w-5 h-5" />
-                  Datos de Ads (opcional)
-                </h3>
-                {step1.purpose !== 'ads' && (
-                  <Button 
-                    variant="outline" 
-                    size="sm"
-                    onClick={handleSkipAdsStep}
-                    className="text-xs gap-1"
-                  >
-                    <SkipForward className="w-3 h-3" />
-                    Saltar
-                  </Button>
-                )}
-              </div>
-              
-              <Alert className="border-primary/30 bg-primary/10">
-                <Megaphone className="h-4 w-4 text-primary" />
-                <AlertDescription className="text-foreground">
-                  {step1.purpose === 'ads' 
-                    ? 'Introduce Clicks, CPC y Pedidos. El resto se auto-calcula con los datos de la economía del libro.'
-                    : 'Puedes añadir datos de Ads ahora o hacerlo después desde la ficha de la keyword.'}
-                </AlertDescription>
-              </Alert>
-              
-              <div className="grid grid-cols-3 gap-4">
-                {/* Clicks */}
-                <div className="space-y-2">
-                  <Label htmlFor="wizard-ads-clicks">
-                    Clicks *
-                    <FieldTooltip content="Clicks acumulados para calcular la conversión y el gasto." />
-                  </Label>
-                  <Input
-                    id="wizard-ads-clicks"
-                    type="number"
-                    min={0}
-                    step={1}
-                    value={adsClicks}
-                    onChange={(e) => setAdsClicks(e.target.value)}
-                    placeholder="0"
-                  />
-                </div>
-                
-                {/* CPC Actual */}
-                <div className="space-y-2">
-                  <Label htmlFor="wizard-ads-cpc">
-                    CPC ($) *
-                    <FieldTooltip content="CPC actual de Amazon Ads. Se usa para calcular el gasto." />
-                  </Label>
-                  <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">$</span>
-                    <Input
-                      id="wizard-ads-cpc"
-                      type="number"
-                      min={0}
-                      step={0.01}
-                      value={adsCpc}
-                      onChange={(e) => setAdsCpc(e.target.value)}
-                      placeholder="0.00"
-                      className="pl-7"
-                    />
-                  </div>
-                </div>
-                
-                {/* Pedidos */}
-                <div className="space-y-2">
-                  <Label htmlFor="wizard-ads-pedidos">
-                    Pedidos *
-                    <FieldTooltip content="Pedidos atribuibles. Se usa para calcular ventas y conversión." />
-                  </Label>
-                  <Input
-                    id="wizard-ads-pedidos"
-                    type="number"
-                    min={0}
-                    step={1}
-                    value={adsPedidos}
-                    onChange={(e) => setAdsPedidos(e.target.value)}
-                    placeholder="0"
-                  />
-                </div>
-              </div>
-              
-              {/* Auto-calculated metrics preview */}
-              {(adsClicks || adsCpc || adsPedidos) && (
-                <div className="p-4 rounded-lg border border-border bg-muted/30 space-y-4">
-                  <h4 className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                    Métricas auto-calculadas
-                    <span className="text-xs bg-primary/20 text-primary px-2 py-0.5 rounded">Usando economía del libro</span>
-                  </h4>
-                  
-                  {/* Show book economy reference */}
-                  <div className="grid grid-cols-3 gap-3 text-xs p-2 bg-muted/50 rounded">
-                    <div className="text-center">
-                      <span className="text-muted-foreground block">PVP</span>
-                      <span className="font-medium">${effectiveBookEconomy.precioLibro.toFixed(2)}</span>
-                    </div>
-                    <div className="text-center">
-                      <span className="text-muted-foreground block">Regalías</span>
-                      <span className="font-medium">${effectiveBookEconomy.regaliasPorVenta.toFixed(2)}</span>
-                    </div>
-                    <div className="text-center">
-                      <span className="text-muted-foreground block">ACOS PE</span>
-                      <span className="font-medium text-primary">
-                        {effectiveBookEconomy.precioLibro > 0 
-                          ? `${((effectiveBookEconomy.regaliasPorVenta / effectiveBookEconomy.precioLibro) * 100).toFixed(1)}%`
-                          : '—'}
-                      </span>
-                    </div>
-                  </div>
-                  
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                    {/* Gasto Acumulado (auto) */}
-                    <div className="flex flex-col gap-1 p-2 rounded bg-background">
-                      <span className="text-xs text-muted-foreground">Gasto acumulado</span>
-                      <span className="font-medium tabular-nums">
-                        {adsClicks && adsCpc 
-                          ? `$${(parseFloat(adsClicks) * parseFloat(adsCpc)).toFixed(2)}`
-                          : '—'}
-                      </span>
-                    </div>
-                    
-                    {/* Ventas Acumuladas (auto) */}
-                    <div className="flex flex-col gap-1 p-2 rounded bg-background">
-                      <span className="text-xs text-muted-foreground">Ventas acumuladas</span>
-                      <span className="font-medium tabular-nums">
-                        {adsPedidos 
-                          ? `$${(parseFloat(adsPedidos) * effectiveBookEconomy.precioLibro).toFixed(2)}`
-                          : '—'}
-                      </span>
-                    </div>
-                    
-                    {/* Beneficio (auto) */}
-                    <div className="flex flex-col gap-1 p-2 rounded bg-background">
-                      <span className="text-xs text-muted-foreground">Beneficio ahora</span>
-                      {(() => {
-                        const gasto = adsClicks && adsCpc ? parseFloat(adsClicks) * parseFloat(adsCpc) : null;
-                        const ventas = adsPedidos ? parseFloat(adsPedidos) * effectiveBookEconomy.precioLibro : null;
-                        const beneficio = gasto !== null && ventas !== null ? ventas - gasto : null;
-                        return (
-                          <span className={cn(
-                            "font-medium tabular-nums",
-                            beneficio !== null && beneficio >= 0 ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"
-                          )}>
-                            {beneficio !== null ? `$${beneficio.toFixed(2)}` : '—'}
-                          </span>
-                        );
-                      })()}
-                    </div>
-                    
-                    {/* ACOS Actual */}
-                    <div className="flex flex-col gap-1 p-2 rounded bg-background">
-                      <span className="text-xs text-muted-foreground">ACOS Actual</span>
-                      <span className="font-medium">{formatearPorcentaje(previewAcosActual)}</span>
-                    </div>
-                    
-                    {/* Conversión */}
-                    <div className="flex flex-col gap-1 p-2 rounded bg-background">
-                      <span className="text-xs text-muted-foreground">Conversión</span>
-                      <span className="font-medium">{formatearPorcentaje(previewConversion)}</span>
-                    </div>
-                  </div>
-                </div>
-              )}
-              
-              {/* Campaña */}
-              <div className="space-y-2">
-                <Label>Campaña</Label>
-                <CampaignSelect
-                  value={adsCampaignName}
-                  onChange={(value) => setAdsCampaignName(value)}
-                  campaigns={campaigns}
-                  onAddCampaign={onAddCampaign}
-                  placeholder="Seleccionar o crear campaña..."
-                />
-              </div>
-              
-              {/* Fase Actual */}
-              <div className="space-y-2">
-                <Label>Fase actual (opcional)</Label>
-                <Select
-                  value={adsFase ?? ''}
-                  onValueChange={(value) => setAdsFase(value as AdsFase)}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Seleccionar fase..." />
-                  </SelectTrigger>
-                  <SelectContent className="bg-popover border-border">
-                    {ADS_FASE_OPTIONS.map((opt) => (
-                      <SelectItem key={opt.value} value={opt.value}>
-                        {opt.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-          )}
-          
-          {/* ============ STEP 5: RESUMEN ============ */}
-          {currentStep === 5 && (
             <div className="space-y-6">
               <h3 className="text-lg font-medium">Resumen</h3>
               
@@ -1249,7 +1040,7 @@ export function NewKeywordWizard({
             <Button variant="ghost" onClick={() => handleOpenChange(false)}>
               Cancelar
             </Button>
-            {currentStep < 5 ? (
+            {currentStep < 4 ? (
               <Button onClick={handleNext} disabled={currentStep === 1 && !canProceedStep1} className="gap-2">
                 Siguiente
                 <ArrowRight className="w-4 h-4" />

@@ -269,8 +269,8 @@ export const AdvertisingResearch = ({
       const currentASINs = asinsByMarket[selectedMarketplace] || [];
       const currentCategories = categoriesByMarket[selectedMarketplace] || [];
       if (currentKeywords.length === 0 && currentASINs.length === 0 && currentCategories.length === 0) {
-        // Load demo keywords (150)
-        const exampleKeywords = generateDemoKeywords(selectedMarketplace, 150).map(k => ({
+        // Load demo keywords (40)
+        const exampleKeywords = generateDemoKeywords(selectedMarketplace, 40).map(k => ({
           ...k,
           id: generateId(),
           createdAt: new Date(),
@@ -811,7 +811,7 @@ export const AdvertisingResearch = ({
               <ThemeToggle />
 
               {/* Overflow Menu */}
-              <HeaderOverflowMenu onImport={() => setShowImportModal(true)} onExport={() => setShowExportModal(true)} onStartTour={() => setShowTour(true)} onOpenCampaignPlanner={() => setShowCampaignPlanner(true)} onResetData={handleResetData} onExportBackup={handleExportBackup} onImportBackup={() => setShowBackupImportModal(true)} onRegenerateDemo={handleRegenerateDemo} onOpenMarketConfig={() => setShowMarketConfigModal(true)} />
+              <HeaderOverflowMenu onImport={() => setShowImportModal(true)} onExport={() => setShowExportModal(true)} onStartTour={() => setShowTour(true)} onResetData={handleResetData} onExportBackup={handleExportBackup} onImportBackup={() => setShowBackupImportModal(true)} onRegenerateDemo={handleRegenerateDemo} onOpenMarketConfig={() => setShowMarketConfigModal(true)} />
             </div>
           </div>
 
@@ -870,8 +870,6 @@ export const AdvertisingResearch = ({
         {/* Always show compact panel + alerts tray */}
         <section className="mb-4 space-y-2">
           <BookInfoPanelCompact bookInfo={bookInfo} onChange={setBookInfo} bookEconomy={bookEconomy} onBookEconomyChange={setBookEconomy} keywords={currentKeywords} />
-          {/* ACOS Alerts Tray - always visible when there are alerts */}
-          <AcosAlertsTray keywords={currentKeywords} bookEconomy={bookEconomy} campaigns={campaigns} />
         </section>
 
         {/* === SECCIÓN 2: PESTAÑAS PRINCIPALES (Datos / Insights) === */}
@@ -966,10 +964,6 @@ export const AdvertisingResearch = ({
 
       {/* Advanced Import Modal */}
       <AdvancedImportModal isOpen={showImportModal} onClose={() => setShowImportModal(false)} onImport={handleAddBulkKeywords} marketplaceId={selectedMarketplace} existingKeywords={currentKeywords.map(k => k.keyword)} />
-
-      {/* Campaign Plan Manager */}
-      <CampaignPlanManager keywords={currentKeywords} plans={currentPlans} onCreatePlan={handleCreatePlan} onUpdatePlan={handleUpdatePlan} onDeletePlan={handleDeletePlan} onAssignKeywords={handleAssignKeywords} isOpen={showCampaignPlanner} onClose={() => setShowCampaignPlanner(false)} />
-
 
       {/* Backup Import Modal */}
       <BackupImportModal isOpen={showBackupImportModal} onClose={() => setShowBackupImportModal(false)} onImport={handleImportBackup} />

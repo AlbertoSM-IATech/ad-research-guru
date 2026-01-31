@@ -57,8 +57,10 @@ export const AdvancedFiltersAds = ({
   const toggleExpanded = onToggleExpanded || (() => setInternalExpanded(!internalExpanded));
   const activeFiltersCount = Object.entries(filters).filter(([key, value]) => {
     if (key === 'rentabilidad') return value !== 'all';
+    if (key === 'needsAttention') return value === true;
     if (key === 'campaignName') return value !== '';
-    return value !== '';
+    // Only count numeric filters if they have non-empty values
+    return typeof value === 'string' && value !== '';
   }).length;
   const resetFilters = () => {
     onFiltersChange(defaultAdsFiltersState);
