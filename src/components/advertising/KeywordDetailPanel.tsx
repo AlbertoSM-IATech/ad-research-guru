@@ -43,7 +43,7 @@ export const KeywordDetailPanel = ({
   // Campaigns hook
   const { campaigns, addCampaign } = useCampaigns(allKeywords);
   // Panel state
-  const [isExpanded, setIsExpanded] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(true); // Panel siempre expandido por defecto
   const [activeTab, setActiveTab] = useState<'nicho' | 'ads'>(defaultTab);
   
   // Market Data state
@@ -475,7 +475,7 @@ export const KeywordDetailPanel = ({
                           <Info className="w-3.5 h-3.5 text-muted-foreground cursor-help" />
                         </TooltipTrigger>
                         <TooltipContent side="top" className="max-w-xs">
-                          Precio medio de venta del nicho. Precios &gt;$9.99 puntúan mejor en Market Score.
+                          Precio medio de la competencia ($) — comprobación visual o con herramientas especializadas.
                         </TooltipContent>
                       </Tooltip>
                     </TooltipProvider>
@@ -493,7 +493,7 @@ export const KeywordDetailPanel = ({
                           <Info className="w-3.5 h-3.5 text-muted-foreground cursor-help" />
                         </TooltipTrigger>
                         <TooltipContent side="top" className="max-w-xs">
-                          Regalías por cada venta (después de costes de impresión). Afecta directamente a la rentabilidad de Ads.
+                          Regalías medias del nicho ($) — requiere herramientas externas especializadas como H10 o Bookbeam.
                         </TooltipContent>
                       </Tooltip>
                     </TooltipProvider>
@@ -512,7 +512,7 @@ export const KeywordDetailPanel = ({
                         <Info className="w-3.5 h-3.5 text-muted-foreground cursor-help" />
                       </TooltipTrigger>
                       <TooltipContent side="top" className="max-w-xs">
-                        ¿De dónde viene el tráfico principal de esta keyword? Amazon = sin penalización. RRSS/Marca personal = penaliza el Market Score.
+                        Fuente de tráfico de tu competidor principal — investigación visual del usuario.
                       </TooltipContent>
                     </Tooltip>
                   </TooltipProvider>

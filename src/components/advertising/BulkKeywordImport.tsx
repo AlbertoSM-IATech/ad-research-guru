@@ -119,7 +119,6 @@ export const BulkKeywordImport = ({
         competitionLevel: k.competitionLevel,
         campaignTypes: k.campaignTypes,
         notes: k.notes,
-        relevance: k.relevance,
         state: k.state,
         marketplaceId,
       }));

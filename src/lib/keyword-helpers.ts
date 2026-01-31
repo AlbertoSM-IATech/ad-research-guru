@@ -1,5 +1,5 @@
 // Helper to create complete Keyword objects with defaults for new fields
-import type { Keyword, CompetitionLevel, CampaignType, RelevanceLevel, IntentType, KeywordState } from '@/types/advertising';
+import type { Keyword, CompetitionLevel, CampaignType, IntentType, KeywordState, AdsData } from '@/types/advertising';
 import { getDefaultMarketData, getMarketScoreTotal } from './market-score';
 
 export interface PartialKeywordInput {
@@ -12,10 +12,10 @@ export interface PartialKeywordInput {
   competitionLevel?: CompetitionLevel;
   campaignTypes?: CampaignType[];
   notes?: string;
-  relevance?: RelevanceLevel;
   intent?: IntentType;
   state?: KeywordState;
   history?: any[];
+  adsData?: AdsData;
 }
 
 export function createKeywordDefaults(input: PartialKeywordInput): Omit<Keyword, 'id' | 'createdAt' | 'updatedAt'> {
@@ -45,11 +45,11 @@ export function createKeywordDefaults(input: PartialKeywordInput): Omit<Keyword,
     competitionLevel: input.competitionLevel ?? 'medium',
     campaignTypes: input.campaignTypes ?? ['SP'],
     notes: input.notes ?? '',
-    relevance: input.relevance,
     intent: input.intent,
     state: input.state ?? 'pending',
     status: 'pending',
     purpose: 'both',
     history: input.history ?? [],
+    adsData: input.adsData,
   };
 }

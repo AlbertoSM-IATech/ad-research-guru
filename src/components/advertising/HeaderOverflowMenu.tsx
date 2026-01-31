@@ -3,11 +3,8 @@ import {
   MoreHorizontal, 
   Upload, 
   Download, 
-  HelpCircle, 
   Settings, 
   Play,
-  Layers,
-  FlaskConical,
   Trash2,
   HardDriveDownload,
   HardDriveUpload,
@@ -37,7 +34,6 @@ interface HeaderOverflowMenuProps {
   onImport: () => void;
   onExport: () => void;
   onStartTour: () => void;
-  onOpenCampaignPlanner: () => void;
   onResetData: () => void;
   onExportBackup: () => void;
   onImportBackup: () => void;
@@ -49,7 +45,6 @@ export const HeaderOverflowMenu = ({
   onImport,
   onExport,
   onStartTour,
-  onOpenCampaignPlanner,
   onResetData,
   onExportBackup,
   onImportBackup,
@@ -86,24 +81,11 @@ export const HeaderOverflowMenu = ({
           
           <DropdownMenuSeparator />
           
-          {/* Sección: Herramientas */}
-          <DropdownMenuLabel className="text-xs text-muted-foreground">Herramientas</DropdownMenuLabel>
-          <DropdownMenuItem onClick={onOpenCampaignPlanner} className="gap-2 cursor-pointer">
-            <Layers className="h-4 w-4" />
-            Planes de campaña
-          </DropdownMenuItem>
-          
-          <DropdownMenuSeparator />
-          
           {/* Sección: Ayuda */}
           <DropdownMenuLabel className="text-xs text-muted-foreground">Ayuda</DropdownMenuLabel>
           <DropdownMenuItem onClick={onStartTour} className="gap-2 cursor-pointer">
             <Play className="h-4 w-4" />
             Iniciar tour guiado
-          </DropdownMenuItem>
-          <DropdownMenuItem className="gap-2 cursor-pointer">
-            <HelpCircle className="h-4 w-4" />
-            Ayuda
           </DropdownMenuItem>
           
           <DropdownMenuSeparator />
