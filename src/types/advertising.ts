@@ -86,6 +86,8 @@ export interface AdsData {
   cpcActual?: number;     // >= 0, CPC actual manual
   pedidos?: number;       // int >= 0, acumulados
   ventas?: number;        // >= 0, ventas atribuibles acumuladas
+  impresiones?: number;   // int >= 0, total de impresiones
+  ctr?: number;           // % = (clicks / impresiones) * 100
   faseActual?: AdsFase;
   guiaLanzamiento?: number; // %
   guiaDominio?: number;     // %
