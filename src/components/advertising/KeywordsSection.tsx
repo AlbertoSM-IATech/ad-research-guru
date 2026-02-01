@@ -27,6 +27,7 @@ import { ResizableTableHeader } from './ResizableTableHeader';
 import { AdsDashboard } from './AdsDashboard';
 import { CampaignSelect } from './CampaignSelect';
 import { PlanUpgradeModal } from './PlanUpgradeModal';
+import { AcosSparkline } from './AcosSparkline';
 import { type Keyword, type CampaignType, type CompetitionLevel, type RelevanceLevel, type IntentType, type KeywordState, type BookInfo, type BookEconomy, type HistoryEntry, type AdsData, RELEVANCE_LEVELS, INTENT_TYPES, KEYWORD_STATES, calculateRelevance, classifyIntent } from '@/types/advertising';
 import { calculateMarketScore, getDefaultMarketData, KEYWORD_STATUS_OPTIONS, type KeywordStatus } from '@/lib/market-score';
 import { createKeywordDefaults } from '@/lib/keyword-helpers';
@@ -420,6 +421,9 @@ export const KeywordsSection = ({
         const ventasCalculadas = calcularVentasAcumuladas(ads?.pedidos, bookEconomy.precioLibro);
         const beneficio = gastoCalculado !== null && ventasCalculadas !== null ? ventasCalculadas - gastoCalculado : null;
         const acosActual = calcularAcosActualPorcentaje(gastoCalculado ?? undefined, ventasCalculadas ?? undefined);
+        const acosEquilibrioVal = bookEconomy.precioLibro > 0 && bookEconomy.regaliasPorVenta > 0 
+          ? (bookEconomy.regaliasPorVenta / bookEconomy.precioLibro) * 100 
+          : null;
 
         // Campaign name filter
         if (adsFilters.campaignName) {
@@ -427,9 +431,17 @@ export const KeywordsSection = ({
           if (!campaignName.includes(adsFilters.campaignName.toLowerCase())) return false;
         }
 
-        // Rentabilidad filter
-        if (adsFilters.rentabilidad === 'profitable' && (beneficio === null || beneficio < 0)) return false;
-        if (adsFilters.rentabilidad === 'unprofitable' && (beneficio === null || beneficio >= 0)) return false;
+        // Rentabilidad filter - CORRECTED: use ACOS vs PE, not beneficio
+        // Profitable = ACOS actual <= ACOS equilibrio (PE)
+        // Unprofitable = ACOS actual > ACOS equilibrio (PE)
+        if (adsFilters.rentabilidad === 'profitable') {
+          // Must have ACOS data and be <= PE
+          if (acosActual === null || acosEquilibrioVal === null || acosActual > acosEquilibrioVal) return false;
+        }
+        if (adsFilters.rentabilidad === 'unprofitable') {
+          // Must have ACOS data and be > PE
+          if (acosActual === null || acosEquilibrioVal === null || acosActual <= acosEquilibrioVal) return false;
+        }
 
         // Clicks range
         if (adsFilters.minClicks && (ads?.clicks ?? 0) < parseInt(adsFilters.minClicks)) return false;
@@ -462,8 +474,21 @@ export const KeywordsSection = ({
         return true;
       });
     }
-    return sortKeywords(result, sortField, sortOrder, bookEconomy.precioLibro);
-  }, [keywords, searchTerm, filters, adsFilters, sortField, sortOrder, functionalView, bookEconomy.precioLibro]);
+    
+    // Sort first
+    let sorted = sortKeywords(result, sortField, sortOrder, bookEconomy.precioLibro);
+    
+    // Pin main keyword to top if it exists and is in the filtered results
+    if (bookInfo.mainKeywordId) {
+      const mainKeywordIndex = sorted.findIndex(k => k.id === bookInfo.mainKeywordId);
+      if (mainKeywordIndex > 0) {
+        const [mainKeyword] = sorted.splice(mainKeywordIndex, 1);
+        sorted = [mainKeyword, ...sorted];
+      }
+    }
+    
+    return sorted;
+  }, [keywords, searchTerm, filters, adsFilters, sortField, sortOrder, functionalView, bookEconomy.precioLibro, bookEconomy.regaliasPorVenta, bookInfo.mainKeywordId]);
 
   // Check visibility of newly created keyword and show appropriate toast
   useEffect(() => {
@@ -553,7 +578,6 @@ export const KeywordsSection = ({
       {/* Functional View Toggle */}
       <div className="flex flex-col gap-4">
         <div className="items-start justify-between flex flex-col px-0 mx-0 my-0 py-0 gap-[13px]">
-          <h3 className="font-heading font-semibold text-xl text-center">Palabras Clave</h3>
           
           {/* View Toggle: Editorial / Ads */}
           <div className="flex items-center gap-2 p-1 bg-muted rounded-lg">
@@ -770,16 +794,16 @@ export const KeywordsSection = ({
                           <InfoTooltip content="ACOS Punto de Equilibrio. Si ACOS actual supera este valor, pierdes dinero." />
                         </div>
                       </ResizableTableHeader>
-                      <ResizableTableHeader columnKey="clicks" width={columnWidths.clicks} onResize={setColumnWidth} className="cursor-pointer hover:text-foreground" onClick={() => handleSort('clicks')}>
+                      <ResizableTableHeader columnKey="impresiones" width={columnWidths.impresiones || 80} onResize={setColumnWidth} className="cursor-pointer hover:text-foreground" onClick={() => handleSort('keyword')}>
                         <div className="flex items-center gap-1">
-                          Clicks
-                          <ArrowUpDown className="w-3 h-3" />
+                          Impr.
+                          <InfoTooltip content="Número total de veces que se ha mostrado tu anuncio." />
                         </div>
                       </ResizableTableHeader>
-                      <ResizableTableHeader columnKey="cpc" width={columnWidths.cpc} onResize={setColumnWidth} className="cursor-pointer hover:text-foreground" onClick={() => handleSort('cpc')}>
+                      <ResizableTableHeader columnKey="ctr" width={columnWidths.ctr || 70} onResize={setColumnWidth} className="cursor-pointer hover:text-foreground" onClick={() => handleSort('keyword')}>
                         <div className="flex items-center gap-1">
-                          CPC
-                          <ArrowUpDown className="w-3 h-3" />
+                          CTR
+                          <InfoTooltip content="Frecuencia con la que los clientes hacen clic en tu anuncio cuando se muestra. El CTR se calcula como los clics divididos entre las impresiones. Un CTR del 3-5% es considerado óptimo." />
                         </div>
                       </ResizableTableHeader>
                       <ResizableTableHeader columnKey="pedidos" width={columnWidths.pedidos} onResize={setColumnWidth} className="cursor-pointer hover:text-foreground" onClick={() => handleSort('pedidos')}>
@@ -806,11 +830,10 @@ export const KeywordsSection = ({
                           <ArrowUpDown className="w-3 h-3" />
                         </div>
                       </ResizableTableHeader>
-                      <ResizableTableHeader columnKey="acosSig" width={columnWidths.acosSig} onResize={setColumnWidth} className="cursor-pointer hover:text-foreground" onClick={() => handleSort('acosSiguiente')}>
+                      <ResizableTableHeader columnKey="tendencia" width={columnWidths.tendencia || 80} onResize={setColumnWidth}>
                         <div className="flex items-center gap-1">
-                          ACOS Sig.
-                          <ArrowUpDown className="w-3 h-3" />
-                          <InfoTooltip content="ACOS si el siguiente click genera 1 venta. Escenario optimista." />
+                          Tendencia
+                          <InfoTooltip content="Evolución del ACOS en los últimos 7 días. Línea punteada = Punto de Equilibrio." />
                         </div>
                       </ResizableTableHeader>
                       <ResizableTableHeader columnKey="conversion" width={columnWidths.conversion} onResize={setColumnWidth} className="cursor-pointer hover:text-foreground" onClick={() => handleSort('conversion')}>
@@ -823,7 +846,7 @@ export const KeywordsSection = ({
                         <div className="flex items-center gap-1">
                           Beneficio
                           <ArrowUpDown className="w-3 h-3" />
-                          <InfoTooltip content="Ventas - Gasto. Muestra la rentabilidad de cada keyword." />
+                          <InfoTooltip content="Ventas - Gasto. Nota: El ACOS es el verdadero indicador de rentabilidad." />
                         </div>
                       </ResizableTableHeader>
                     </>}
@@ -831,7 +854,7 @@ export const KeywordsSection = ({
               </TableHeader>
               <TableBody>
               {paginatedKeywords.length === 0 ? <TableRow>
-                    <TableCell colSpan={functionalView === 'editorial' ? 7 : 14} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={functionalView === 'editorial' ? 7 : 12} className="text-center py-8 text-muted-foreground">
                       {keywords.length === 0 ? 'No hay keywords. Añade tu primera keyword o importa en lote.' : 'No se encontraron keywords con los filtros aplicados.'}
                     </TableCell>
                   </TableRow> : paginatedKeywords.map(keyword => {
@@ -1019,47 +1042,27 @@ export const KeywordsSection = ({
                             <TableCell className="tabular-nums text-xs font-medium text-primary">
                               {acosEquilibrio !== null ? `${acosEquilibrio.toFixed(1)}%` : '—'}
                             </TableCell>
-                            {/* Clicks - Inline editable with increment buttons */}
-                            <TableCell onClick={e => e.stopPropagation()}>
-                              <div className="flex items-center gap-0.5">
-                                <Input type="number" min={0} step={1} value={ads?.clicks ?? ''} onChange={e => handleInlineAdsUpdate('clicks', e.target.value)} className="h-7 w-14 text-xs tabular-nums text-center [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" placeholder="0" />
-                                <div className="flex flex-col">
-                                  <Button variant="ghost" size="sm" className="h-3.5 w-5 p-0 hover:bg-primary/20" onClick={() => handleInlineAdsUpdate('clicks', String((ads?.clicks ?? 0) + 1))}>
-                                    <ChevronUp className="w-3 h-3" />
-                                  </Button>
-                                  <Button variant="ghost" size="sm" className="h-3.5 w-5 p-0 hover:bg-primary/20" onClick={() => handleInlineAdsUpdate('clicks', String(Math.max(0, (ads?.clicks ?? 0) - 1)))}>
-                                    <ChevronDown className="w-3 h-3" />
-                                  </Button>
-                                </div>
-                              </div>
+                            {/* Impresiones - Read only */}
+                            <TableCell className="tabular-nums text-xs text-muted-foreground">
+                              {ads?.impresiones?.toLocaleString() ?? '—'}
                             </TableCell>
-                            {/* CPC - Inline editable with increment buttons */}
-                            <TableCell onClick={e => e.stopPropagation()}>
-                              <div className="flex items-center gap-0.5">
-                                <Input type="number" min={0} step={0.01} value={ads?.cpcActual ?? ''} onChange={e => handleInlineAdsUpdate('cpcActual', e.target.value)} className="h-7 w-14 text-xs tabular-nums text-center [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" placeholder="0.00" />
-                                <div className="flex flex-col">
-                                  <Button variant="ghost" size="sm" className="h-3.5 w-5 p-0 hover:bg-primary/20" onClick={() => handleInlineAdsUpdate('cpcActual', String(((ads?.cpcActual ?? 0) + 0.01).toFixed(2)))}>
-                                    <ChevronUp className="w-3 h-3" />
-                                  </Button>
-                                  <Button variant="ghost" size="sm" className="h-3.5 w-5 p-0 hover:bg-primary/20" onClick={() => handleInlineAdsUpdate('cpcActual', String(Math.max(0, (ads?.cpcActual ?? 0) - 0.01).toFixed(2)))}>
-                                    <ChevronDown className="w-3 h-3" />
-                                  </Button>
-                                </div>
-                              </div>
+                            {/* CTR - Read only */}
+                            <TableCell className="tabular-nums text-xs">
+                              <span className={cn(
+                                ads?.ctr !== undefined 
+                                  ? ads.ctr >= 3 && ads.ctr <= 5 
+                                    ? 'text-green-600 dark:text-green-400' 
+                                    : ads.ctr < 3 
+                                      ? 'text-amber-600 dark:text-amber-400' 
+                                      : 'text-muted-foreground'
+                                  : 'text-muted-foreground'
+                              )}>
+                                {ads?.ctr !== undefined ? `${ads.ctr.toFixed(2)}%` : '—'}
+                              </span>
                             </TableCell>
-                            {/* Pedidos - Inline editable with increment buttons */}
-                            <TableCell onClick={e => e.stopPropagation()}>
-                              <div className="flex items-center gap-0.5">
-                                <Input type="number" min={0} step={1} value={ads?.pedidos ?? ''} onChange={e => handleInlineAdsUpdate('pedidos', e.target.value)} className="h-7 w-14 text-xs tabular-nums text-center [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" placeholder="0" />
-                                <div className="flex flex-col">
-                                  <Button variant="ghost" size="sm" className="h-3.5 w-5 p-0 hover:bg-primary/20" onClick={() => handleInlineAdsUpdate('pedidos', String((ads?.pedidos ?? 0) + 1))}>
-                                    <ChevronUp className="w-3 h-3" />
-                                  </Button>
-                                  <Button variant="ghost" size="sm" className="h-3.5 w-5 p-0 hover:bg-primary/20" onClick={() => handleInlineAdsUpdate('pedidos', String(Math.max(0, (ads?.pedidos ?? 0) - 1)))}>
-                                    <ChevronDown className="w-3 h-3" />
-                                  </Button>
-                                </div>
-                              </div>
+                            {/* Pedidos - Read only */}
+                            <TableCell className="tabular-nums text-xs text-muted-foreground">
+                              {ads?.pedidos ?? '—'}
                             </TableCell>
                             {/* Gasto - Auto-calculated (read-only) */}
                             <TableCell className="tabular-nums text-xs text-muted-foreground">
@@ -1089,11 +1092,9 @@ export const KeywordsSection = ({
                                 </span>
                               </div>
                             </TableCell>
-                            {/* ACOS Siguiente Click */}
-                            <TableCell className="tabular-nums text-xs">
-                              <span className={cn(acosSiguiente !== null && acosEquilibrio !== null ? acosSiguiente <= acosEquilibrio ? 'text-green-600 dark:text-green-400' : 'text-amber-600 dark:text-amber-400' : 'text-muted-foreground')}>
-                                {formatearPorcentaje(acosSiguiente)}
-                              </span>
+                            {/* Tendencia ACOS Sparkline */}
+                            <TableCell>
+                              <AcosSparkline history={ads?.history} acosEquilibrio={acosEquilibrio} />
                             </TableCell>
                             {/* Conversión */}
                             <TableCell className="tabular-nums text-xs text-muted-foreground">

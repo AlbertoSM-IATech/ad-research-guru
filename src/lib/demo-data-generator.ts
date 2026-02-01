@@ -194,12 +194,18 @@ function generateRandomAdsData(): import('@/types/advertising').AdsData {
   const conversionRate = 0.02 + Math.random() * 0.08; // 2% - 10%
   const pedidos = Math.floor(clicks * conversionRate);
   
+  // Generate impressions based on CTR between 2-8%
+  const ctr = 2 + Math.random() * 6; // 2-8%
+  const impresiones = clicks > 0 ? Math.floor((clicks / ctr) * 100) : Math.floor(Math.random() * 5000);
+  
   const campaigns = ['Campaña Principal', 'Auto', 'Manual Exacto', 'Broad Test', 'Discovery', 'Libro #1', 'Nichos Q1'];
   
   return {
     clicks,
     cpcActual,
     pedidos,
+    impresiones,
+    ctr: parseFloat(ctr.toFixed(2)),
     campaignName: randomFrom(campaigns),
     history: generateRandomAdsHistory(clicks, cpcActual, pedidos),
   };

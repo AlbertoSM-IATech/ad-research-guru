@@ -577,8 +577,8 @@ export const AdvertisingResearch = ({
 
   // Regenerate demo data handler - generates fresh demo data with competitors
   const handleRegenerateDemo = useCallback(() => {
-    // Generate fresh demo keywords (150)
-    const exampleKeywords = generateDemoKeywords(selectedMarketplace, 150).map(k => ({
+    // Generate fresh demo keywords (40)
+    const exampleKeywords = generateDemoKeywords(selectedMarketplace, 40).map(k => ({
       ...k,
       id: generateId(),
       createdAt: new Date(),
