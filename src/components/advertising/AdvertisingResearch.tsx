@@ -963,7 +963,7 @@ export const AdvertisingResearch = ({
       <AdvancedExportModal isOpen={showExportModal} onClose={() => setShowExportModal(false)} keywords={currentKeywords} asins={currentASINs} categories={currentCategories} marketplaceId={selectedMarketplace} />
 
       {/* Advanced Import Modal */}
-      <AdvancedImportModal isOpen={showImportModal} onClose={() => setShowImportModal(false)} onImport={handleAddBulkKeywords} marketplaceId={selectedMarketplace} existingKeywords={currentKeywords.map(k => k.keyword)} />
+      <AdvancedImportModal isOpen={showImportModal} onClose={() => setShowImportModal(false)} onImport={handleAddBulkKeywords} marketplaceId={selectedMarketplace} existingKeywords={currentKeywords} />
 
       {/* Backup Import Modal */}
       <BackupImportModal isOpen={showBackupImportModal} onClose={() => setShowBackupImportModal(false)} onImport={handleImportBackup} />
