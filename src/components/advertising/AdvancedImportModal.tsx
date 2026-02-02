@@ -1,5 +1,5 @@
-import { useState, useCallback } from 'react';
-import { Upload, FileSpreadsheet, ArrowRight, Save, Plus } from 'lucide-react';
+import { useState, useCallback, useRef } from 'react';
+import { Upload, FileSpreadsheet, ArrowRight, Save, FileUp, AlertCircle, CheckCircle2, Info } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -22,60 +22,51 @@ import {
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Checkbox } from '@/components/ui/checkbox';
-import { ImportHelpTooltip } from './ImportHelpTooltip';
-import { type Keyword, type ImportMappingTemplate, normalizeText } from '@/types/advertising';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { type Keyword, normalizeText } from '@/types/advertising';
 import { createKeywordDefaults } from '@/lib/keyword-helpers';
 import { useToast } from '@/hooks/use-toast';
+import { 
+  parseDelimitedText, 
+  parseFile, 
+  type ParsedTable 
+} from '@/lib/import/parsers';
+import {
+  IMPORT_TEMPLATES,
+  IMPORTABLE_FIELDS,
+  detectTemplate,
+  autoMapHeaders,
+  parseNumericValue,
+  deriveCompetitionLevel,
+  type ImportSource,
+  type ImportableFieldKey,
+} from '@/lib/import/templates';
 
 interface AdvancedImportModalProps {
   isOpen: boolean;
   onClose: () => void;
   onImport: (keywords: Array<Omit<Keyword, 'id' | 'createdAt' | 'updatedAt'>>) => void;
   marketplaceId: string;
-  existingKeywords?: string[];
+  existingKeywords?: Keyword[];
 }
 
 interface ParsedRow {
   originalData: Record<string, string>;
-  mappedData: Partial<Keyword>;
+  mappedData: {
+    keyword?: string;
+    searchVolume?: number;
+    competitors?: number;
+    titleDensity?: number;
+    cpc?: number;
+    notes?: string;
+  };
   isValid: boolean;
   isDuplicate: boolean;
+  existingKeyword?: Keyword; // For merge updates
 }
 
-const INTERNAL_FIELDS = [
-  { value: 'keyword', label: 'Keyword', required: true },
-  { value: 'searchVolume', label: 'Volumen de Búsqueda', required: false },
-  { value: 'competitionLevel', label: 'Competencia', required: false },
-  { value: 'notes', label: 'Notas', required: false },
-  { value: 'ignore', label: '— Ignorar —', required: false },
-];
-
-const PRESET_TEMPLATES: ImportMappingTemplate[] = [
-  {
-    id: 'helium10',
-    name: 'Helium 10',
-    source: 'Helium10',
-    mappings: {
-      'Keyword': 'keyword',
-      'Search Volume': 'searchVolume',
-      'Competing Products': 'competitionLevel',
-    },
-    createdAt: new Date(),
-  },
-  {
-    id: 'publisher-rocket',
-    name: 'Publisher Rocket',
-    source: 'Publisher Rocket',
-    mappings: {
-      'Keyword Phrase': 'keyword',
-      'Est. Amazon Searches': 'searchVolume',
-      'Competition Score': 'competitionLevel',
-    },
-    createdAt: new Date(),
-  },
-];
-
-const STORAGE_KEY = 'publify-import-templates';
+type ImportMethod = 'file' | 'paste';
 
 export const AdvancedImportModal = ({
   isOpen,
@@ -85,317 +76,424 @@ export const AdvancedImportModal = ({
   existingKeywords = [],
 }: AdvancedImportModalProps) => {
   const { toast } = useToast();
-  const [step, setStep] = useState<'input' | 'mapping' | 'preview'>('input');
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  // Step management
+  const [step, setStep] = useState<'source' | 'mapping'>('source');
+  
+  // Source selection
+  const [importSource, setImportSource] = useState<ImportSource>('helium10');
+  const [importMethod, setImportMethod] = useState<ImportMethod>('file');
   const [rawText, setRawText] = useState('');
-  const [detectedHeaders, setDetectedHeaders] = useState<string[]>([]);
-  const [columnMappings, setColumnMappings] = useState<Record<string, string>>({});
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  
+  // Parsed data
+  const [parsedTable, setParsedTable] = useState<ParsedTable | null>(null);
+  const [columnMappings, setColumnMappings] = useState<Record<string, ImportableFieldKey | 'ignore'>>({});
   const [parsedRows, setParsedRows] = useState<ParsedRow[]>([]);
-  const [templates, setTemplates] = useState<ImportMappingTemplate[]>(() => {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved) {
-      try {
-        return [...PRESET_TEMPLATES, ...JSON.parse(saved)];
-      } catch {
-        return PRESET_TEMPLATES;
-      }
-    }
-    return PRESET_TEMPLATES;
-  });
-  const [selectedTemplate, setSelectedTemplate] = useState<string>('');
-  const [newTemplateName, setNewTemplateName] = useState('');
-  const [skipDuplicates, setSkipDuplicates] = useState(true);
+  
+  // Options
+  const [skipDuplicates, setSkipDuplicates] = useState(false);
+  const [updateExisting, setUpdateExisting] = useState(true);
 
-  const detectDelimiter = (text: string): string => {
-    const firstLine = text.split('\n')[0] || '';
-    if (firstLine.includes('\t')) return '\t';
-    if (firstLine.includes(';')) return ';';
-    return ',';
+  // Normalize existing keywords for lookup
+  const existingKeywordMap = new Map(
+    existingKeywords.map(k => [normalizeText(k.keyword), k])
+  );
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setSelectedFile(file);
+    }
   };
 
-  const parseHeaders = useCallback(() => {
-    if (!rawText.trim()) return;
-    
-    const lines = rawText.trim().split('\n');
-    const delimiter = detectDelimiter(rawText);
-    const firstLine = lines[0] || '';
-    
-    // Detect if first line looks like headers
-    const headers = firstLine.split(delimiter).map(h => h.trim().replace(/^["']|["']$/g, ''));
-    
-    // Check if headers look like data (all numeric or look like keywords)
-    const looksLikeData = headers.every(h => !isNaN(Number(h))) || 
-                          (headers.length === 1 && !headers[0].includes(' '));
-    
-    if (looksLikeData) {
-      // No headers, treat as single column
-      setDetectedHeaders(['Column 1']);
-      setColumnMappings({ 'Column 1': 'keyword' });
-    } else {
-      setDetectedHeaders(headers);
-      // Auto-detect mappings based on common header names
-      const autoMappings: Record<string, string> = {};
-      headers.forEach(header => {
-        const lower = header.toLowerCase();
-        if (lower.includes('keyword') || lower.includes('palabra') || lower.includes('phrase')) {
-          autoMappings[header] = 'keyword';
-        } else if (lower.includes('volume') || lower.includes('search') || lower.includes('búsqueda')) {
-          autoMappings[header] = 'searchVolume';
-        } else if (lower.includes('competition') || lower.includes('compet')) {
-          autoMappings[header] = 'competitionLevel';
-        } else if (lower.includes('note') || lower.includes('nota')) {
-          autoMappings[header] = 'notes';
-        } else {
-          autoMappings[header] = 'ignore';
+  const processSource = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      let table: ParsedTable;
+      
+      if (importMethod === 'file' && selectedFile) {
+        table = await parseFile(selectedFile);
+      } else if (importMethod === 'paste' && rawText.trim()) {
+        table = parseDelimitedText(rawText);
+      } else {
+        toast({ 
+          title: 'Error', 
+          description: 'Selecciona un archivo o pega contenido', 
+          variant: 'destructive' 
+        });
+        setIsLoading(false);
+        return;
+      }
+
+      if (table.headers.length === 0) {
+        toast({ 
+          title: 'Error', 
+          description: 'No se detectaron columnas en los datos', 
+          variant: 'destructive' 
+        });
+        setIsLoading(false);
+        return;
+      }
+
+      setParsedTable(table);
+      
+      // Auto-detect template if custom, otherwise use selected
+      const detectedTemplate = importSource === 'custom' 
+        ? detectTemplate(table.headers)
+        : importSource;
+      
+      // Auto-map headers
+      const autoMappings = autoMapHeaders(table.headers, detectedTemplate);
+      setColumnMappings(autoMappings);
+      
+      // Process rows with initial mappings
+      processRows(table, autoMappings);
+      setStep('mapping');
+      
+    } catch (error) {
+      console.error('Parse error:', error);
+      toast({ 
+        title: 'Error al procesar', 
+        description: error instanceof Error ? error.message : 'Error desconocido', 
+        variant: 'destructive' 
+      });
+    }
+    setIsLoading(false);
+  }, [importMethod, selectedFile, rawText, importSource, toast]);
+
+  const processRows = useCallback((
+    table: ParsedTable, 
+    mappings: Record<string, ImportableFieldKey | 'ignore'>
+  ) => {
+    const rows: ParsedRow[] = table.rows.map(row => {
+      const mappedData: ParsedRow['mappedData'] = {};
+      
+      Object.entries(mappings).forEach(([header, field]) => {
+        if (field === 'ignore') return;
+        
+        const rawValue = row[header];
+        if (!rawValue) return;
+        
+        switch (field) {
+          case 'keyword':
+            mappedData.keyword = rawValue.trim();
+            break;
+          case 'searchVolume':
+            mappedData.searchVolume = parseNumericValue(rawValue);
+            break;
+          case 'competitors':
+            mappedData.competitors = parseNumericValue(rawValue);
+            break;
+          case 'titleDensity':
+            mappedData.titleDensity = parseNumericValue(rawValue);
+            break;
+          case 'cpc':
+            mappedData.cpc = parseNumericValue(rawValue);
+            break;
+          case 'notes':
+            mappedData.notes = rawValue.trim();
+            break;
         }
       });
-      setColumnMappings(autoMappings);
-    }
-    
-    setStep('mapping');
-  }, [rawText]);
 
-  const applyTemplate = (templateId: string) => {
-    const template = templates.find(t => t.id === templateId);
-    if (template) {
-      setColumnMappings(prev => {
-        const newMappings = { ...prev };
-        Object.entries(template.mappings).forEach(([external, internal]) => {
-          // Find matching header (case-insensitive)
-          const matchingHeader = detectedHeaders.find(h => 
-            h.toLowerCase() === external.toLowerCase()
-          );
-          if (matchingHeader) {
-            newMappings[matchingHeader] = internal;
-          }
-        });
-        return newMappings;
-      });
-      setSelectedTemplate(templateId);
-    }
-  };
-
-  const saveAsTemplate = () => {
-    if (!newTemplateName.trim()) {
-      toast({ title: 'Error', description: 'Introduce un nombre para la plantilla', variant: 'destructive' });
-      return;
-    }
-    
-    const newTemplate: ImportMappingTemplate = {
-      id: `custom-${Date.now()}`,
-      name: newTemplateName,
-      source: 'Custom',
-      mappings: { ...columnMappings },
-      createdAt: new Date(),
-    };
-    
-    const customTemplates = templates.filter(t => !PRESET_TEMPLATES.find(p => p.id === t.id));
-    const updatedCustom = [...customTemplates, newTemplate];
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedCustom));
-    
-    setTemplates([...PRESET_TEMPLATES, ...updatedCustom]);
-    setNewTemplateName('');
-    toast({ title: 'Plantilla guardada', description: `"${newTemplateName}" se ha guardado correctamente` });
-  };
-
-  const deleteTemplate = (templateId: string) => {
-    if (PRESET_TEMPLATES.find(t => t.id === templateId)) return;
-    
-    const customTemplates = templates.filter(t => 
-      !PRESET_TEMPLATES.find(p => p.id === t.id) && t.id !== templateId
-    );
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(customTemplates));
-    setTemplates([...PRESET_TEMPLATES, ...customTemplates]);
-    toast({ title: 'Plantilla eliminada' });
-  };
-
-  const processData = useCallback(() => {
-    const lines = rawText.trim().split('\n');
-    const delimiter = detectDelimiter(rawText);
-    const hasHeaders = detectedHeaders.length > 0 && detectedHeaders[0] !== 'Column 1';
-    const dataLines = hasHeaders ? lines.slice(1) : lines;
-    
-    const existingSet = new Set(existingKeywords.map(k => normalizeText(k)));
-    
-    const rows: ParsedRow[] = dataLines
-      .filter(line => line.trim())
-      .map(line => {
-        const values = line.split(delimiter).map(v => v.trim().replace(/^["']|["']$/g, ''));
-        const originalData: Record<string, string> = {};
-        const mappedData: Partial<Keyword> = {};
-        
-        detectedHeaders.forEach((header, idx) => {
-          originalData[header] = values[idx] || '';
-          const mapping = columnMappings[header];
-          
-          if (mapping && mapping !== 'ignore' && values[idx]) {
-            if (mapping === 'keyword') {
-              mappedData.keyword = values[idx];
-            } else if (mapping === 'searchVolume') {
-              mappedData.searchVolume = parseInt(values[idx].replace(/[^0-9]/g, '')) || 0;
-            } else if (mapping === 'competitionLevel') {
-              const val = values[idx].toLowerCase();
-              if (val.includes('low') || val.includes('baj') || parseInt(val) < 30) {
-                mappedData.competitionLevel = 'low';
-              } else if (val.includes('high') || val.includes('alt') || parseInt(val) > 70) {
-                mappedData.competitionLevel = 'high';
-              } else {
-                mappedData.competitionLevel = 'medium';
-              }
-            } else if (mapping === 'notes') {
-              mappedData.notes = values[idx];
-            }
-          }
-        });
-
-        const isValid = !!mappedData.keyword && mappedData.keyword.trim().length > 0;
-        const isDuplicate = mappedData.keyword ? existingSet.has(normalizeText(mappedData.keyword)) : false;
-        
-        return { originalData, mappedData, isValid, isDuplicate };
-      });
+      const normalizedKw = mappedData.keyword ? normalizeText(mappedData.keyword) : '';
+      const existingKw = normalizedKw ? existingKeywordMap.get(normalizedKw) : undefined;
+      
+      return {
+        originalData: row,
+        mappedData,
+        isValid: !!mappedData.keyword && mappedData.keyword.trim().length > 0,
+        isDuplicate: !!existingKw,
+        existingKeyword: existingKw,
+      };
+    });
     
     setParsedRows(rows);
-    setStep('preview');
-  }, [rawText, detectedHeaders, columnMappings, existingKeywords]);
+  }, [existingKeywordMap]);
+
+  const handleMappingChange = (header: string, field: ImportableFieldKey | 'ignore') => {
+    const newMappings = { ...columnMappings, [header]: field };
+    setColumnMappings(newMappings);
+    
+    if (parsedTable) {
+      processRows(parsedTable, newMappings);
+    }
+  };
 
   const handleImport = () => {
-    const toImport = parsedRows
-      .filter(r => r.isValid && (!skipDuplicates || !r.isDuplicate))
-      .map(r => createKeywordDefaults({
-        keyword: r.mappedData.keyword!,
-        searchVolume: r.mappedData.searchVolume || 0,
-        competitionLevel: r.mappedData.competitionLevel || 'medium',
-        notes: r.mappedData.notes || '',
-        intent: r.mappedData.intent,
-        state: 'pending',
-        campaignTypes: ['SP'],
+    const results = {
+      added: 0,
+      updated: 0,
+      skipped: 0,
+    };
+
+    const toImport: Array<Omit<Keyword, 'id' | 'createdAt' | 'updatedAt'>> = [];
+
+    parsedRows.forEach(row => {
+      if (!row.isValid) {
+        results.skipped++;
+        return;
+      }
+
+      if (row.isDuplicate) {
+        if (skipDuplicates && !updateExisting) {
+          results.skipped++;
+          return;
+        }
+        
+        if (updateExisting && row.existingKeyword) {
+          // Create merged keyword preserving existing adsData and history
+          const existing = row.existingKeyword;
+          const competitionLevel = row.mappedData.competitors 
+            ? deriveCompetitionLevel(row.mappedData.competitors)
+            : existing.competitionLevel;
+          
+          toImport.push({
+            ...createKeywordDefaults({
+              keyword: row.mappedData.keyword!,
+              marketplaceId,
+              searchVolume: row.mappedData.searchVolume ?? existing.searchVolume,
+              competitors: row.mappedData.competitors ?? existing.competitors,
+              competitionLevel,
+              notes: row.mappedData.notes || existing.notes,
+              state: existing.state,
+              adsData: existing.adsData, // Preserve ads data
+              history: existing.history, // Preserve history
+            }),
+            // Preserve other existing fields
+            status: existing.status,
+            purpose: existing.purpose,
+            campaignTypes: existing.campaignTypes,
+          });
+          results.updated++;
+          return;
+        }
+      }
+
+      // New keyword
+      const competitionLevel = row.mappedData.competitors 
+        ? deriveCompetitionLevel(row.mappedData.competitors)
+        : 'medium';
+
+      toImport.push(createKeywordDefaults({
+        keyword: row.mappedData.keyword!,
         marketplaceId,
+        searchVolume: row.mappedData.searchVolume ?? 0,
+        competitors: row.mappedData.competitors ?? 0,
+        competitionLevel,
+        notes: row.mappedData.notes || '',
+        state: 'pending',
       }));
-    
+      results.added++;
+    });
+
     onImport(toImport);
-    toast({ title: `${toImport.length} keywords importadas` });
+    
+    toast({ 
+      title: 'Importación completada',
+      description: `Añadidas: ${results.added} | Actualizadas: ${results.updated} | Omitidas: ${results.skipped}`,
+    });
+    
     handleClose();
   };
 
   const handleClose = () => {
-    setStep('input');
+    setStep('source');
     setRawText('');
-    setDetectedHeaders([]);
+    setSelectedFile(null);
+    setParsedTable(null);
     setColumnMappings({});
     setParsedRows([]);
-    setSelectedTemplate('');
+    setImportSource('helium10');
+    setImportMethod('file');
     onClose();
   };
 
+  // Stats
   const validCount = parsedRows.filter(r => r.isValid).length;
   const duplicateCount = parsedRows.filter(r => r.isDuplicate).length;
-  const toImportCount = parsedRows.filter(r => r.isValid && (!skipDuplicates || !r.isDuplicate)).length;
+  const newCount = parsedRows.filter(r => r.isValid && !r.isDuplicate).length;
+  const hasKeywordMapping = Object.values(columnMappings).includes('keyword');
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-[900px] max-h-[90vh] overflow-y-auto bg-card border-border">
+      <DialogContent className="sm:max-w-[900px] max-h-[90vh] overflow-hidden flex flex-col bg-card border-border">
         <DialogHeader>
           <DialogTitle className="font-heading flex items-center gap-2">
             <Upload className="w-5 h-5" />
-            Importación Avanzada de Keywords
-            <ImportHelpTooltip type="keywords" />
+            Importar Keywords
           </DialogTitle>
         </DialogHeader>
 
         {/* Step Indicator */}
-        <div className="flex items-center gap-2 text-sm">
-          <Badge variant={step === 'input' ? 'default' : 'outline'}>1. Datos</Badge>
+        <div className="flex items-center gap-2 text-sm py-2">
+          <Badge variant={step === 'source' ? 'default' : 'outline'} className="gap-1">
+            <span className="font-bold">1</span> Fuente
+          </Badge>
           <ArrowRight className="w-4 h-4 text-muted-foreground" />
-          <Badge variant={step === 'mapping' ? 'default' : 'outline'}>2. Mapeo</Badge>
-          <ArrowRight className="w-4 h-4 text-muted-foreground" />
-          <Badge variant={step === 'preview' ? 'default' : 'outline'}>3. Vista Previa</Badge>
+          <Badge variant={step === 'mapping' ? 'default' : 'outline'} className="gap-1">
+            <span className="font-bold">2</span> Mapeo y Vista Previa
+          </Badge>
         </div>
 
-        <div className="py-4">
-          {/* Step 1: Input */}
-          {step === 'input' && (
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label>Pega tus datos CSV o de herramientas externas</Label>
-                <Textarea
-                  value={rawText}
-                  onChange={(e) => setRawText(e.target.value)}
-                  placeholder={`Keyword,Search Volume,Competition\nmindfulness para principiantes,3400,Low\nmeditación diaria,1600,Medium`}
-                  rows={12}
-                  className="font-mono text-sm"
-                />
-                <p className="text-xs text-muted-foreground">
-                  Soporta datos de Helium 10, Publisher Rocket, y otros formatos CSV.
-                </p>
+        <Separator />
+
+        <div className="flex-1 overflow-y-auto py-4">
+          {/* Step 1: Source Selection */}
+          {step === 'source' && (
+            <div className="space-y-6">
+              {/* Tool Selection */}
+              <div className="space-y-3">
+                <Label className="text-sm font-medium">Herramienta de origen</Label>
+                <div className="grid grid-cols-4 gap-2">
+                  {Object.entries(IMPORT_TEMPLATES).map(([id, template]) => (
+                    <button
+                      key={id}
+                      onClick={() => setImportSource(id as ImportSource)}
+                      className={`p-3 rounded-lg border text-left transition-all ${
+                        importSource === id 
+                          ? 'border-primary bg-primary/5 ring-1 ring-primary' 
+                          : 'border-border hover:border-primary/50'
+                      }`}
+                    >
+                      <div className="font-medium text-sm">{template.name}</div>
+                      <div className="text-xs text-muted-foreground mt-1">
+                        {template.description}
+                      </div>
+                    </button>
+                  ))}
+                </div>
               </div>
 
+              {/* Import Method */}
+              <div className="space-y-3">
+                <Label className="text-sm font-medium">Método de importación</Label>
+                <Tabs value={importMethod} onValueChange={(v) => setImportMethod(v as ImportMethod)}>
+                  <TabsList className="grid w-full grid-cols-2">
+                    <TabsTrigger value="file" className="gap-2">
+                      <FileUp className="w-4 h-4" />
+                      Subir archivo
+                    </TabsTrigger>
+                    <TabsTrigger value="paste" className="gap-2">
+                      <FileSpreadsheet className="w-4 h-4" />
+                      Pegar contenido
+                    </TabsTrigger>
+                  </TabsList>
+
+                  <TabsContent value="file" className="mt-4">
+                    <div 
+                      onClick={() => fileInputRef.current?.click()}
+                      className="border-2 border-dashed border-border rounded-lg p-8 text-center cursor-pointer hover:border-primary/50 hover:bg-muted/30 transition-all"
+                    >
+                      <FileUp className="w-10 h-10 mx-auto text-muted-foreground mb-3" />
+                      <p className="font-medium">
+                        {selectedFile ? selectedFile.name : 'Haz clic para seleccionar archivo'}
+                      </p>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        Soporta .csv, .tsv, .txt, .xlsx, .xls
+                      </p>
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept=".csv,.tsv,.txt,.xlsx,.xls"
+                        onChange={handleFileSelect}
+                        className="hidden"
+                      />
+                    </div>
+                  </TabsContent>
+
+                  <TabsContent value="paste" className="mt-4">
+                    <Textarea
+                      value={rawText}
+                      onChange={(e) => setRawText(e.target.value)}
+                      placeholder={`Pega aquí el contenido CSV de ${IMPORT_TEMPLATES[importSource].name}...
+
+Ejemplo:
+Keyword Phrase,Search Volume,Competing Products
+meditación para principiantes,3400,2500
+mindfulness diario,1200,800`}
+                      rows={12}
+                      className="font-mono text-sm"
+                    />
+                  </TabsContent>
+                </Tabs>
+              </div>
             </div>
           )}
 
-          {/* Step 2: Mapping */}
-          {step === 'mapping' && (
-            <div className="space-y-4">
-              <div className="flex items-center gap-4 flex-wrap">
-                <div className="flex-1 min-w-[200px]">
-                  <Label className="text-xs mb-1 block">Plantilla</Label>
-                  <Select value={selectedTemplate} onValueChange={applyTemplate}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Seleccionar plantilla..." />
-                    </SelectTrigger>
-                    <SelectContent className="bg-popover border-border">
-                      {templates.map(t => (
-                        <SelectItem key={t.id} value={t.id}>
-                          <div className="flex items-center gap-2">
-                            <FileSpreadsheet className="w-4 h-4" />
-                            {t.name}
-                            {t.source !== 'Custom' && (
-                              <Badge variant="outline" className="text-xs">{t.source}</Badge>
-                            )}
-                          </div>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                
-                <div className="flex items-end gap-2">
-                  <div>
-                    <Label className="text-xs mb-1 block">Guardar configuración</Label>
-                    <div className="flex gap-2">
-                      <Input
-                        value={newTemplateName}
-                        onChange={(e) => setNewTemplateName(e.target.value)}
-                        placeholder="Nombre de plantilla..."
-                        className="w-40 h-9"
-                      />
-                      <Button size="sm" variant="outline" onClick={saveAsTemplate}>
-                        <Save className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  </div>
-                </div>
+          {/* Step 2: Mapping & Preview */}
+          {step === 'mapping' && parsedTable && (
+            <div className="space-y-6">
+              {/* Stats Bar */}
+              <div className="flex flex-wrap items-center gap-3 p-3 bg-muted/30 rounded-lg">
+                <Badge variant="outline" className="gap-1">
+                  <FileSpreadsheet className="w-3 h-3" />
+                  {parsedTable.rawRowCount} filas
+                </Badge>
+                <Badge variant="outline" className="gap-1 bg-green-500/10 text-green-600 border-green-500/30">
+                  <CheckCircle2 className="w-3 h-3" />
+                  {validCount} válidas
+                </Badge>
+                {duplicateCount > 0 && (
+                  <Badge variant="outline" className="gap-1 bg-yellow-500/10 text-yellow-600 border-yellow-500/30">
+                    <AlertCircle className="w-3 h-3" />
+                    {duplicateCount} existentes
+                  </Badge>
+                )}
+                <Badge variant="outline" className="gap-1 bg-blue-500/10 text-blue-600 border-blue-500/30">
+                  {newCount} nuevas
+                </Badge>
               </div>
 
-              <Separator />
-
+              {/* Column Mapping */}
               <div className="space-y-3">
-                <Label>Mapeo de columnas</Label>
-                <div className="grid gap-3">
-                  {detectedHeaders.map((header) => (
-                    <div key={header} className="flex items-center gap-3 p-3 bg-muted/30 rounded-lg">
-                      <div className="flex-1">
-                        <Badge variant="outline" className="font-mono">{header}</Badge>
+                <div className="flex items-center justify-between">
+                  <Label className="text-sm font-medium">Mapeo de columnas</Label>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-6 w-6">
+                          <Info className="w-4 h-4 text-muted-foreground" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent className="max-w-xs">
+                        <p>Ajusta qué columna del archivo corresponde a cada campo interno. 
+                        "Competidores" se usará como número de resultados de Amazon.</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </div>
+                
+                {!hasKeywordMapping && (
+                  <div className="flex items-center gap-2 p-3 bg-destructive/10 text-destructive rounded-lg text-sm">
+                    <AlertCircle className="w-4 h-4" />
+                    Debes mapear al menos la columna "Keyword"
+                  </div>
+                )}
+
+                <div className="grid gap-2 max-h-48 overflow-y-auto">
+                  {parsedTable.headers.map((header) => (
+                    <div key={header} className="flex items-center gap-3 p-2 bg-muted/30 rounded-lg">
+                      <div className="flex-1 min-w-0">
+                        <Badge variant="outline" className="font-mono text-xs truncate max-w-full">
+                          {header}
+                        </Badge>
                       </div>
-                      <ArrowRight className="w-4 h-4 text-muted-foreground" />
+                      <ArrowRight className="w-4 h-4 text-muted-foreground shrink-0" />
                       <Select
                         value={columnMappings[header] || 'ignore'}
-                        onValueChange={(v) => setColumnMappings(prev => ({ ...prev, [header]: v }))}
+                        onValueChange={(v) => handleMappingChange(header, v as ImportableFieldKey | 'ignore')}
                       >
-                        <SelectTrigger className="w-48">
+                        <SelectTrigger className="w-44">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent className="bg-popover border-border">
-                          {INTERNAL_FIELDS.map(field => (
-                            <SelectItem key={field.value} value={field.value}>
+                          <SelectItem value="ignore">— Ignorar —</SelectItem>
+                          {IMPORTABLE_FIELDS.map(field => (
+                            <SelectItem key={field.key} value={field.key}>
                               {field.label}
                               {field.required && <span className="text-red-500 ml-1">*</span>}
                             </SelectItem>
@@ -406,109 +504,123 @@ export const AdvancedImportModal = ({
                   ))}
                 </div>
               </div>
-            </div>
-          )}
 
-          {/* Step 3: Preview */}
-          {step === 'preview' && (
-            <div className="space-y-4">
-              <div className="flex flex-wrap gap-2">
-                <Badge variant="outline" className="bg-green-500/10 text-green-600 border-green-500/30">
-                  {validCount} válidas
-                </Badge>
-                {duplicateCount > 0 && (
-                  <Badge variant="outline" className="bg-yellow-500/10 text-yellow-600 border-yellow-500/30">
-                    {duplicateCount} duplicadas
-                  </Badge>
-                )}
-              </div>
+              <Separator />
 
+              {/* Duplicate Handling Options */}
               {duplicateCount > 0 && (
-                <div className="flex items-center space-x-2 p-3 bg-yellow-500/10 rounded-lg border border-yellow-500/30">
-                  <Checkbox
-                    id="skip-dup-adv"
-                    checked={skipDuplicates}
-                    onCheckedChange={(checked) => setSkipDuplicates(checked === true)}
-                  />
-                  <label htmlFor="skip-dup-adv" className="text-sm cursor-pointer">
-                    Ignorar keywords duplicadas ({duplicateCount})
-                  </label>
+                <div className="space-y-3 p-3 bg-yellow-500/10 rounded-lg border border-yellow-500/30">
+                  <Label className="text-sm font-medium text-yellow-700 dark:text-yellow-400">
+                    {duplicateCount} keywords ya existen
+                  </Label>
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <Checkbox
+                        id="update-existing"
+                        checked={updateExisting}
+                        onCheckedChange={(checked) => setUpdateExisting(checked === true)}
+                      />
+                      <label htmlFor="update-existing" className="text-sm cursor-pointer">
+                        Actualizar datos de keywords existentes (sin borrar adsData/historial)
+                      </label>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Checkbox
+                        id="skip-duplicates"
+                        checked={skipDuplicates}
+                        onCheckedChange={(checked) => setSkipDuplicates(checked === true)}
+                        disabled={updateExisting}
+                      />
+                      <label htmlFor="skip-duplicates" className={`text-sm cursor-pointer ${updateExisting ? 'text-muted-foreground' : ''}`}>
+                        Ignorar duplicados completamente
+                      </label>
+                    </div>
+                  </div>
                 </div>
               )}
 
-              <ScrollArea className="h-[300px] border border-border rounded-lg">
-                <table className="w-full text-sm">
-                  <thead className="bg-muted/50 sticky top-0">
-                    <tr>
-                      <th className="text-left p-2 font-medium">Keyword</th>
-                      <th className="text-left p-2 font-medium w-24">Volumen</th>
-                      <th className="text-left p-2 font-medium w-24">Comp.</th>
-                      <th className="text-left p-2 font-medium w-24">Relev.</th>
-                      <th className="text-left p-2 font-medium w-20">Estado</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {parsedRows.map((row, idx) => (
-                      <tr 
-                        key={idx}
-                        className={`border-t border-border ${
-                          !row.isValid ? 'bg-red-500/5 opacity-50' :
-                          row.isDuplicate ? 'bg-yellow-500/5' : ''
-                        }`}
-                      >
-                        <td className="p-2 font-medium">{row.mappedData.keyword || '—'}</td>
-                        <td className="p-2">{row.mappedData.searchVolume?.toLocaleString() || '—'}</td>
-                        <td className="p-2">{row.mappedData.competitionLevel || '—'}</td>
-                        <td className="p-2">{row.mappedData.relevance || '—'}</td>
-                        <td className="p-2">
-                          {!row.isValid ? (
-                            <Badge variant="outline" className="bg-red-500/10 text-red-600 text-xs">Inválida</Badge>
-                          ) : row.isDuplicate ? (
-                            <Badge variant="outline" className="bg-yellow-500/10 text-yellow-600 text-xs">Dup.</Badge>
-                          ) : (
-                            <Badge variant="outline" className="bg-green-500/10 text-green-600 text-xs">OK</Badge>
-                          )}
-                        </td>
+              {/* Data Preview */}
+              <div className="space-y-3">
+                <Label className="text-sm font-medium">Vista previa (primeras 10 filas)</Label>
+                <ScrollArea className="h-[200px] border border-border rounded-lg">
+                  <table className="w-full text-sm">
+                    <thead className="bg-muted/50 sticky top-0">
+                      <tr>
+                        <th className="text-left p-2 font-medium w-10">Estado</th>
+                        <th className="text-left p-2 font-medium">Keyword</th>
+                        <th className="text-right p-2 font-medium w-24">Volumen</th>
+                        <th className="text-right p-2 font-medium w-24">Compet.</th>
+                        <th className="text-left p-2 font-medium w-32">Notas</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </ScrollArea>
+                    </thead>
+                    <tbody>
+                      {parsedRows.slice(0, 10).map((row, idx) => (
+                        <tr key={idx} className={`border-t border-border ${!row.isValid ? 'opacity-50' : ''}`}>
+                          <td className="p-2">
+                            {!row.isValid ? (
+                              <Badge variant="outline" className="text-xs bg-red-500/10 text-red-600">
+                                Inválida
+                              </Badge>
+                            ) : row.isDuplicate ? (
+                              <Badge variant="outline" className="text-xs bg-yellow-500/10 text-yellow-600">
+                                Existe
+                              </Badge>
+                            ) : (
+                              <Badge variant="outline" className="text-xs bg-green-500/10 text-green-600">
+                                Nueva
+                              </Badge>
+                            )}
+                          </td>
+                          <td className="p-2 font-medium truncate max-w-[200px]">
+                            {row.mappedData.keyword || '—'}
+                          </td>
+                          <td className="p-2 text-right tabular-nums">
+                            {row.mappedData.searchVolume?.toLocaleString() || '—'}
+                          </td>
+                          <td className="p-2 text-right tabular-nums">
+                            {row.mappedData.competitors?.toLocaleString() || '—'}
+                          </td>
+                          <td className="p-2 text-muted-foreground truncate max-w-[120px]">
+                            {row.mappedData.notes || '—'}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </ScrollArea>
+              </div>
             </div>
           )}
         </div>
 
-        <DialogFooter className="gap-2">
-          {step !== 'input' && (
-            <Button variant="outline" onClick={() => setStep(step === 'preview' ? 'mapping' : 'input')}>
-              Atrás
-            </Button>
-          )}
-          <Button variant="outline" onClick={handleClose}>Cancelar</Button>
-          
-          {step === 'input' && (
-            <Button onClick={parseHeaders} disabled={!rawText.trim()} className="gap-2">
-              Continuar
-              <ArrowRight className="w-4 h-4" />
-            </Button>
-          )}
-          
-          {step === 'mapping' && (
-            <Button 
-              onClick={processData} 
-              disabled={!Object.values(columnMappings).includes('keyword')}
-              className="gap-2"
-            >
-              Procesar
-              <ArrowRight className="w-4 h-4" />
-            </Button>
-          )}
-          
-          {step === 'preview' && (
-            <Button onClick={handleImport} disabled={toImportCount === 0} className="gap-2">
-              <Plus className="w-4 h-4" />
-              Importar {toImportCount} Keywords
-            </Button>
+        <Separator />
+
+        <DialogFooter className="gap-2 pt-4">
+          {step === 'source' ? (
+            <>
+              <Button variant="outline" onClick={handleClose}>
+                Cancelar
+              </Button>
+              <Button 
+                onClick={processSource}
+                disabled={isLoading || (importMethod === 'file' && !selectedFile) || (importMethod === 'paste' && !rawText.trim())}
+              >
+                {isLoading ? 'Procesando...' : 'Continuar'}
+                <ArrowRight className="w-4 h-4 ml-2" />
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button variant="outline" onClick={() => setStep('source')}>
+                Atrás
+              </Button>
+              <Button 
+                onClick={handleImport}
+                disabled={!hasKeywordMapping || validCount === 0}
+              >
+                Importar {validCount} keywords
+              </Button>
+            </>
           )}
         </DialogFooter>
       </DialogContent>
