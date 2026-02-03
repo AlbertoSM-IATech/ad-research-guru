@@ -423,7 +423,9 @@ export const KeywordsSection = ({
         const ventasCalculadas = calcularVentasAcumuladas(ads?.pedidos, bookEconomy.precioLibro);
         const beneficio = gastoCalculado !== null && ventasCalculadas !== null ? ventasCalculadas - gastoCalculado : null;
         const acosActual = calcularAcosActualPorcentaje(gastoCalculado ?? undefined, ventasCalculadas ?? undefined);
-        const acosEquilibrioVal = bookEconomy.precioLibro > 0 && bookEconomy.regaliasPorVenta > 0 ? bookEconomy.regaliasPorVenta / bookEconomy.precioLibro * 100 : null;
+        const acosEquilibrioVal = bookEconomy.precioLibro > 0 && bookEconomy.regaliasPorVenta > 0 
+          ? (bookEconomy.regaliasPorVenta / bookEconomy.precioLibro) * 100 
+          : null;
 
         // Campaign name filter
         if (adsFilters.campaignName) {
@@ -474,10 +476,10 @@ export const KeywordsSection = ({
         return true;
       });
     }
-
+    
     // Sort first
     let sorted = sortKeywords(result, sortField, sortOrder, bookEconomy.precioLibro);
-
+    
     // Pin main keyword to top if it exists and is in the filtered results
     if (bookInfo.mainKeywordId) {
       const mainKeywordIndex = sorted.findIndex(k => k.id === bookInfo.mainKeywordId);
@@ -486,6 +488,7 @@ export const KeywordsSection = ({
         sorted = [mainKeyword, ...sorted];
       }
     }
+    
     return sorted;
   }, [keywords, searchTerm, filters, adsFilters, sortField, sortOrder, functionalView, bookEconomy.precioLibro, bookEconomy.regaliasPorVenta, bookInfo.mainKeywordId]);
 
@@ -575,7 +578,7 @@ export const KeywordsSection = ({
   };
   return <div data-tour="keywords-section" className="space-y-6 animate-fade-in">
       {/* Functional View Toggle */}
-      <div className="flex-col gap-4 flex items-center justify-start">
+      <div className="flex flex-col gap-4">
         <div className="items-start justify-between flex flex-col px-0 mx-0 my-0 py-0 gap-[13px]">
           
           {/* View Toggle: Editorial / Ads */}
@@ -704,14 +707,18 @@ export const KeywordsSection = ({
           <KeywordExportCSV keywords={filteredKeywords} bookEconomy={bookEconomy} selectedIds={selectedIds} />
           
           {/* Import button per view */}
-          {functionalView === 'editorial' && <Button data-tour="external-import" size="sm" onClick={() => setShowExternalImportModal(true)} className="gap-2 bg-primary hover:bg-primary/90">
+          {functionalView === 'editorial' && (
+            <Button data-tour="external-import" size="sm" onClick={() => setShowExternalImportModal(true)} className="gap-2 bg-primary hover:bg-primary/90">
               <Upload className="w-4 h-4" />
               Importar datos
-            </Button>}
-          {functionalView === 'ads' && <Button size="sm" onClick={() => setShowAmazonAdsImport(true)} className="gap-2 bg-primary hover:bg-primary/90">
+            </Button>
+          )}
+          {functionalView === 'ads' && (
+            <Button size="sm" onClick={() => setShowAmazonAdsImport(true)} className="gap-2 bg-primary hover:bg-primary/90">
               <Upload className="w-4 h-4" />
               Importar Amazon ADS
-            </Button>}
+            </Button>
+          )}
           {selectedIds.size === 2 && <Tooltip>
               <TooltipTrigger asChild>
                 <Button variant="outline" size="sm" onClick={() => setIsComparisonOpen(true)} className="gap-2 border-primary/50 text-primary hover:bg-primary/10">
@@ -1053,7 +1060,15 @@ export const KeywordsSection = ({
                             </TableCell>
                             {/* CTR - Read only */}
                             <TableCell className="tabular-nums text-xs">
-                              <span className={cn(ads?.ctr !== undefined ? ads.ctr >= 3 && ads.ctr <= 5 ? 'text-green-600 dark:text-green-400' : ads.ctr < 3 ? 'text-amber-600 dark:text-amber-400' : 'text-muted-foreground' : 'text-muted-foreground')}>
+                              <span className={cn(
+                                ads?.ctr !== undefined 
+                                  ? ads.ctr >= 3 && ads.ctr <= 5 
+                                    ? 'text-green-600 dark:text-green-400' 
+                                    : ads.ctr < 3 
+                                      ? 'text-amber-600 dark:text-amber-400' 
+                                      : 'text-muted-foreground'
+                                  : 'text-muted-foreground'
+                              )}>
                                 {ads?.ctr !== undefined ? `${ads.ctr.toFixed(2)}%` : '—'}
                               </span>
                             </TableCell>
