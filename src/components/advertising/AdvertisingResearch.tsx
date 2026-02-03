@@ -15,17 +15,14 @@ import { BookInfoPanel } from "./BookInfoPanel";
 import { BookInfoPanelCompact } from "./BookInfoPanelCompact";
 import { AcosAlertsTray } from "./AcosAlertsTray";
 import { ThemeToggle } from "@/components/ThemeToggle";
-import { AdvancedExportModal } from "./AdvancedExportModal";
-import { AdvancedImportModal } from "./AdvancedImportModal";
-import { CampaignPlanManager } from "./CampaignPlanManager";
 import { GuidedTour, useTourStatus, type UIStateRequest } from "./GuidedTour";
 import { KeyboardShortcutsManager } from "./KeyboardShortcutsManager";
 import { HeaderOverflowMenu } from "./HeaderOverflowMenu";
 import { MarketConfigModal } from "./MarketConfigModal";
-import { BackupImportModal } from "./BackupImportModal";
+import { BackupModal } from "./BackupModal";
 import { loadPersistedState, usePersistence, getLastSyncAt, getAdResearchStorageKey, clearBookStorage, DEFAULT_BOOK_ECONOMY } from "@/hooks/useLocalPersistence";
 import { useCampaigns } from "@/hooks/useCampaigns";
-import { type BackupSummary } from "./BackupImportModal";
+import { performMerge } from "@/lib/backup-merge";
 import { toast } from "sonner";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -96,10 +93,7 @@ export const AdvertisingResearch = ({
   const [showTour, setShowTour] = useState(false);
 
   // Modal states
-  const [showExportModal, setShowExportModal] = useState(false);
-  const [showImportModal, setShowImportModal] = useState(false);
-  const [showBackupImportModal, setShowBackupImportModal] = useState(false);
-  const [showCampaignPlanner, setShowCampaignPlanner] = useState(false);
+  const [showBackupModal, setShowBackupModal] = useState(false);
   const [showMarketConfigModal, setShowMarketConfigModal] = useState(false);
   const [configVersion, setConfigVersion] = useState(0); // To trigger re-renders on config change
 
@@ -564,9 +558,7 @@ export const AdvertisingResearch = ({
     setPendingChangesCount(0); // Reset pending changes
 
     // 3. Close any open modals
-    setShowExportModal(false);
-    setShowImportModal(false);
-    setShowCampaignPlanner(false);
+    setShowBackupModal(false);
 
     // 4. Reopen book panel
     setIsBookPanelOpen(true);
@@ -621,72 +613,56 @@ export const AdvertisingResearch = ({
     });
   }, [selectedMarketplace]);
 
-  // Export backup handler - downloads current state as JSON (v2)
-  const handleExportBackup = useCallback(() => {
-    const serializeData = <T,>(data: T): T => {
-      return JSON.parse(JSON.stringify(data, (key, value) => {
-        if (value instanceof Date) {
-          return value.toISOString();
-        }
-        return value;
-      }));
-    };
-    const backup = {
-      version: 2,
-      exportedAt: new Date().toISOString(),
-      storageKey: getAdResearchStorageKey(bookId),
-      data: {
-        selectedMarketplace,
-        activeTab,
-        bookInfo: serializeData(bookInfo),
-        keywordsByMarket: serializeData(keywordsByMarket),
-        asinsByMarket: serializeData(asinsByMarket),
-        categoriesByMarket: serializeData(categoriesByMarket),
-        campaignPlansByMarket: serializeData(campaignPlansByMarket),
-        showInsights
-      }
-    };
-    const jsonString = JSON.stringify(backup, null, 2);
-    const blob = new Blob([jsonString], {
-      type: "application/json"
-    });
-    const url = URL.createObjectURL(blob);
-    const date = new Date().toISOString().split("T")[0];
-    const filename = `ad-research-backup-v2-${date}.json`;
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-    toast.success("Backup exportado");
-    toast.info(`Archivo: ${filename}`, {
-      duration: 4000
-    });
-  }, [bookId, selectedMarketplace, activeTab, bookInfo, keywordsByMarket, asinsByMarket, categoriesByMarket, campaignPlansByMarket, showInsights]);
-
-  // Import backup handler - restores state from imported data
-  const handleImportBackup = useCallback((data: {
+  // Backup restore handler - handles both replace and merge modes
+  const handleRestoreBackup = useCallback((data: {
     selectedMarketplace: string;
     activeTab: "keywords" | "asins" | "categories";
     bookInfo: BookInfo;
+    bookEconomy: BookEconomy;
     keywordsByMarket: Record<string, Keyword[]>;
     asinsByMarket: Record<string, TargetASIN[]>;
     categoriesByMarket: Record<string, AdvertisingCategory[]>;
     campaignPlansByMarket: Record<string, CampaignPlan[]>;
-    showInsights?: boolean;
-  }, summary: BackupSummary) => {
-    // Set all states from imported data
-    setSelectedMarketplace(data.selectedMarketplace);
-    setActiveTab(data.activeTab);
-    setBookInfo(data.bookInfo);
-    setKeywordsByMarket(data.keywordsByMarket);
-    setAsinsByMarket(data.asinsByMarket);
-    setCategoriesByMarket(data.categoriesByMarket);
-    setCampaignPlansByMarket(data.campaignPlansByMarket);
-    if (data.showInsights !== undefined) {
+    showInsights: boolean;
+  }, mode: 'replace' | 'merge', options: { restoreOverrides: boolean; restoreUiPrefs: boolean }) => {
+    if (mode === 'replace') {
+      // Replace all data
+      setSelectedMarketplace(data.selectedMarketplace);
+      setActiveTab(data.activeTab);
+      setBookInfo(data.bookInfo);
+      setBookEconomy(data.bookEconomy);
+      setKeywordsByMarket(data.keywordsByMarket);
+      setAsinsByMarket(data.asinsByMarket);
+      setCategoriesByMarket(data.categoriesByMarket);
+      setCampaignPlansByMarket(data.campaignPlansByMarket);
       setShowInsights(data.showInsights);
+    } else {
+      // Merge data
+      const mergeResult = performMerge(
+        {
+          selectedMarketplace,
+          activeTab,
+          bookInfo,
+          bookEconomy,
+          keywordsByMarket,
+          asinsByMarket,
+          categoriesByMarket,
+          campaignPlansByMarket,
+          showInsights,
+        },
+        data
+      );
+      
+      setBookInfo(mergeResult.bookInfo);
+      setBookEconomy(mergeResult.bookEconomy);
+      setKeywordsByMarket(mergeResult.keywordsByMarket);
+      setAsinsByMarket(mergeResult.asinsByMarket);
+      setCategoriesByMarket(mergeResult.categoriesByMarket);
+      setCampaignPlansByMarket(mergeResult.campaignPlansByMarket);
+      
+      toast.info(`KW: +${mergeResult.stats.keywordsAdded}/↻${mergeResult.stats.keywordsUpdated} | ASIN: +${mergeResult.stats.asinsAdded}/↻${mergeResult.stats.asinsUpdated}`, {
+        duration: 5000
+      });
     }
 
     // Prevent demo data from loading
@@ -699,18 +675,9 @@ export const AdvertisingResearch = ({
       categories: new Set()
     });
 
-    // Reset pending changes (backup is now the source of truth)
+    // Reset pending changes
     setPendingChangesCount(0);
-
-    // Close backup modal
-    setShowBackupImportModal(false);
-
-    // Show success toasts
-    toast.success("Backup importado correctamente");
-    toast.info(`Markets: ${summary.markets} | Keywords: ${summary.keywords} | ASINs: ${summary.asins} | Categorías: ${summary.categories}`, {
-      duration: 5000
-    });
-  }, []);
+  }, [selectedMarketplace, activeTab, bookInfo, bookEconomy, keywordsByMarket, asinsByMarket, categoriesByMarket, campaignPlansByMarket, showInsights]);
 
   // Education sections (accessible from overflow menu)
   const educationSections = [{
@@ -811,7 +778,7 @@ export const AdvertisingResearch = ({
               <ThemeToggle />
 
               {/* Overflow Menu */}
-              <HeaderOverflowMenu onImport={() => setShowImportModal(true)} onExport={() => setShowExportModal(true)} onStartTour={() => setShowTour(true)} onResetData={handleResetData} onExportBackup={handleExportBackup} onImportBackup={() => setShowBackupImportModal(true)} onRegenerateDemo={handleRegenerateDemo} onOpenMarketConfig={() => setShowMarketConfigModal(true)} />
+              <HeaderOverflowMenu onStartTour={() => setShowTour(true)} onResetData={handleResetData} onRegenerateDemo={handleRegenerateDemo} onOpenMarketConfig={() => setShowMarketConfigModal(true)} onOpenBackup={() => setShowBackupModal(true)} />
             </div>
           </div>
 
@@ -959,14 +926,22 @@ export const AdvertisingResearch = ({
       }
     }} />
 
-      {/* Advanced Export Modal */}
-      <AdvancedExportModal isOpen={showExportModal} onClose={() => setShowExportModal(false)} keywords={currentKeywords} asins={currentASINs} categories={currentCategories} marketplaceId={selectedMarketplace} />
-
-      {/* Advanced Import Modal */}
-      <AdvancedImportModal isOpen={showImportModal} onClose={() => setShowImportModal(false)} onImport={handleAddBulkKeywords} marketplaceId={selectedMarketplace} existingKeywords={currentKeywords} />
-
-      {/* Backup Import Modal */}
-      <BackupImportModal isOpen={showBackupImportModal} onClose={() => setShowBackupImportModal(false)} onImport={handleImportBackup} />
+      {/* Backup Modal */}
+      <BackupModal 
+        isOpen={showBackupModal} 
+        onClose={() => setShowBackupModal(false)} 
+        bookId={bookId}
+        selectedMarketplace={selectedMarketplace}
+        activeTab={activeTab}
+        bookInfo={bookInfo}
+        bookEconomy={bookEconomy}
+        keywordsByMarket={keywordsByMarket}
+        asinsByMarket={asinsByMarket}
+        categoriesByMarket={categoriesByMarket}
+        campaignPlansByMarket={campaignPlansByMarket}
+        showInsights={showInsights}
+        onRestore={handleRestoreBackup}
+      />
 
       {/* Market Config Modal */}
       <MarketConfigModal isOpen={showMarketConfigModal} onClose={() => setShowMarketConfigModal(false)} currentMarketplace={selectedMarketplace} onConfigChange={() => setConfigVersion(v => v + 1)} />

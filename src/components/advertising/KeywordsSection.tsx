@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, useCallback } from 'react';
-import { Plus, Search, Trash2, ArrowUpDown, Upload, Eye, BookOpen, Megaphone, Info, Star, AlertTriangle, RotateCcw, GitCompare, History, ChevronUp, ChevronDown, Save, Crown } from 'lucide-react';
+import { Plus, Search, Trash2, ArrowUpDown, Eye, BookOpen, Megaphone, Info, Star, AlertTriangle, RotateCcw, GitCompare, ChevronUp, ChevronDown, Save, Crown, Upload } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -10,7 +10,6 @@ import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/comp
 import { InfoTooltip } from './InfoTooltip';
 import { InlineSelectBadge } from './InlineSelectBadge';
 import { InlineEditableCell } from './InlineEditableCell';
-import { BulkKeywordImport } from './BulkKeywordImport';
 import { BulkCopyTools } from './BulkCopyTools';
 import { BulkEditorialStatusToolbar } from './BulkEditorialStatusToolbar';
 import { AdvancedFilters, AdvancedFiltersContent, type AdvancedFiltersState } from './AdvancedFilters';
@@ -28,6 +27,8 @@ import { AdsDashboard } from './AdsDashboard';
 import { CampaignSelect } from './CampaignSelect';
 import { PlanUpgradeModal } from './PlanUpgradeModal';
 import { AcosSparkline } from './AcosSparkline';
+import { AdvancedImportModal } from './AdvancedImportModal';
+import { AmazonAdsImportPlaceholder } from './AmazonAdsImportPlaceholder';
 import { type Keyword, type CampaignType, type CompetitionLevel, type RelevanceLevel, type IntentType, type KeywordState, type BookInfo, type BookEconomy, type HistoryEntry, type AdsData, RELEVANCE_LEVELS, INTENT_TYPES, KEYWORD_STATES, calculateRelevance, classifyIntent } from '@/types/advertising';
 import { calculateMarketScore, getDefaultMarketData, KEYWORD_STATUS_OPTIONS, type KeywordStatus } from '@/lib/market-score';
 import { createKeywordDefaults } from '@/lib/keyword-helpers';
@@ -128,7 +129,8 @@ export const KeywordsSection = ({
   const [sortField, setSortField] = useState<SortField>(persistedState.sortField);
   const [sortOrder, setSortOrder] = useState<SortOrder>(persistedState.sortOrder);
   const [currentPage, setCurrentPage] = useState(1);
-  const [isBulkImportOpen, setIsBulkImportOpen] = useState(false);
+  const [showExternalImportModal, setShowExternalImportModal] = useState(false);
+  const [showAmazonAdsImport, setShowAmazonAdsImport] = useState(false);
   const [quickAddKeyword, setQuickAddKeyword] = useState('');
   const [historyKeyword, setHistoryKeyword] = useState<Keyword | null>(null);
   const [isWizardOpen, setIsWizardOpen] = useState(false);
@@ -703,10 +705,20 @@ export const KeywordsSection = ({
           
           <BulkCopyTools keywords={filteredKeywords} selectedIds={selectedIds} />
           <KeywordExportCSV keywords={filteredKeywords} bookEconomy={bookEconomy} selectedIds={selectedIds} />
-          <Button data-tour="bulk-import" variant="outline" size="sm" onClick={() => setIsBulkImportOpen(true)} className="gap-2">
-            <Upload className="w-4 h-4" />
-            Importar lote
-          </Button>
+          
+          {/* Import button per view */}
+          {functionalView === 'editorial' && (
+            <Button data-tour="external-import" size="sm" onClick={() => setShowExternalImportModal(true)} className="gap-2 bg-primary hover:bg-primary/90">
+              <Upload className="w-4 h-4" />
+              Importar datos
+            </Button>
+          )}
+          {functionalView === 'ads' && (
+            <Button size="sm" onClick={() => setShowAmazonAdsImport(true)} className="gap-2 bg-primary hover:bg-primary/90">
+              <Upload className="w-4 h-4" />
+              Importar Amazon ADS
+            </Button>
+          )}
           {selectedIds.size === 2 && <Tooltip>
               <TooltipTrigger asChild>
                 <Button variant="outline" size="sm" onClick={() => setIsComparisonOpen(true)} className="gap-2 border-primary/50 text-primary hover:bg-primary/10">
@@ -1146,8 +1158,11 @@ export const KeywordsSection = ({
           </div>
         </div>}
 
-      {/* Bulk Import Modal */}
-      <BulkKeywordImport isOpen={isBulkImportOpen} onClose={() => setIsBulkImportOpen(false)} onImport={handleBulkImport} marketplaceId={marketplaceId} bookInfo={bookInfo} existingKeywords={keywords.map(k => k.keyword)} />
+      {/* External Import Modal (Editorial view) */}
+      <AdvancedImportModal isOpen={showExternalImportModal} onClose={() => setShowExternalImportModal(false)} onImport={handleBulkImport} marketplaceId={marketplaceId} existingKeywords={keywords} />
+      
+      {/* Amazon ADS Import Placeholder (Ads view) */}
+      <AmazonAdsImportPlaceholder isOpen={showAmazonAdsImport} onClose={() => setShowAmazonAdsImport(false)} />
 
       {/* History Modal */}
       <KeywordHistoryModal keyword={historyKeyword} isOpen={!!historyKeyword} onClose={() => setHistoryKeyword(null)} />

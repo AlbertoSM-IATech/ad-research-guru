@@ -1,13 +1,10 @@
 import { useState } from 'react';
 import { 
   MoreHorizontal, 
-  Upload, 
-  Download, 
   Settings, 
   Play,
   Trash2,
-  HardDriveDownload,
-  HardDriveUpload,
+  HardDrive,
   RefreshCw
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -31,25 +28,19 @@ import {
 } from '@/components/ui/alert-dialog';
 
 interface HeaderOverflowMenuProps {
-  onImport: () => void;
-  onExport: () => void;
   onStartTour: () => void;
   onResetData: () => void;
-  onExportBackup: () => void;
-  onImportBackup: () => void;
   onRegenerateDemo: () => void;
   onOpenMarketConfig: () => void;
+  onOpenBackup: () => void;
 }
 
 export const HeaderOverflowMenu = ({
-  onImport,
-  onExport,
   onStartTour,
   onResetData,
-  onExportBackup,
-  onImportBackup,
   onRegenerateDemo,
   onOpenMarketConfig,
+  onOpenBackup,
 }: HeaderOverflowMenuProps) => {
   const [showResetDialog, setShowResetDialog] = useState(false);
 
@@ -68,19 +59,6 @@ export const HeaderOverflowMenu = ({
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-56">
-          {/* Sección: Datos */}
-          <DropdownMenuLabel className="text-xs text-muted-foreground">Datos</DropdownMenuLabel>
-          <DropdownMenuItem onClick={onImport} className="gap-2 cursor-pointer">
-            <Upload className="h-4 w-4" />
-            Importar datos
-          </DropdownMenuItem>
-          <DropdownMenuItem onClick={onExport} className="gap-2 cursor-pointer">
-            <Download className="h-4 w-4" />
-            Exportar datos
-          </DropdownMenuItem>
-          
-          <DropdownMenuSeparator />
-          
           {/* Sección: Ayuda */}
           <DropdownMenuLabel className="text-xs text-muted-foreground">Ayuda</DropdownMenuLabel>
           <DropdownMenuItem onClick={onStartTour} className="gap-2 cursor-pointer">
@@ -96,13 +74,9 @@ export const HeaderOverflowMenu = ({
             <Settings className="h-4 w-4" />
             Criterios por mercado
           </DropdownMenuItem>
-          <DropdownMenuItem onClick={onExportBackup} className="gap-2 cursor-pointer">
-            <HardDriveDownload className="h-4 w-4" />
-            Exportar backup completo
-          </DropdownMenuItem>
-          <DropdownMenuItem onClick={onImportBackup} className="gap-2 cursor-pointer">
-            <HardDriveUpload className="h-4 w-4" />
-            Importar backup
+          <DropdownMenuItem onClick={onOpenBackup} className="gap-2 cursor-pointer">
+            <HardDrive className="h-4 w-4" />
+            Backup
           </DropdownMenuItem>
           <DropdownMenuItem 
             onClick={() => setShowResetDialog(true)} 
