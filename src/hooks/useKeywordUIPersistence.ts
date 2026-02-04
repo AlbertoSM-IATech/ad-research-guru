@@ -1,6 +1,9 @@
 // Persistence hook for keyword UI state (filters, sort, view mode)
+// IMPORTANT: Editorial and Ads filters are stored SEPARATELY to ensure independence
 import { useState, useEffect, useCallback, useRef } from 'react';
 import type { AdvancedFiltersState } from '@/components/advertising/AdvancedFilters';
+import type { AdsFiltersState } from '@/components/advertising/AdvancedFiltersAds';
+import { defaultAdsFiltersState } from '@/components/advertising/AdvancedFiltersAds';
 import type { QuickFilter } from '@/lib/keyword-filters';
 import type { SortField, SortOrder } from '@/lib/keyword-sorting';
 
@@ -8,6 +11,7 @@ export type FunctionalView = 'editorial' | 'ads';
 
 export interface KeywordUIState {
   filters: AdvancedFiltersState;
+  adsFilters: AdsFiltersState; // Separate ads filters
   quickFilter: QuickFilter;
   searchTerm: string;
   sortField: SortField;
@@ -16,7 +20,7 @@ export interface KeywordUIState {
   functionalView: FunctionalView;
 }
 
-const STORAGE_VERSION = 'v1';
+const STORAGE_VERSION = 'v2'; // Bumped version for new structure
 const DEBOUNCE_MS = 300;
 
 function getStorageKey(bookId: string | undefined, marketplaceId: string): string {
@@ -24,19 +28,24 @@ function getStorageKey(bookId: string | undefined, marketplaceId: string): strin
   return `ad-research:${bookPrefix}:keywords-ui:${STORAGE_VERSION}:${marketplaceId}`;
 }
 
+function getDefaultFilters(): AdvancedFiltersState {
+  return {
+    minVolume: '',
+    maxVolume: '',
+    minCompetition: '',
+    maxCompetition: '',
+    status: 'all',
+    campaignName: '',
+    marketScoreRanges: [],
+    has200PlusReviews: false,
+    hasUnder100Reviews: false,
+  };
+}
+
 function getDefaultState(): KeywordUIState {
   return {
-    filters: {
-      minVolume: '',
-      maxVolume: '',
-      minCompetition: '',
-      maxCompetition: '',
-      status: 'all',
-      campaignName: '',
-      marketScoreRanges: [],
-      has200PlusReviews: false,
-      hasUnder100Reviews: false,
-    },
+    filters: getDefaultFilters(),
+    adsFilters: { ...defaultAdsFiltersState },
     quickFilter: 'all',
     searchTerm: '',
     sortField: 'marketScore',
@@ -57,6 +66,11 @@ function loadFromStorage(bookId: string | undefined, marketplaceId: string): Key
     const parsed = JSON.parse(stored);
     // Validate structure
     if (!parsed.filters || !parsed.sortField) return null;
+    
+    // Ensure adsFilters exists (migration from v1)
+    if (!parsed.adsFilters) {
+      parsed.adsFilters = { ...defaultAdsFiltersState };
+    }
     
     return parsed as KeywordUIState;
   } catch {
@@ -119,10 +133,19 @@ export function useKeywordUIPersistence(marketplaceId: string, bookId?: string) 
     }, DEBOUNCE_MS);
   }, [marketplaceId, isHydrated]);
   
-  // Update individual fields
+  // Update editorial filters (only affects editorial view)
   const updateFilters = useCallback((filters: AdvancedFiltersState) => {
     setState(prev => {
       const newState = { ...prev, filters };
+      persistState(newState);
+      return newState;
+    });
+  }, [persistState]);
+  
+  // Update ads filters (only affects ads view)
+  const updateAdsFilters = useCallback((adsFilters: AdsFiltersState) => {
+    setState(prev => {
+      const newState = { ...prev, adsFilters };
       persistState(newState);
       return newState;
     });
@@ -187,6 +210,7 @@ export function useKeywordUIPersistence(marketplaceId: string, bookId?: string) 
     state,
     isHydrated,
     updateFilters,
+    updateAdsFilters,
     updateQuickFilter,
     updateSearchTerm,
     updateSort,

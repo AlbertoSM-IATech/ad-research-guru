@@ -27,6 +27,7 @@ import { AdsDashboard } from './AdsDashboard';
 import { CampaignSelect } from './CampaignSelect';
 import { PlanUpgradeModal } from './PlanUpgradeModal';
 import { AcosSparkline } from './AcosSparkline';
+import { AcosAlertsTray } from './AcosAlertsTray';
 import { AdvancedImportModal } from './AdvancedImportModal';
 import { AmazonAdsImportPlaceholder } from './AmazonAdsImportPlaceholder';
 import { type Keyword, type CampaignType, type CompetitionLevel, type RelevanceLevel, type IntentType, type KeywordState, type BookInfo, type BookEconomy, type HistoryEntry, type AdsData, RELEVANCE_LEVELS, INTENT_TYPES, KEYWORD_STATES, calculateRelevance, classifyIntent } from '@/types/advertising';
@@ -58,19 +59,21 @@ const DEFAULT_ADS_WIDTHS: ColumnWidths = {
   checkbox: 40,
   star: 40,
   keyword: 180,
-  campaign: 120,
-  volume: 90,
-  competitors: 100,
-  acosPE: 70,
-  clicks: 70,
-  cpc: 70,
-  pedidos: 70,
-  gasto: 70,
-  ventas: 70,
-  acos: 80,
-  acosSig: 75,
-  conversion: 70,
-  beneficio: 80
+  campaign: 100,
+  volume: 80,
+  competitors: 90,
+  acosPE: 65,
+  clicks: 60,
+  impresiones: 70,
+  ctr: 60,
+  pedidos: 60,
+  gasto: 65,
+  ventas: 65,
+  acos: 75,
+  acosSig: 70,
+  tendencia: 80,
+  conversion: 65,
+  beneficio: 75
 };
 interface KeywordsSectionProps {
   keywords: Keyword[];
@@ -118,14 +121,15 @@ export const KeywordsSection = ({
     state: persistedState,
     isHydrated,
     updateFilters,
+    updateAdsFilters: persistAdsFilters,
     updateQuickFilter,
     updateSort,
     updateFunctionalView
   } = useKeywordUIPersistence(marketplaceId);
 
-  // Local state synced with persistence
+  // Local state synced with persistence - SEPARATE filters for each view
   const [filters, setFilters] = useState<AdvancedFiltersState>(persistedState.filters);
-  const [adsFilters, setAdsFilters] = useState<AdsFiltersState>(defaultAdsFiltersState);
+  const [adsFilters, setAdsFilters] = useState<AdsFiltersState>(persistedState.adsFilters || defaultAdsFiltersState);
   const [sortField, setSortField] = useState<SortField>(persistedState.sortField);
   const [sortOrder, setSortOrder] = useState<SortOrder>(persistedState.sortOrder);
   const [currentPage, setCurrentPage] = useState(1);
@@ -178,10 +182,11 @@ export const KeywordsSection = ({
   const setColumnWidth = functionalView === 'editorial' ? setEditorialColumnWidth : setAdsColumnWidth;
   const resetColumnWidths = functionalView === 'editorial' ? resetEditorialWidths : resetAdsWidths;
 
-  // Sync persisted state when hydrated
+  // Sync persisted state when hydrated - SEPARATE filters for each view
   useEffect(() => {
     if (isHydrated) {
       setFilters(persistedState.filters);
+      setAdsFilters(persistedState.adsFilters || defaultAdsFiltersState);
       setSortField(persistedState.sortField);
       setSortOrder(persistedState.sortOrder);
       setFunctionalView(persistedState.functionalView || 'editorial');
@@ -391,11 +396,37 @@ export const KeywordsSection = ({
     setCurrentPage(1);
   };
 
-  // Handle ADS filter change
+  // Handle ADS filter change - INDEPENDENT from editorial filters
   const handleAdsFiltersChange = (newFilters: AdsFiltersState) => {
     setAdsFilters(newFilters);
+    persistAdsFilters(newFilters);
     setCurrentPage(1);
   };
+
+  // Reveal keyword and open panel - clears filters to ensure visibility
+  const revealKeywordAndOpenPanel = useCallback((keywordId: string) => {
+    // Clear search
+    onSearchTermChange('');
+    
+    // Reset ADS filters but keep needsAttention to show the alert keywords
+    setAdsFilters({
+      ...defaultAdsFiltersState,
+      needsAttention: true,
+    });
+    persistAdsFilters({
+      ...defaultAdsFiltersState,
+      needsAttention: true,
+    });
+    
+    // Wait for filter update then navigate to keyword page
+    requestAnimationFrame(() => {
+      const idx = keywords.findIndex(k => k.id === keywordId);
+      if (idx >= 0) {
+        setCurrentPage(Math.floor(idx / ITEMS_PER_PAGE) + 1);
+      }
+      setSelectedKeywordId(keywordId);
+    });
+  }, [keywords, onSearchTermChange, persistAdsFilters]);
 
   // Filter and sort keywords - show ALL keywords in both views (no purpose filter)
   const filteredKeywords = useMemo(() => {
@@ -612,6 +643,16 @@ export const KeywordsSection = ({
 
         {/* ADS Dashboard - only in ads view */}
         {functionalView === 'ads' && hasAdsAccess && <AdsDashboard keywords={keywords} bookEconomy={bookEconomy} />}
+        
+        {/* ACOS Alerts Tray - only in ads view, shows keywords with ACOS > PE */}
+        {functionalView === 'ads' && hasAdsAccess && (
+          <AcosAlertsTray
+            keywords={keywords}
+            bookEconomy={bookEconomy}
+            campaigns={campaigns}
+            onKeywordClick={(kw) => revealKeywordAndOpenPanel(kw.id)}
+          />
+        )}
       </div>
 
       {/* Advanced Filters - positioned above table with toolbar */}
@@ -787,7 +828,7 @@ export const KeywordsSection = ({
                         </div>
                       </ResizableTableHeader>
                     </> : <>
-                      <ResizableTableHeader columnKey="campaign" width={columnWidths.campaign} onResize={setColumnWidth} className="cursor-pointer hover:text-foreground" onClick={() => handleSort('keyword')}>
+                      <ResizableTableHeader columnKey="campaign" width={columnWidths.campaign} onResize={setColumnWidth}>
                         <div className="flex items-center gap-1">
                           Campaña
                           <InfoTooltip content="Nombre de la campaña de Amazon Ads donde se usa esta keyword." />
@@ -795,17 +836,23 @@ export const KeywordsSection = ({
                       </ResizableTableHeader>
                       <ResizableTableHeader columnKey="acosPE" width={columnWidths.acosPE} onResize={setColumnWidth}>
                         <div className="flex items-center gap-1">
-                          ACOS PE
+                          PE
                           <InfoTooltip content="ACOS Punto de Equilibrio. Si ACOS actual supera este valor, pierdes dinero." />
                         </div>
                       </ResizableTableHeader>
-                      <ResizableTableHeader columnKey="impresiones" width={columnWidths.impresiones || 80} onResize={setColumnWidth} className="cursor-pointer hover:text-foreground" onClick={() => handleSort('keyword')}>
+                      <ResizableTableHeader columnKey="clicks" width={columnWidths.clicks} onResize={setColumnWidth} className="cursor-pointer hover:text-foreground" onClick={() => handleSort('clicks')}>
+                        <div className="flex items-center gap-1">
+                          Clicks
+                          <ArrowUpDown className="w-3 h-3" />
+                        </div>
+                      </ResizableTableHeader>
+                      <ResizableTableHeader columnKey="impresiones" width={columnWidths.impresiones || 70} onResize={setColumnWidth}>
                         <div className="flex items-center gap-1">
                           Impr.
                           <InfoTooltip content="Número total de veces que se ha mostrado tu anuncio." />
                         </div>
                       </ResizableTableHeader>
-                      <ResizableTableHeader columnKey="ctr" width={columnWidths.ctr || 70} onResize={setColumnWidth} className="cursor-pointer hover:text-foreground" onClick={() => handleSort('keyword')}>
+                      <ResizableTableHeader columnKey="ctr" width={columnWidths.ctr || 60} onResize={setColumnWidth}>
                         <div className="flex items-center gap-1">
                           CTR
                           <InfoTooltip content="Frecuencia con la que los clientes hacen clic en tu anuncio cuando se muestra. El CTR se calcula como los clics divididos entre las impresiones. Un CTR del 3-5% es considerado óptimo." />
@@ -835,6 +882,12 @@ export const KeywordsSection = ({
                           <ArrowUpDown className="w-3 h-3" />
                         </div>
                       </ResizableTableHeader>
+                      <ResizableTableHeader columnKey="acosSig" width={columnWidths.acosSig || 70} onResize={setColumnWidth}>
+                        <div className="flex items-center gap-1">
+                          ACOS Sig.
+                          <InfoTooltip content="ACOS proyectado si se produce un click más sin venta. Útil para anticipar el impacto." />
+                        </div>
+                      </ResizableTableHeader>
                       <ResizableTableHeader columnKey="tendencia" width={columnWidths.tendencia || 80} onResize={setColumnWidth}>
                         <div className="flex items-center gap-1">
                           Tendencia
@@ -859,7 +912,7 @@ export const KeywordsSection = ({
               </TableHeader>
               <TableBody>
               {paginatedKeywords.length === 0 ? <TableRow>
-                    <TableCell colSpan={functionalView === 'editorial' ? 7 : 12} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={functionalView === 'editorial' ? 7 : 15} className="text-center py-8 text-muted-foreground">
                       {keywords.length === 0 ? 'No hay keywords. Añade tu primera keyword o importa en lote.' : 'No se encontraron keywords con los filtros aplicados.'}
                     </TableCell>
                   </TableRow> : paginatedKeywords.map(keyword => {
@@ -939,13 +992,10 @@ export const KeywordsSection = ({
                                 </TooltipContent>
                               </Tooltip>}
                             
-                            {/* Needs Attention badge - ACOS > PE */}
+                            {/* Needs Attention badge - ACOS > PE - Icon only */}
                             {functionalView === 'ads' && acosEquilibrio !== null && acosActual !== null && acosActual > acosEquilibrio && <Tooltip>
                                 <TooltipTrigger asChild>
-                                  <Badge variant="destructive" className="h-5 px-1.5 text-[10px] gap-0.5 flex-shrink-0">
-                                    <AlertTriangle className="w-3 h-3" />
-                                    Atención
-                                  </Badge>
+                                  <AlertTriangle className="w-4 h-4 text-destructive flex-shrink-0" />
                                 </TooltipTrigger>
                                 <TooltipContent>
                                   <p className="font-medium">ACOS sobre equilibrio</p>
@@ -1029,23 +1079,17 @@ export const KeywordsSection = ({
                     })} />
                             </TableCell>
                           </> : <>
-                            {/* Campaña - Dropdown select */}
-                            <TableCell onClick={e => e.stopPropagation()}>
-                              <CampaignSelect value={ads?.campaignName ?? ''} onChange={value => {
-                      const baseAds = (ads ?? {}) as AdsData;
-                      const updatedAdsData = {
-                        ...baseAds,
-                        campaignName: value
-                      };
-                      onUpdate(keyword.id, {
-                        adsData: updatedAdsData
-                      });
-                      // No local state patch needed - derivation handles sync
-                    }} campaigns={campaigns} onAddCampaign={addCampaign} placeholder="Campaña..." className="h-7 text-xs max-w-[120px]" />
+                            {/* Campaña - Read only (editable only in lateral panel) */}
+                            <TableCell className="text-xs text-muted-foreground truncate max-w-[100px]">
+                              {ads?.campaignName || '—'}
                             </TableCell>
                             {/* ACOS Equilibrio (PE) - Read only reference */}
                             <TableCell className="tabular-nums text-xs font-medium text-primary">
                               {acosEquilibrio !== null ? `${acosEquilibrio.toFixed(1)}%` : '—'}
+                            </TableCell>
+                            {/* Clicks - Read only */}
+                            <TableCell className="tabular-nums text-xs text-muted-foreground">
+                              {ads?.clicks ?? '—'}
                             </TableCell>
                             {/* Impresiones - Read only */}
                             <TableCell className="tabular-nums text-xs text-muted-foreground">
@@ -1075,7 +1119,7 @@ export const KeywordsSection = ({
                                 {acosActual !== null && acosEquilibrio !== null && acosActual > acosEquilibrio && <TooltipProvider>
                                     <Tooltip>
                                       <TooltipTrigger asChild>
-                                        <AlertTriangle className="w-3.5 h-3.5 text-red-500 shrink-0" />
+                                        <AlertTriangle className="w-3.5 h-3.5 text-destructive shrink-0" />
                                       </TooltipTrigger>
                                       <TooltipContent side="left" className="text-xs">
                                         <p className="font-medium">ACOS sobre equilibrio</p>
@@ -1088,6 +1132,12 @@ export const KeywordsSection = ({
                                   {formatearPorcentaje(acosActual)}
                                 </span>
                               </div>
+                            </TableCell>
+                            {/* ACOS Siguiente Click */}
+                            <TableCell className="tabular-nums text-xs">
+                              <span className={cn(acosSiguiente !== null && acosEquilibrio !== null ? acosSiguiente <= acosEquilibrio ? 'text-green-600 dark:text-green-400' : 'text-amber-600 dark:text-amber-400' : 'text-muted-foreground')}>
+                                {formatearPorcentaje(acosSiguiente)}
+                              </span>
                             </TableCell>
                             {/* Tendencia ACOS Sparkline */}
                             <TableCell>

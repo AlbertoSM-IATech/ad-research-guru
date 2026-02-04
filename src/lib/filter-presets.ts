@@ -99,53 +99,44 @@ export const EDITORIAL_PRESETS: PredefinedPreset[] = [
 ];
 
 // ========== ADS PRESETS ==========
+// Criterios claros basados en ACOS vs PE (punto de equilibrio)
 
 export const ADS_PRESETS: PredefinedPreset[] = [
   {
-    id: 'preset-ads-above-acos-pe',
-    name: 'Por encima del ACOS PE',
+    id: 'preset-ads-needs-attention',
+    name: 'Necesitan atención',
     type: 'ads',
-    description: 'Keywords con ACOS actual mayor al punto de equilibrio (perdiendo dinero)',
+    description: 'Keywords con ACOS > PE (perdiendo dinero)',
     filters: {
       ...defaultAdsFilters,
-      rentabilidad: 'unprofitable',
+      needsAttention: true,
     },
   },
   {
-    id: 'preset-ads-below-acos-pe',
-    name: 'Por debajo del ACOS PE',
+    id: 'preset-ads-profitable',
+    name: 'Rentables (ACOS ≤ PE)',
     type: 'ads',
-    description: 'Keywords con ACOS actual menor al punto de equilibrio (rentables)',
+    description: 'Keywords con ACOS actual por debajo del punto de equilibrio',
     filters: {
       ...defaultAdsFilters,
       rentabilidad: 'profitable',
     },
   },
   {
-    id: 'preset-ads-conversion-0-2',
-    name: 'Conversión 0-2%',
+    id: 'preset-ads-unprofitable',
+    name: 'No rentables (ACOS > PE)',
     type: 'ads',
-    description: 'Keywords con baja tasa de conversión',
+    description: 'Keywords con ACOS actual por encima del punto de equilibrio',
     filters: {
       ...defaultAdsFilters,
-      minClicks: '1', // At least some clicks to calculate conversion
+      rentabilidad: 'unprofitable',
     },
   },
   {
-    id: 'preset-ads-conversion-2-4',
-    name: 'Conversión 2-4%',
+    id: 'preset-ads-high-spend-no-sales',
+    name: 'Alto gasto sin ventas',
     type: 'ads',
-    description: 'Keywords con conversión media-baja',
-    filters: {
-      ...defaultAdsFilters,
-      minPedidos: '1',
-    },
-  },
-  {
-    id: 'preset-ads-high-clicks-no-sales',
-    name: 'Muchos clicks, sin ventas',
-    type: 'ads',
-    description: 'Keywords que consumen presupuesto sin generar ventas',
+    description: 'Keywords con clicks pero sin pedidos',
     filters: {
       ...defaultAdsFilters,
       minClicks: '10',
@@ -153,24 +144,33 @@ export const ADS_PRESETS: PredefinedPreset[] = [
     },
   },
   {
-    id: 'preset-ads-positive-benefit',
-    name: 'Beneficio positivo',
+    id: 'preset-ads-low-acos',
+    name: 'ACOS muy bajo (<20%)',
     type: 'ads',
-    description: 'Keywords que están generando beneficio neto',
+    description: 'Keywords muy eficientes, posiblemente escalables',
     filters: {
       ...defaultAdsFilters,
-      rentabilidad: 'profitable',
-      minBeneficio: '0.01',
+      maxAcos: '20',
     },
   },
   {
-    id: 'preset-ads-negative-benefit',
-    name: 'Beneficio negativo',
+    id: 'preset-ads-high-acos',
+    name: 'ACOS alto (>50%)',
     type: 'ads',
-    description: 'Keywords que están generando pérdidas',
+    description: 'Keywords con ACOS muy alto, revisar optimización',
     filters: {
       ...defaultAdsFilters,
-      rentabilidad: 'unprofitable',
+      minAcos: '50',
+    },
+  },
+  {
+    id: 'preset-ads-with-orders',
+    name: 'Con ventas',
+    type: 'ads',
+    description: 'Keywords que han generado al menos un pedido',
+    filters: {
+      ...defaultAdsFilters,
+      minPedidos: '1',
     },
   },
 ];
