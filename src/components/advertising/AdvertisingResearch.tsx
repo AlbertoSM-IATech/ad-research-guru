@@ -624,7 +624,10 @@ export const AdvertisingResearch = ({
     categoriesByMarket: Record<string, AdvertisingCategory[]>;
     campaignPlansByMarket: Record<string, CampaignPlan[]>;
     showInsights: boolean;
-  }, mode: 'replace' | 'merge', options: { restoreOverrides: boolean; restoreUiPrefs: boolean }) => {
+  }, mode: 'replace' | 'merge', options: {
+    restoreOverrides: boolean;
+    restoreUiPrefs: boolean;
+  }) => {
     if (mode === 'replace') {
       // Replace all data
       setSelectedMarketplace(data.selectedMarketplace);
@@ -638,28 +641,23 @@ export const AdvertisingResearch = ({
       setShowInsights(data.showInsights);
     } else {
       // Merge data
-      const mergeResult = performMerge(
-        {
-          selectedMarketplace,
-          activeTab,
-          bookInfo,
-          bookEconomy,
-          keywordsByMarket,
-          asinsByMarket,
-          categoriesByMarket,
-          campaignPlansByMarket,
-          showInsights,
-        },
-        data
-      );
-      
+      const mergeResult = performMerge({
+        selectedMarketplace,
+        activeTab,
+        bookInfo,
+        bookEconomy,
+        keywordsByMarket,
+        asinsByMarket,
+        categoriesByMarket,
+        campaignPlansByMarket,
+        showInsights
+      }, data);
       setBookInfo(mergeResult.bookInfo);
       setBookEconomy(mergeResult.bookEconomy);
       setKeywordsByMarket(mergeResult.keywordsByMarket);
       setAsinsByMarket(mergeResult.asinsByMarket);
       setCategoriesByMarket(mergeResult.categoriesByMarket);
       setCampaignPlansByMarket(mergeResult.campaignPlansByMarket);
-      
       toast.info(`KW: +${mergeResult.stats.keywordsAdded}/↻${mergeResult.stats.keywordsUpdated} | ASIN: +${mergeResult.stats.asinsAdded}/↻${mergeResult.stats.asinsUpdated}`, {
         duration: 5000
       });
@@ -711,9 +709,9 @@ export const AdvertisingResearch = ({
       <div className="w-full px-3 sm:px-4 lg:px-6 py-6">
         {/* === HEADER === Minimalista y profesional */}
         <header className="mb-6">
-          <div className="flex items-center justify-between gap-4 flex-wrap">
+          <div className="flex items-center justify-between flex-wrap gap-[3px]">
             {/* Title + Sync indicator */}
-            <div className="flex flex-col gap-1">
+            <div className="flex-row px-0 py-0 flex items-start justify-start gap-[40px]">
               <div className="flex items-center gap-3">
                 <h1 className="font-heading text-2xl font-bold text-foreground">Análisis de Keywords y Gestión de ADS</h1>
               </div>
@@ -927,21 +925,7 @@ export const AdvertisingResearch = ({
     }} />
 
       {/* Backup Modal */}
-      <BackupModal 
-        isOpen={showBackupModal} 
-        onClose={() => setShowBackupModal(false)} 
-        bookId={bookId}
-        selectedMarketplace={selectedMarketplace}
-        activeTab={activeTab}
-        bookInfo={bookInfo}
-        bookEconomy={bookEconomy}
-        keywordsByMarket={keywordsByMarket}
-        asinsByMarket={asinsByMarket}
-        categoriesByMarket={categoriesByMarket}
-        campaignPlansByMarket={campaignPlansByMarket}
-        showInsights={showInsights}
-        onRestore={handleRestoreBackup}
-      />
+      <BackupModal isOpen={showBackupModal} onClose={() => setShowBackupModal(false)} bookId={bookId} selectedMarketplace={selectedMarketplace} activeTab={activeTab} bookInfo={bookInfo} bookEconomy={bookEconomy} keywordsByMarket={keywordsByMarket} asinsByMarket={asinsByMarket} categoriesByMarket={categoriesByMarket} campaignPlansByMarket={campaignPlansByMarket} showInsights={showInsights} onRestore={handleRestoreBackup} />
 
       {/* Market Config Modal */}
       <MarketConfigModal isOpen={showMarketConfigModal} onClose={() => setShowMarketConfigModal(false)} currentMarketplace={selectedMarketplace} onConfigChange={() => setConfigVersion(v => v + 1)} />
