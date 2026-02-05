@@ -1,5 +1,5 @@
 import { useState, useCallback, useMemo, useEffect, useRef } from "react";
-import { Search, Target, FolderOpen, BarChart3, Save } from "lucide-react";
+ import { Search, Target, FolderOpen, BarChart3, Save, HelpCircle } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
@@ -776,7 +776,33 @@ export const AdvertisingResearch = ({
               <ThemeToggle />
 
               {/* Overflow Menu */}
-              <HeaderOverflowMenu onStartTour={() => setShowTour(true)} onResetData={handleResetData} onRegenerateDemo={handleRegenerateDemo} onOpenMarketConfig={() => setShowMarketConfigModal(true)} onOpenBackup={() => setShowBackupModal(true)} />
+               {/* Tour Button - Visible */}
+               <TooltipProvider>
+                 <Tooltip>
+                   <TooltipTrigger asChild>
+                     <Button 
+                       variant="outline" 
+                       size="sm" 
+                       onClick={() => setShowTour(true)}
+                       className="gap-1.5 h-9"
+                     >
+                       <HelpCircle className="w-4 h-4" />
+                       <span className="hidden sm:inline">Tour</span>
+                     </Button>
+                   </TooltipTrigger>
+                   <TooltipContent side="bottom">
+                     <div className="text-center">
+                       <p className="font-medium text-xs">Recorrido rápido</p>
+                       <p className="text-xs text-muted-foreground">
+                         {hasCompletedTour ? "Repetir tour" : "Te enseño lo esencial en 30 segundos"}
+                       </p>
+                     </div>
+                   </TooltipContent>
+                 </Tooltip>
+               </TooltipProvider>
+ 
+               {/* Overflow Menu */}
+               <HeaderOverflowMenu onStartTour={() => setShowTour(true)} onResetData={handleResetData} onRegenerateDemo={handleRegenerateDemo} onOpenMarketConfig={() => setShowMarketConfigModal(true)} onOpenBackup={() => setShowBackupModal(true)} />
             </div>
           </div>
 
