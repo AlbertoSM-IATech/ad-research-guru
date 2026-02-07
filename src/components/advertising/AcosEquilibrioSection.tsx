@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
@@ -47,19 +47,21 @@ export const AcosEquilibrioSection = ({
   const [guiaDominio, setGuiaDominio] = useState<string>('');
   const [guiaBeneficio, setGuiaBeneficio] = useState<string>('');
 
-  // Load data from adsData prop
+  // Deep fingerprint for adsData to avoid stale data from shallow reference comparison
+  const adsDataFingerprint = useMemo(() => JSON.stringify(adsData ?? null), [adsData]);
+
+  // Load data from adsData prop — uses deep comparison to catch ALL changes
   useEffect(() => {
-    if (adsData) {
-      setClicks(adsData.clicks?.toString() ?? '');
-      setCpcActual(adsData.cpcActual?.toString() ?? '');
-      setPedidos(adsData.pedidos?.toString() ?? '');
-      setFaseActual(adsData.faseActual);
-      setCampaignName(adsData.campaignName ?? '');
-      setGuiaLanzamiento(adsData.guiaLanzamiento?.toString() ?? '');
-      setGuiaDominio(adsData.guiaDominio?.toString() ?? '');
-      setGuiaBeneficio(adsData.guiaBeneficio?.toString() ?? '');
-    }
-  }, [adsData]);
+    // Always sync: set to actual values or clear to empty
+    setClicks(adsData?.clicks?.toString() ?? '');
+    setCpcActual(adsData?.cpcActual?.toString() ?? '');
+    setPedidos(adsData?.pedidos?.toString() ?? '');
+    setFaseActual(adsData?.faseActual);
+    setCampaignName(adsData?.campaignName ?? '');
+    setGuiaLanzamiento(adsData?.guiaLanzamiento?.toString() ?? '');
+    setGuiaDominio(adsData?.guiaDominio?.toString() ?? '');
+    setGuiaBeneficio(adsData?.guiaBeneficio?.toString() ?? '');
+  }, [adsDataFingerprint]);
 
   // Update parent when values change
   const updateAdsData = (field: keyof AdsData, value: number | undefined | AdsFase | string) => {
