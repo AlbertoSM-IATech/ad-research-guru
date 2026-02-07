@@ -1,5 +1,8 @@
 import { useState, useMemo, useEffect, useCallback } from 'react';
 import { Plus, Search, Trash2, ArrowUpDown, Eye, BookOpen, Megaphone, Info, Star, AlertTriangle, RotateCcw, GitCompare, ChevronUp, ChevronDown, Save, Crown, Upload } from 'lucide-react';
+import { DndContext, closestCenter, type DragEndEvent, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
+import { SortableContext, horizontalListSortingStrategy } from '@dnd-kit/sortable';
+
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -23,6 +26,7 @@ import { NewKeywordWizard } from './NewKeywordWizard';
 import { KeywordExportCSV } from './KeywordExportCSV';
 import { KeywordComparisonPanel } from './KeywordComparisonPanel';
 import { ResizableTableHeader } from './ResizableTableHeader';
+import { DraggableResizableHeader } from './DraggableResizableHeader';
 import { AdsDashboard } from './AdsDashboard';
 import { CampaignSelect } from './CampaignSelect';
 import { PlanUpgradeModal } from './PlanUpgradeModal';
@@ -38,12 +42,16 @@ import { sortKeywords, getKeywordMarketScore, isMarketDataIncomplete, SORT_OPTIO
 import { applyKeywordFilters } from '@/lib/keyword-filters';
 import { useKeywordUIPersistence, type FunctionalView } from '@/hooks/useKeywordUIPersistence';
 import { useColumnWidths, type ColumnWidths } from '@/hooks/useColumnWidths';
+import { useColumnOrder } from '@/hooks/useColumnOrder';
 import { useFilterPresets } from '@/hooks/useFilterPresets';
 import { useCampaigns } from '@/hooks/useCampaigns';
 import { calcularGastoAcumulado, calcularVentasAcumuladas, calcularAcosActualPorcentaje, calcularAcosSiguienteClickPorcentaje, calcularConversionPorcentaje, calcularAcosEquilibrioPorcentaje, formatearPorcentaje, formatearMoneda } from '@/lib/acosEquilibrio';
 import { getCurrentPlan, hasAccess } from '@/lib/plan-system';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+
+// Highlighted columns (ACOS focus)
+const HIGHLIGHTED_COLUMNS = new Set(['acos', 'acosSig']);
 
 // Default column widths
 const DEFAULT_EDITORIAL_WIDTHS: ColumnWidths = {
@@ -75,6 +83,10 @@ const DEFAULT_ADS_WIDTHS: ColumnWidths = {
   conversion: 65,
   beneficio: 75
 };
+
+// Default column orders (reorderable columns only - checkbox, star, keyword are fixed)
+const DEFAULT_EDITORIAL_ORDER = ['volume', 'competitors', 'marketScore', 'status'];
+const DEFAULT_ADS_ORDER = ['campaign', 'acosPE', 'clicks', 'impresiones', 'ctr', 'pedidos', 'gasto', 'ventas', 'acos', 'acosSig', 'tendencia', 'conversion', 'beneficio'];
 interface KeywordsSectionProps {
   keywords: Keyword[];
   onAdd: (keyword: Omit<Keyword, 'id' | 'createdAt' | 'updatedAt'> | Keyword) => void;
@@ -181,6 +193,32 @@ export const KeywordsSection = ({
   const columnWidths = functionalView === 'editorial' ? editorialWidths : adsWidths;
   const setColumnWidth = functionalView === 'editorial' ? setEditorialColumnWidth : setAdsColumnWidth;
   const resetColumnWidths = functionalView === 'editorial' ? resetEditorialWidths : resetAdsWidths;
+
+  // Column order management for drag-and-drop reordering
+  const {
+    order: editorialColumnOrder,
+    reorder: reorderEditorialColumns,
+    resetOrder: resetEditorialOrder
+  } = useColumnOrder(`keywords-editorial-${marketplaceId}`, DEFAULT_EDITORIAL_ORDER);
+  const {
+    order: adsColumnOrder,
+    reorder: reorderAdsColumns,
+    resetOrder: resetAdsOrder
+  } = useColumnOrder(`keywords-ads-${marketplaceId}`, DEFAULT_ADS_ORDER);
+  const columnOrder = functionalView === 'editorial' ? editorialColumnOrder : adsColumnOrder;
+  const reorderColumns = functionalView === 'editorial' ? reorderEditorialColumns : reorderAdsColumns;
+  const resetColumnOrder = functionalView === 'editorial' ? resetEditorialOrder : resetAdsOrder;
+
+  // DnD sensor for column reordering (with activation distance to avoid accidental drags)
+  const dndSensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
+  );
+  const handleDragEnd = useCallback((event: DragEndEvent) => {
+    const { active, over } = event;
+    if (over && active.id !== over.id) {
+      reorderColumns(String(active.id), String(over.id));
+    }
+  }, [reorderColumns]);
 
   // Sync persisted state when hydrated - SEPARATE filters for each view
   useEffect(() => {
@@ -604,6 +642,160 @@ export const KeywordsSection = ({
     const option = KEYWORD_STATUS_OPTIONS.find(s => s.value === status);
     return option || KEYWORD_STATUS_OPTIONS[0];
   };
+
+  // --- Header renderers for column reordering ---
+  const renderEditorialHeader = (colKey: string) => {
+    switch (colKey) {
+      case 'volume':
+        return <DraggableResizableHeader key={colKey} columnKey="volume" width={columnWidths.volume} onResize={setColumnWidth} className="cursor-pointer hover:text-foreground" onClick={() => handleSort('searchVolume')}>
+          <div className="flex items-center gap-1">
+            Volumen
+            <ArrowUpDown className="w-3 h-3" />
+            <InfoTooltip content="Volumen de búsquedas mensuales estimado." />
+          </div>
+        </DraggableResizableHeader>;
+      case 'competitors':
+        return <DraggableResizableHeader key={colKey} columnKey="competitors" width={columnWidths.competitors} onResize={setColumnWidth} className="cursor-pointer hover:text-foreground" onClick={() => handleSort('competitors')}>
+          <div className="flex items-center gap-1">
+            Competidores
+            <ArrowUpDown className="w-3 h-3" />
+            <InfoTooltip content="Resultados Amazon para esta búsqueda. Menos de 3000 se considera favorable." />
+          </div>
+        </DraggableResizableHeader>;
+      case 'marketScore':
+        return <DraggableResizableHeader key={colKey} columnKey="marketScore" width={columnWidths.marketScore} onResize={setColumnWidth} className="cursor-pointer hover:text-foreground" onClick={() => handleSort('marketScore')}>
+          <div className="flex items-center gap-1">
+            Market Score
+            <ArrowUpDown className="w-3 h-3" />
+            <InfoTooltip content="Puntuación 0-100 de viabilidad de mercado." />
+          </div>
+        </DraggableResizableHeader>;
+      case 'status':
+        return <DraggableResizableHeader key={colKey} columnKey="status" width={columnWidths.status} onResize={setColumnWidth} className="cursor-pointer hover:text-foreground" onClick={() => handleSort('status')}>
+          <div className="flex items-center gap-1">
+            Estado
+            <ArrowUpDown className="w-3 h-3" />
+            <InfoTooltip content="Pendiente / Válida / Descartada" />
+          </div>
+        </DraggableResizableHeader>;
+      default:
+        return null;
+    }
+  };
+
+  const renderAdsHeader = (colKey: string) => {
+    const isHighlighted = HIGHLIGHTED_COLUMNS.has(colKey);
+    switch (colKey) {
+      case 'campaign':
+        return <DraggableResizableHeader key={colKey} columnKey="campaign" width={columnWidths.campaign} onResize={setColumnWidth}>
+          <div className="flex items-center gap-1">
+            Campaña
+            <InfoTooltip content="Nombre de la campaña de Amazon Ads donde se usa esta keyword." />
+          </div>
+        </DraggableResizableHeader>;
+      case 'volume':
+        return <DraggableResizableHeader key={colKey} columnKey="volume" width={columnWidths.volume || 80} onResize={setColumnWidth} className="cursor-pointer hover:text-foreground" onClick={() => handleSort('searchVolume')}>
+          <div className="flex items-center gap-1">
+            Vol.
+            <ArrowUpDown className="w-3 h-3" />
+          </div>
+        </DraggableResizableHeader>;
+      case 'competitors':
+        return <DraggableResizableHeader key={colKey} columnKey="competitors" width={columnWidths.competitors || 90} onResize={setColumnWidth} className="cursor-pointer hover:text-foreground" onClick={() => handleSort('competitors')}>
+          <div className="flex items-center gap-1">
+            Comp.
+            <ArrowUpDown className="w-3 h-3" />
+          </div>
+        </DraggableResizableHeader>;
+      case 'acosPE':
+        return <DraggableResizableHeader key={colKey} columnKey="acosPE" width={columnWidths.acosPE} onResize={setColumnWidth}>
+          <div className="flex items-center gap-1">
+            PE
+            <InfoTooltip content="ACOS Punto de Equilibrio. Si ACOS actual supera este valor, pierdes dinero." />
+          </div>
+        </DraggableResizableHeader>;
+      case 'clicks':
+        return <DraggableResizableHeader key={colKey} columnKey="clicks" width={columnWidths.clicks} onResize={setColumnWidth} className="cursor-pointer hover:text-foreground" onClick={() => handleSort('clicks')}>
+          <div className="flex items-center gap-1">
+            Clicks
+            <ArrowUpDown className="w-3 h-3" />
+          </div>
+        </DraggableResizableHeader>;
+      case 'impresiones':
+        return <DraggableResizableHeader key={colKey} columnKey="impresiones" width={columnWidths.impresiones || 70} onResize={setColumnWidth}>
+          <div className="flex items-center gap-1">
+            Impr.
+            <InfoTooltip content="Número total de veces que se ha mostrado tu anuncio." />
+          </div>
+        </DraggableResizableHeader>;
+      case 'ctr':
+        return <DraggableResizableHeader key={colKey} columnKey="ctr" width={columnWidths.ctr || 60} onResize={setColumnWidth}>
+          <div className="flex items-center gap-1">
+            CTR
+            <InfoTooltip content="Frecuencia con la que los clientes hacen clic en tu anuncio cuando se muestra. Un CTR del 3-5% es considerado óptimo." />
+          </div>
+        </DraggableResizableHeader>;
+      case 'pedidos':
+        return <DraggableResizableHeader key={colKey} columnKey="pedidos" width={columnWidths.pedidos} onResize={setColumnWidth} className="cursor-pointer hover:text-foreground" onClick={() => handleSort('pedidos')}>
+          <div className="flex items-center gap-1">
+            Pedidos
+            <ArrowUpDown className="w-3 h-3" />
+          </div>
+        </DraggableResizableHeader>;
+      case 'gasto':
+        return <DraggableResizableHeader key={colKey} columnKey="gasto" width={columnWidths.gasto} onResize={setColumnWidth} className="cursor-pointer hover:text-foreground" onClick={() => handleSort('gasto')}>
+          <div className="flex items-center gap-1">
+            Gasto
+            <ArrowUpDown className="w-3 h-3" />
+          </div>
+        </DraggableResizableHeader>;
+      case 'ventas':
+        return <DraggableResizableHeader key={colKey} columnKey="ventas" width={columnWidths.ventas} onResize={setColumnWidth} className="cursor-pointer hover:text-foreground" onClick={() => handleSort('ventas')}>
+          <div className="flex items-center gap-1">
+            Ventas
+            <ArrowUpDown className="w-3 h-3" />
+          </div>
+        </DraggableResizableHeader>;
+      case 'acos':
+        return <DraggableResizableHeader key={colKey} columnKey="acos" width={columnWidths.acos} onResize={setColumnWidth} className="cursor-pointer hover:text-foreground" onClick={() => handleSort('acosActual')} highlighted={isHighlighted}>
+          <div className="flex items-center gap-1">
+            <span className="font-bold">ACOS</span>
+            <ArrowUpDown className="w-3 h-3" />
+          </div>
+        </DraggableResizableHeader>;
+      case 'acosSig':
+        return <DraggableResizableHeader key={colKey} columnKey="acosSig" width={columnWidths.acosSig || 70} onResize={setColumnWidth} highlighted={isHighlighted}>
+          <div className="flex items-center gap-1">
+            <span className="font-bold">ACOS Sig.</span>
+            <InfoTooltip content="ACOS proyectado si se produce un click más sin venta. Útil para anticipar el impacto." />
+          </div>
+        </DraggableResizableHeader>;
+      case 'tendencia':
+        return <DraggableResizableHeader key={colKey} columnKey="tendencia" width={columnWidths.tendencia || 80} onResize={setColumnWidth}>
+          <div className="flex items-center gap-1">
+            Tendencia
+            <InfoTooltip content="Evolución del ACOS en los últimos 7 días. Línea punteada = Punto de Equilibrio." />
+          </div>
+        </DraggableResizableHeader>;
+      case 'conversion':
+        return <DraggableResizableHeader key={colKey} columnKey="conversion" width={columnWidths.conversion} onResize={setColumnWidth} className="cursor-pointer hover:text-foreground" onClick={() => handleSort('conversion')}>
+          <div className="flex items-center gap-1">
+            Conv.
+            <ArrowUpDown className="w-3 h-3" />
+          </div>
+        </DraggableResizableHeader>;
+      case 'beneficio':
+        return <DraggableResizableHeader key={colKey} columnKey="beneficio" width={columnWidths.beneficio} onResize={setColumnWidth} className="cursor-pointer hover:text-foreground" onClick={() => handleSort('beneficio')}>
+          <div className="flex items-center gap-1">
+            Beneficio
+            <ArrowUpDown className="w-3 h-3" />
+            <InfoTooltip content="Ventas - Gasto. Nota: El ACOS es el verdadero indicador de rentabilidad." />
+          </div>
+        </DraggableResizableHeader>;
+      default:
+        return null;
+    }
+  };
   return <div data-tour="keywords-section" className="space-y-6 animate-fade-in">
       {/* Functional View Toggle */}
       <div className="flex-col gap-4 flex items-center justify-start">
@@ -731,14 +923,14 @@ export const KeywordsSection = ({
         })()}
         </div>
         <div className="flex items-center gap-2">
-          {/* Reset Column Widths */}
+          {/* Reset Column Widths & Order */}
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={resetColumnWidths}>
+              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { resetColumnWidths(); resetColumnOrder(); }}>
                 <RotateCcw className="w-3.5 h-3.5" />
               </Button>
             </TooltipTrigger>
-            <TooltipContent>Resetear anchos de columna</TooltipContent>
+            <TooltipContent>Resetear columnas (ancho y orden)</TooltipContent>
           </Tooltip>
           
           <BulkCopyTools keywords={filteredKeywords} selectedIds={selectedIds} />
@@ -772,20 +964,18 @@ export const KeywordsSection = ({
       {/* Bulk actions (Editorial) */}
       {functionalView === 'editorial' && <BulkEditorialStatusToolbar selectedCount={selectedIds.size} onChangeStatus={handleBulkChangeKeywordStatus} onQuickValidate={() => handleBulkChangeKeywordStatus('valid')} />}
 
-      {/* Content - Table */}
-      <div className="rounded-lg border border-border overflow-hidden">
+      {/* Content - Table with DnD column reordering */}
+      <DndContext sensors={dndSensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+        <div className="rounded-lg border border-border overflow-hidden">
           <div className="overflow-x-auto">
             <Table className="table-fixed">
               <TableHeader>
                 <TableRow className="bg-muted/50 hover:bg-muted/50">
-                  <TableHead style={{
-                width: columnWidths.checkbox
-              }}>
+                  {/* Fixed columns: checkbox, star, keyword */}
+                  <TableHead style={{ width: columnWidths.checkbox }}>
                     <Checkbox checked={selectedIds.size === filteredKeywords.length && filteredKeywords.length > 0} onCheckedChange={toggleSelectAll} />
                   </TableHead>
-                  <TableHead style={{
-                width: columnWidths.star
-              }}>
+                  <TableHead style={{ width: columnWidths.star }}>
                     <div className="flex items-center justify-center">
                       <Star className="w-3.5 h-3.5 text-muted-foreground" />
                     </div>
@@ -796,123 +986,22 @@ export const KeywordsSection = ({
                       <ArrowUpDown className="w-3 h-3" />
                     </div>
                   </ResizableTableHeader>
-                  <ResizableTableHeader columnKey="volume" width={columnWidths.volume} onResize={setColumnWidth} className="cursor-pointer hover:text-foreground" onClick={() => handleSort('searchVolume')}>
-                    <div className="flex items-center gap-1">
-                      Volumen
-                      <ArrowUpDown className="w-3 h-3" />
-                      <InfoTooltip content="Volumen de búsquedas mensuales estimado." />
-                    </div>
-                  </ResizableTableHeader>
-                  <ResizableTableHeader columnKey="competitors" width={columnWidths.competitors} onResize={setColumnWidth} className="cursor-pointer hover:text-foreground" onClick={() => handleSort('competitors')}>
-                    <div className="flex items-center gap-1">
-                      Competidores
-                      <ArrowUpDown className="w-3 h-3" />
-                      <InfoTooltip content="Resultados Amazon para esta búsqueda. Menos de 3000 se considera favorable." />
-                    </div>
-                  </ResizableTableHeader>
-                  
-                  {/* Columnas específicas por vista */}
-                  {functionalView === 'editorial' ? <>
-                      <ResizableTableHeader columnKey="marketScore" width={columnWidths.marketScore} onResize={setColumnWidth} className="cursor-pointer hover:text-foreground" onClick={() => handleSort('marketScore')}>
-                        <div className="flex items-center gap-1">
-                          Market Score
-                          <ArrowUpDown className="w-3 h-3" />
-                          <InfoTooltip content="Puntuación 0-100 de viabilidad de mercado." />
-                        </div>
-                      </ResizableTableHeader>
-                      <ResizableTableHeader columnKey="status" width={columnWidths.status} onResize={setColumnWidth} className="cursor-pointer hover:text-foreground" onClick={() => handleSort('status')}>
-                        <div className="flex items-center gap-1">
-                          Estado
-                          <ArrowUpDown className="w-3 h-3" />
-                          <InfoTooltip content="Pendiente / Válida / Descartada" />
-                        </div>
-                      </ResizableTableHeader>
-                    </> : <>
-                      <ResizableTableHeader columnKey="campaign" width={columnWidths.campaign} onResize={setColumnWidth}>
-                        <div className="flex items-center gap-1">
-                          Campaña
-                          <InfoTooltip content="Nombre de la campaña de Amazon Ads donde se usa esta keyword." />
-                        </div>
-                      </ResizableTableHeader>
-                      <ResizableTableHeader columnKey="acosPE" width={columnWidths.acosPE} onResize={setColumnWidth}>
-                        <div className="flex items-center gap-1">
-                          PE
-                          <InfoTooltip content="ACOS Punto de Equilibrio. Si ACOS actual supera este valor, pierdes dinero." />
-                        </div>
-                      </ResizableTableHeader>
-                      <ResizableTableHeader columnKey="clicks" width={columnWidths.clicks} onResize={setColumnWidth} className="cursor-pointer hover:text-foreground" onClick={() => handleSort('clicks')}>
-                        <div className="flex items-center gap-1">
-                          Clicks
-                          <ArrowUpDown className="w-3 h-3" />
-                        </div>
-                      </ResizableTableHeader>
-                      <ResizableTableHeader columnKey="impresiones" width={columnWidths.impresiones || 70} onResize={setColumnWidth}>
-                        <div className="flex items-center gap-1">
-                          Impr.
-                          <InfoTooltip content="Número total de veces que se ha mostrado tu anuncio." />
-                        </div>
-                      </ResizableTableHeader>
-                      <ResizableTableHeader columnKey="ctr" width={columnWidths.ctr || 60} onResize={setColumnWidth}>
-                        <div className="flex items-center gap-1">
-                          CTR
-                          <InfoTooltip content="Frecuencia con la que los clientes hacen clic en tu anuncio cuando se muestra. El CTR se calcula como los clics divididos entre las impresiones. Un CTR del 3-5% es considerado óptimo." />
-                        </div>
-                      </ResizableTableHeader>
-                      <ResizableTableHeader columnKey="pedidos" width={columnWidths.pedidos} onResize={setColumnWidth} className="cursor-pointer hover:text-foreground" onClick={() => handleSort('pedidos')}>
-                        <div className="flex items-center gap-1">
-                          Pedidos
-                          <ArrowUpDown className="w-3 h-3" />
-                        </div>
-                      </ResizableTableHeader>
-                      <ResizableTableHeader columnKey="gasto" width={columnWidths.gasto} onResize={setColumnWidth} className="cursor-pointer hover:text-foreground" onClick={() => handleSort('gasto')}>
-                        <div className="flex items-center gap-1">
-                          Gasto
-                          <ArrowUpDown className="w-3 h-3" />
-                        </div>
-                      </ResizableTableHeader>
-                      <ResizableTableHeader columnKey="ventas" width={columnWidths.ventas} onResize={setColumnWidth} className="cursor-pointer hover:text-foreground" onClick={() => handleSort('ventas')}>
-                        <div className="flex items-center gap-1">
-                          Ventas
-                          <ArrowUpDown className="w-3 h-3" />
-                        </div>
-                      </ResizableTableHeader>
-                      <ResizableTableHeader columnKey="acos" width={columnWidths.acos} onResize={setColumnWidth} className="cursor-pointer hover:text-foreground" onClick={() => handleSort('acosActual')}>
-                        <div className="flex items-center gap-1">
-                          ACOS
-                          <ArrowUpDown className="w-3 h-3" />
-                        </div>
-                      </ResizableTableHeader>
-                      <ResizableTableHeader columnKey="acosSig" width={columnWidths.acosSig || 70} onResize={setColumnWidth}>
-                        <div className="flex items-center gap-1">
-                          ACOS Sig.
-                          <InfoTooltip content="ACOS proyectado si se produce un click más sin venta. Útil para anticipar el impacto." />
-                        </div>
-                      </ResizableTableHeader>
-                      <ResizableTableHeader columnKey="tendencia" width={columnWidths.tendencia || 80} onResize={setColumnWidth}>
-                        <div className="flex items-center gap-1">
-                          Tendencia
-                          <InfoTooltip content="Evolución del ACOS en los últimos 7 días. Línea punteada = Punto de Equilibrio." />
-                        </div>
-                      </ResizableTableHeader>
-                      <ResizableTableHeader columnKey="conversion" width={columnWidths.conversion} onResize={setColumnWidth} className="cursor-pointer hover:text-foreground" onClick={() => handleSort('conversion')}>
-                        <div className="flex items-center gap-1">
-                          Conv.
-                          <ArrowUpDown className="w-3 h-3" />
-                        </div>
-                      </ResizableTableHeader>
-                      <ResizableTableHeader columnKey="beneficio" width={columnWidths.beneficio} onResize={setColumnWidth} className="cursor-pointer hover:text-foreground" onClick={() => handleSort('beneficio')}>
-                        <div className="flex items-center gap-1">
-                          Beneficio
-                          <ArrowUpDown className="w-3 h-3" />
-                          <InfoTooltip content="Ventas - Gasto. Nota: El ACOS es el verdadero indicador de rentabilidad." />
-                        </div>
-                      </ResizableTableHeader>
-                    </>}
+
+                  {/* Reorderable columns rendered in user-defined order */}
+                  <SortableContext items={columnOrder} strategy={horizontalListSortingStrategy}>
+                    {columnOrder.map(colKey => {
+                      if (functionalView === 'editorial') {
+                        return renderEditorialHeader(colKey);
+                      } else {
+                        return renderAdsHeader(colKey);
+                      }
+                    })}
+                  </SortableContext>
                 </TableRow>
               </TableHeader>
               <TableBody>
               {paginatedKeywords.length === 0 ? <TableRow>
-                    <TableCell colSpan={functionalView === 'editorial' ? 7 : 15} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={3 + columnOrder.length} className="text-center py-8 text-muted-foreground">
                       {keywords.length === 0 ? 'No hay keywords. Añade tu primera keyword o importa en lote.' : 'No se encontraron keywords con los filtros aplicados.'}
                     </TableCell>
                   </TableRow> : paginatedKeywords.map(keyword => {
@@ -955,7 +1044,6 @@ export const KeywordsSection = ({
                 onUpdate(keyword.id, {
                   adsData: updatedAdsData
                 });
-                // No need to patch local state - derivation from keywords handles sync automatically
               };
 
               // Check for data inconsistency: clicks < pedidos
@@ -970,7 +1058,159 @@ export const KeywordsSection = ({
                   mainKeywordId: isMainKeyword ? undefined : keyword.id
                 });
               };
+
+              // Cell highlight class for ACOS columns
+              const highlightCellClass = "bg-primary/5";
+
+              // Render a cell by column key for editorial view
+              const renderEditorialCellContent = (colKey: string) => {
+                switch (colKey) {
+                  case 'volume':
+                    return <TableCell key={colKey} className="tabular-nums text-sm" onClick={e => e.stopPropagation()}>
+                      <InlineEditableCell value={keyword.searchVolume || 0} type="number" min={0} onSave={value => handleUpdateWithHistory(keyword.id, { searchVolume: Number(value) })} formatter={v => Number(v || 0).toLocaleString()} className="text-sm" />
+                    </TableCell>;
+                  case 'competitors':
+                    return <TableCell key={colKey} className="tabular-nums text-sm" onClick={e => e.stopPropagation()}>
+                      <div className="flex items-center gap-2">
+                        <span className={cn("w-2 h-2 rounded-full flex-shrink-0", (keyword.competitors || 0) < 3000 ? "bg-green-500" : "bg-red-500")} />
+                        <InlineEditableCell value={keyword.competitors || 0} type="number" min={0} onSave={value => handleUpdateWithHistory(keyword.id, { competitors: Number(value) })} formatter={v => Number(v || 0).toLocaleString()} className="text-sm" />
+                      </div>
+                    </TableCell>;
+                  case 'marketScore':
+                    return <TableCell key={colKey}>
+                      <MarketScoreCell marketData={keyword.marketData} score={score} isIncomplete={incomplete} onValidate={() => setSelectedKeywordId(keyword.id)} />
+                    </TableCell>;
+                  case 'status':
+                    return <TableCell key={colKey} onClick={e => e.stopPropagation()}>
+                      <InlineSelectBadge value={keyword.status || 'pending'} options={KEYWORD_STATUS_OPTIONS.map(s => ({
+                        value: s.value,
+                        label: s.label,
+                        color: s.color
+                      }))} onChange={value => handleUpdateWithHistory(keyword.id, {
+                        status: value as KeywordStatus,
+                        statusManuallySet: true
+                      })} />
+                    </TableCell>;
+                  default:
+                    return null;
+                }
+              };
+
+              // Render a cell by column key for ads view
+              const renderAdsCellContent = (colKey: string) => {
+                const isHighlighted = HIGHLIGHTED_COLUMNS.has(colKey);
+                switch (colKey) {
+                  case 'campaign':
+                    return <TableCell key={colKey} className="text-xs text-muted-foreground truncate max-w-[100px]">
+                      {ads?.campaignName || '—'}
+                    </TableCell>;
+                  case 'volume':
+                    return <TableCell key={colKey} className="tabular-nums text-xs text-muted-foreground">
+                      {(keyword.searchVolume || 0).toLocaleString()}
+                    </TableCell>;
+                  case 'competitors':
+                    return <TableCell key={colKey} className="tabular-nums text-xs text-muted-foreground">
+                      <div className="flex items-center gap-2">
+                        <span className={cn("w-2 h-2 rounded-full flex-shrink-0", (keyword.competitors || 0) < 3000 ? "bg-green-500" : "bg-red-500")} />
+                        {(keyword.competitors || 0).toLocaleString()}
+                      </div>
+                    </TableCell>;
+                  case 'acosPE':
+                    return <TableCell key={colKey} className="tabular-nums text-xs font-medium text-primary">
+                      {acosEquilibrio !== null ? `${acosEquilibrio.toFixed(1)}%` : '—'}
+                    </TableCell>;
+                  case 'clicks':
+                    return <TableCell key={colKey} className="tabular-nums text-xs text-muted-foreground">
+                      {ads?.clicks ?? '—'}
+                    </TableCell>;
+                  case 'impresiones':
+                    return <TableCell key={colKey} className="tabular-nums text-xs text-muted-foreground">
+                      {ads?.impresiones?.toLocaleString() ?? '—'}
+                    </TableCell>;
+                  case 'ctr':
+                    return <TableCell key={colKey} className="tabular-nums text-xs">
+                      <span className={cn(ads?.ctr !== undefined ? ads.ctr >= 3 && ads.ctr <= 5 ? 'text-green-600 dark:text-green-400' : ads.ctr < 3 ? 'text-amber-600 dark:text-amber-400' : 'text-muted-foreground' : 'text-muted-foreground')}>
+                        {ads?.ctr !== undefined ? `${ads.ctr.toFixed(2)}%` : '—'}
+                      </span>
+                    </TableCell>;
+                  case 'pedidos':
+                    return <TableCell key={colKey} className="tabular-nums text-xs text-muted-foreground">
+                      {ads?.pedidos ?? '—'}
+                    </TableCell>;
+                  case 'gasto':
+                    return <TableCell key={colKey} className="tabular-nums text-xs text-muted-foreground">
+                      {formatearMoneda(gastoCalculado)}
+                    </TableCell>;
+                  case 'ventas':
+                    return <TableCell key={colKey} className="tabular-nums text-xs text-muted-foreground">
+                      {formatearMoneda(ventasCalculadas)}
+                    </TableCell>;
+                  case 'acos':
+                    return <TableCell key={colKey} className={cn("tabular-nums text-xs", isHighlighted && highlightCellClass)}>
+                      <div className="flex items-center gap-1">
+                        {acosActual !== null && acosEquilibrio !== null && acosActual > acosEquilibrio && <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <AlertTriangle className="w-3.5 h-3.5 text-destructive shrink-0" />
+                              </TooltipTrigger>
+                              <TooltipContent side="left" className="text-xs">
+                                <p className="font-medium">ACOS sobre equilibrio</p>
+                                <p>Actual: {formatearPorcentaje(acosActual)}</p>
+                                <p>Equilibrio: {formatearPorcentaje(acosEquilibrio)}</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>}
+                        <span className={cn("font-semibold", acosActual !== null && acosEquilibrio !== null ? acosActual <= acosEquilibrio ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400' : 'text-muted-foreground')}>
+                          {formatearPorcentaje(acosActual)}
+                        </span>
+                      </div>
+                    </TableCell>;
+                  case 'acosSig':
+                    return <TableCell key={colKey} className={cn("tabular-nums text-xs", isHighlighted && highlightCellClass)}>
+                      <span className={cn("font-semibold", acosSiguiente !== null && acosEquilibrio !== null ? acosSiguiente <= acosEquilibrio ? 'text-green-600 dark:text-green-400' : 'text-amber-600 dark:text-amber-400' : 'text-muted-foreground')}>
+                        {formatearPorcentaje(acosSiguiente)}
+                      </span>
+                    </TableCell>;
+                  case 'tendencia':
+                    return <TableCell key={colKey}>
+                      <AcosSparkline history={ads?.history} acosEquilibrio={acosEquilibrio} />
+                    </TableCell>;
+                  case 'conversion':
+                    return <TableCell key={colKey} className="tabular-nums text-xs text-muted-foreground">
+                      {formatearPorcentaje(conversion)}
+                    </TableCell>;
+                  case 'beneficio':
+                    return <TableCell key={colKey} className="tabular-nums text-xs">
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <span className="cursor-help">
+                              {(() => {
+                                const beneficio = gastoCalculado !== null && ventasCalculadas !== null ? ventasCalculadas - gastoCalculado : null;
+                                if (beneficio === null) return '—';
+                                return <span className={beneficio >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}>
+                                  {formatearMoneda(beneficio)}
+                                </span>;
+                              })()}
+                            </span>
+                          </TooltipTrigger>
+                          <TooltipContent side="left" className="max-w-xs">
+                            <p className="font-medium">Beneficio = Ventas - Gasto</p>
+                            <p className="text-xs text-muted-foreground mt-1">
+                              ⚠️ Este NO es el beneficio real. Se calcula con ventas totales (PVP × Pedidos), no con las regalías.
+                              El ACOS te indica si realmente tienes beneficio: si ACOS &lt; PE = beneficio real.
+                            </p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    </TableCell>;
+                  default:
+                    return null;
+                }
+              };
+
               return <TableRow key={keyword.id} className={cn('transition-colors', functionalView === 'editorial' ? getRowScoreClass(score) : hasDataInconsistency ? 'bg-amber-500/10 hover:bg-amber-500/15' : 'hover:bg-muted/30')}>
+                        {/* Fixed cells: checkbox, star, keyword */}
                         <TableCell onClick={e => e.stopPropagation()}>
                           <Checkbox checked={selectedIds.has(keyword.id)} onCheckedChange={() => toggleSelect(keyword.id)} />
                         </TableCell>
@@ -1023,11 +1263,9 @@ export const KeywordsSection = ({
                           const normalizedAds: AdsData = {
                             ...baseAds
                           };
-                          // Trigger a new object reference to ensure sync
                           onUpdate(keyword.id, {
                             adsData: normalizedAds
                           });
-                          // No local state patch needed - derivation handles sync
                           toast({
                             title: 'Guardado',
                             description: 'Datos de Ads sincronizados.'
@@ -1046,139 +1284,22 @@ export const KeywordsSection = ({
                             </div>
                           </div>
                         </TableCell>
-                        <TableCell className="tabular-nums text-sm" onClick={e => e.stopPropagation()}>
-                          {functionalView === 'editorial' ? <InlineEditableCell value={keyword.searchVolume || 0} type="number" min={0} onSave={value => handleUpdateWithHistory(keyword.id, {
-                    searchVolume: Number(value)
-                  })} formatter={v => Number(v || 0).toLocaleString()} className="text-sm" /> : (keyword.searchVolume || 0).toLocaleString()}
-                        </TableCell>
-                        <TableCell className="tabular-nums text-sm" onClick={e => e.stopPropagation()}>
-                          {functionalView === 'editorial' ? <div className="flex items-center gap-2">
-                              <span className={cn("w-2 h-2 rounded-full flex-shrink-0", (keyword.competitors || 0) < 3000 ? "bg-green-500" : "bg-red-500")} />
-                              <InlineEditableCell value={keyword.competitors || 0} type="number" min={0} onSave={value => handleUpdateWithHistory(keyword.id, {
-                      competitors: Number(value)
-                    })} formatter={v => Number(v || 0).toLocaleString()} className="text-sm" />
-                            </div> : <div className="flex items-center gap-2">
-                              <span className={cn("w-2 h-2 rounded-full flex-shrink-0", (keyword.competitors || 0) < 3000 ? "bg-green-500" : "bg-red-500")} />
-                              {(keyword.competitors || 0).toLocaleString()}
-                            </div>}
-                        </TableCell>
-                        
-                        {/* Columnas específicas por vista */}
-                        {functionalView === 'editorial' ? <>
-                            <TableCell>
-                              <MarketScoreCell marketData={keyword.marketData} score={score} isIncomplete={incomplete} onValidate={() => setSelectedKeywordId(keyword.id)} />
-                            </TableCell>
-                            <TableCell onClick={e => e.stopPropagation()}>
-                              <InlineSelectBadge value={keyword.status || 'pending'} options={KEYWORD_STATUS_OPTIONS.map(s => ({
-                      value: s.value,
-                      label: s.label,
-                      color: s.color
-                    }))} onChange={value => handleUpdateWithHistory(keyword.id, {
-                      status: value as KeywordStatus,
-                      statusManuallySet: true
-                    })} />
-                            </TableCell>
-                          </> : <>
-                            {/* Campaña - Read only (editable only in lateral panel) */}
-                            <TableCell className="text-xs text-muted-foreground truncate max-w-[100px]">
-                              {ads?.campaignName || '—'}
-                            </TableCell>
-                            {/* ACOS Equilibrio (PE) - Read only reference */}
-                            <TableCell className="tabular-nums text-xs font-medium text-primary">
-                              {acosEquilibrio !== null ? `${acosEquilibrio.toFixed(1)}%` : '—'}
-                            </TableCell>
-                            {/* Clicks - Read only */}
-                            <TableCell className="tabular-nums text-xs text-muted-foreground">
-                              {ads?.clicks ?? '—'}
-                            </TableCell>
-                            {/* Impresiones - Read only */}
-                            <TableCell className="tabular-nums text-xs text-muted-foreground">
-                              {ads?.impresiones?.toLocaleString() ?? '—'}
-                            </TableCell>
-                            {/* CTR - Read only */}
-                            <TableCell className="tabular-nums text-xs">
-                              <span className={cn(ads?.ctr !== undefined ? ads.ctr >= 3 && ads.ctr <= 5 ? 'text-green-600 dark:text-green-400' : ads.ctr < 3 ? 'text-amber-600 dark:text-amber-400' : 'text-muted-foreground' : 'text-muted-foreground')}>
-                                {ads?.ctr !== undefined ? `${ads.ctr.toFixed(2)}%` : '—'}
-                              </span>
-                            </TableCell>
-                            {/* Pedidos - Read only */}
-                            <TableCell className="tabular-nums text-xs text-muted-foreground">
-                              {ads?.pedidos ?? '—'}
-                            </TableCell>
-                            {/* Gasto - Auto-calculated (read-only) */}
-                            <TableCell className="tabular-nums text-xs text-muted-foreground">
-                              {formatearMoneda(gastoCalculado)}
-                            </TableCell>
-                            {/* Ventas - Auto-calculated (read-only) */}
-                            <TableCell className="tabular-nums text-xs text-muted-foreground">
-                              {formatearMoneda(ventasCalculadas)}
-                            </TableCell>
-                            {/* ACOS Actual with Alert Icon */}
-                            <TableCell className="tabular-nums text-xs">
-                              <div className="flex items-center gap-1">
-                                {acosActual !== null && acosEquilibrio !== null && acosActual > acosEquilibrio && <TooltipProvider>
-                                    <Tooltip>
-                                      <TooltipTrigger asChild>
-                                        <AlertTriangle className="w-3.5 h-3.5 text-destructive shrink-0" />
-                                      </TooltipTrigger>
-                                      <TooltipContent side="left" className="text-xs">
-                                        <p className="font-medium">ACOS sobre equilibrio</p>
-                                        <p>Actual: {formatearPorcentaje(acosActual)}</p>
-                                        <p>Equilibrio: {formatearPorcentaje(acosEquilibrio)}</p>
-                                      </TooltipContent>
-                                    </Tooltip>
-                                  </TooltipProvider>}
-                                <span className={cn(acosActual !== null && acosEquilibrio !== null ? acosActual <= acosEquilibrio ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400' : 'text-muted-foreground')}>
-                                  {formatearPorcentaje(acosActual)}
-                                </span>
-                              </div>
-                            </TableCell>
-                            {/* ACOS Siguiente Click */}
-                            <TableCell className="tabular-nums text-xs">
-                              <span className={cn(acosSiguiente !== null && acosEquilibrio !== null ? acosSiguiente <= acosEquilibrio ? 'text-green-600 dark:text-green-400' : 'text-amber-600 dark:text-amber-400' : 'text-muted-foreground')}>
-                                {formatearPorcentaje(acosSiguiente)}
-                              </span>
-                            </TableCell>
-                            {/* Tendencia ACOS Sparkline */}
-                            <TableCell>
-                              <AcosSparkline history={ads?.history} acosEquilibrio={acosEquilibrio} />
-                            </TableCell>
-                            {/* Conversión */}
-                            <TableCell className="tabular-nums text-xs text-muted-foreground">
-                              {formatearPorcentaje(conversion)}
-                            </TableCell>
-                            {/* Beneficio */}
-                            <TableCell className="tabular-nums text-xs">
-                              <TooltipProvider>
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <span className="cursor-help">
-                                      {(() => {
-                              const beneficio = gastoCalculado !== null && ventasCalculadas !== null ? ventasCalculadas - gastoCalculado : null;
-                              if (beneficio === null) return '—';
-                              return <span className={beneficio >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}>
-                                          {formatearMoneda(beneficio)}
-                                        </span>;
-                            })()}
-                                    </span>
-                                  </TooltipTrigger>
-                                  <TooltipContent side="left" className="max-w-xs">
-                                    <p className="font-medium">Beneficio = Ventas - Gasto</p>
-                                    <p className="text-xs text-muted-foreground mt-1">
-                                      ⚠️ Este NO es el beneficio real. Se calcula con ventas totales (PVP × Pedidos), no con las regalías.
-                                      El ACOS te indica si realmente tienes beneficio: si ACOS &lt; PE = beneficio real.
-                                    </p>
-                                  </TooltipContent>
-                                </Tooltip>
-                              </TooltipProvider>
-                            </TableCell>
-                          </>}
+
+                        {/* Ordered cells rendered in user-defined column order */}
+                        {columnOrder.map(colKey => {
+                          if (functionalView === 'editorial') {
+                            return renderEditorialCellContent(colKey);
+                          } else {
+                            return renderAdsCellContent(colKey);
+                          }
+                        })}
                       </TableRow>;
             })}
               </TableBody>
             </Table>
           </div>
         </div>
+      </DndContext>
 
       {/* Pagination */}
       {totalPages > 1 && <div className="flex items-center justify-between">
