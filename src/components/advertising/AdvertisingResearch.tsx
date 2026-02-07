@@ -29,7 +29,6 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { ChevronDown, TrendingUp } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { type Keyword, type TargetASIN, type AdvertisingCategory, type BookInfo, type CampaignPlan, type BookEconomy } from "@/types/advertising";
-import { generateDemoKeywords, generateDemoASINs, generateDemoCategories } from "@/lib/demo-data-generator";
 import { createKeywordDefaults } from "@/lib/keyword-helpers";
 
 // Generate unique ID using crypto.randomUUID with fallback
@@ -77,7 +76,6 @@ export const AdvertisingResearch = ({
   const [pendingChangesCount, setPendingChangesCount] = useState(0);
   const [selectedMarketplace, setSelectedMarketplace] = useState("us");
   const [activeTab, setActiveTab] = useState<"keywords" | "asins" | "categories">("keywords");
-  const [hasLoadedExamples, setHasLoadedExamples] = useState(false);
   const [showInsights, setShowInsights] = useState(false);
 
   // Derived mainView from showInsights for UI
@@ -166,8 +164,6 @@ export const AdvertisingResearch = ({
       if (persisted.showInsights !== undefined) {
         setShowInsights(persisted.showInsights);
       }
-      // Skip loading demo data if we have persisted data
-      setHasLoadedExamples(true);
     }
     // Set initial last sync time
     setLastSyncAt(getLastSyncAt(bookId));
@@ -255,53 +251,6 @@ export const AdvertisingResearch = ({
     }
   }, [bookContextComplete]);
 
-  // Load example data when section is empty (only after hydration)
-  useEffect(() => {
-    if (!hasHydrated) return;
-    if (!hasLoadedExamples) {
-      const currentKeywords = keywordsByMarket[selectedMarketplace] || [];
-      const currentASINs = asinsByMarket[selectedMarketplace] || [];
-      const currentCategories = categoriesByMarket[selectedMarketplace] || [];
-      if (currentKeywords.length === 0 && currentASINs.length === 0 && currentCategories.length === 0) {
-        // Load demo keywords (40)
-        const exampleKeywords = generateDemoKeywords(selectedMarketplace, 40).map(k => ({
-          ...k,
-          id: generateId(),
-          createdAt: new Date(),
-          updatedAt: new Date()
-        }));
-        setKeywordsByMarket(prev => ({
-          ...prev,
-          [selectedMarketplace]: exampleKeywords
-        }));
-
-        // Load demo ASINs (40)
-        const exampleASINs = generateDemoASINs(selectedMarketplace, 40).map(a => ({
-          ...a,
-          id: generateId(),
-          createdAt: new Date(),
-          updatedAt: new Date()
-        }));
-        setAsinsByMarket(prev => ({
-          ...prev,
-          [selectedMarketplace]: exampleASINs
-        }));
-
-        // Load demo categories (15)
-        const exampleCategories = generateDemoCategories(selectedMarketplace, 15).map(c => ({
-          ...c,
-          id: generateId(),
-          createdAt: new Date(),
-          updatedAt: new Date()
-        }));
-        setCategoriesByMarket(prev => ({
-          ...prev,
-          [selectedMarketplace]: exampleCategories
-        }));
-        setHasLoadedExamples(true);
-      }
-    }
-  }, [hasHydrated, selectedMarketplace, hasLoadedExamples, keywordsByMarket, asinsByMarket, categoriesByMarket]);
   const currentKeywords = keywordsByMarket[selectedMarketplace] || [];
   const currentASINs = asinsByMarket[selectedMarketplace] || [];
   const currentCategories = categoriesByMarket[selectedMarketplace] || [];
@@ -525,7 +474,6 @@ export const AdvertisingResearch = ({
     searchInputRef.current?.focus();
   }, []);
 
-  // (Demo mode handler removed - AI features removed)
 
   // Reset data handler - clears localStorage and resets all states to initial values
   const handleResetData = useCallback(() => {
@@ -554,7 +502,6 @@ export const AdvertisingResearch = ({
       categories: new Set()
     });
     setShowInsights(false);
-    setHasLoadedExamples(false); // This will trigger demo data reload
     setPendingChangesCount(0); // Reset pending changes
 
     // 3. Close any open modals
@@ -566,52 +513,6 @@ export const AdvertisingResearch = ({
     // 5. Show confirmation toast
     toast.success("Datos reseteados");
   }, [bookId]);
-
-  // Regenerate demo data handler - generates fresh demo data with competitors
-  const handleRegenerateDemo = useCallback(() => {
-    // Generate fresh demo keywords (40)
-    const exampleKeywords = generateDemoKeywords(selectedMarketplace, 40).map(k => ({
-      ...k,
-      id: generateId(),
-      createdAt: new Date(),
-      updatedAt: new Date()
-    }));
-    setKeywordsByMarket(prev => ({
-      ...prev,
-      [selectedMarketplace]: exampleKeywords
-    }));
-
-    // Generate fresh demo ASINs (40)
-    const exampleASINs = generateDemoASINs(selectedMarketplace, 40).map(a => ({
-      ...a,
-      id: generateId(),
-      createdAt: new Date(),
-      updatedAt: new Date()
-    }));
-    setAsinsByMarket(prev => ({
-      ...prev,
-      [selectedMarketplace]: exampleASINs
-    }));
-
-    // Generate fresh demo categories (15)
-    const exampleCategories = generateDemoCategories(selectedMarketplace, 15).map(c => ({
-      ...c,
-      id: generateId(),
-      createdAt: new Date(),
-      updatedAt: new Date()
-    }));
-    setCategoriesByMarket(prev => ({
-      ...prev,
-      [selectedMarketplace]: exampleCategories
-    }));
-
-    // Show confirmation toast
-    import("sonner").then(({
-      toast
-    }) => {
-      toast.success("Datos demo regenerados con datos de competidores");
-    });
-  }, [selectedMarketplace]);
 
   // Backup restore handler - handles both replace and merge modes
   const handleRestoreBackup = useCallback((data: {
@@ -663,8 +564,6 @@ export const AdvertisingResearch = ({
       });
     }
 
-    // Prevent demo data from loading
-    setHasLoadedExamples(true);
 
     // Clear selection
     setSelection({
@@ -802,7 +701,7 @@ export const AdvertisingResearch = ({
                </TooltipProvider>
  
                {/* Overflow Menu */}
-               <HeaderOverflowMenu onStartTour={() => setShowTour(true)} onResetData={handleResetData} onRegenerateDemo={handleRegenerateDemo} onOpenMarketConfig={() => setShowMarketConfigModal(true)} onOpenBackup={() => setShowBackupModal(true)} />
+               <HeaderOverflowMenu onStartTour={() => setShowTour(true)} onResetData={handleResetData} onOpenMarketConfig={() => setShowMarketConfigModal(true)} onOpenBackup={() => setShowBackupModal(true)} />
             </div>
           </div>
 

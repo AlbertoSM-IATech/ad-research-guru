@@ -5,7 +5,6 @@ import {
   Play,
   Trash2,
   HardDrive,
-  RefreshCw
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -30,7 +29,6 @@ import {
 interface HeaderOverflowMenuProps {
   onStartTour: () => void;
   onResetData: () => void;
-  onRegenerateDemo: () => void;
   onOpenMarketConfig: () => void;
   onOpenBackup: () => void;
 }
@@ -38,7 +36,6 @@ interface HeaderOverflowMenuProps {
 export const HeaderOverflowMenu = ({
   onStartTour,
   onResetData,
-  onRegenerateDemo,
   onOpenMarketConfig,
   onOpenBackup,
 }: HeaderOverflowMenuProps) => {
@@ -84,14 +81,6 @@ export const HeaderOverflowMenu = ({
           >
             <Trash2 className="h-4 w-4" />
             Restablecer datos
-          </DropdownMenuItem>
-          
-          <DropdownMenuSeparator />
-          
-          {/* Sección: Experimental */}
-          <DropdownMenuItem onClick={onRegenerateDemo} className="gap-2 cursor-pointer">
-            <RefreshCw className="h-4 w-4" />
-            Regenerar datos demo
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
