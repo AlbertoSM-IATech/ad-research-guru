@@ -82,8 +82,14 @@ export const KeywordDetailPanel = ({
     }
   }, [isOpen, defaultTab]);
 
+  // Deep content fingerprint for sync — avoids stale data from shallow reference comparison
+  const keywordFingerprint = useMemo(() => {
+    if (!keyword) return '';
+    return JSON.stringify(keyword);
+  }, [keyword]);
+
   // Keep ALL data in sync with keyword prop (bidirectional sync with table edits and wizard)
-  // This single useEffect handles both initial load AND live sync
+  // Uses deep content comparison via keywordFingerprint to catch ALL changes
   useEffect(() => {
     if (!keyword || !isOpen) return;
     
@@ -137,24 +143,7 @@ export const KeywordDetailPanel = ({
     setAdsData(keyword.adsData);
     
     setLastSyncTime(new Date());
-  }, [
-    // Trigger on any keyword property change for full sync
-    keyword?.id,
-    keyword?.keyword,
-    keyword?.searchVolume,
-    keyword?.competitors,
-    keyword?.price,
-    keyword?.royalties,
-    keyword?.marketData,
-    keyword?.marketStructure,
-    keyword?.catalogSignals,
-    keyword?.editorialData,
-    keyword?.status,
-    keyword?.statusManuallySet,
-    keyword?.notes,
-    keyword?.adsData,
-    isOpen
-  ]);
+  }, [keywordFingerprint, isOpen]);
 
   // Calculate Market Score
   const marketData: MarketData = useMemo(() => ({
