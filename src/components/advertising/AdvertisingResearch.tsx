@@ -864,14 +864,14 @@ export const AdvertisingResearch = ({
         </section>
 
         {/* === SECCIÓN 2: PESTAÑAS PRINCIPALES (Datos / Insights) === */}
-        <section className="mb-6" data-tour="tabs">
+        <section className="mb-6">
           {/* Main View Toggle: Datos / Insights */}
           <div className="flex items-center gap-2 p-1 bg-muted rounded-lg w-fit mb-4">
-            <Button variant={mainView === 'data' ? 'default' : 'ghost'} size="sm" onClick={() => setMainView('data')} className={cn("gap-2 transition-all", mainView === 'data' && "bg-primary text-primary-foreground")}>
+            <Button data-tour="tab-datos" variant={mainView === 'data' ? 'default' : 'ghost'} size="sm" onClick={() => setMainView('data')} className={cn("gap-2 transition-all", mainView === 'data' && "bg-primary text-primary-foreground")}>
               <Search className="w-4 h-4" />
               Datos
             </Button>
-            <Button variant={mainView === 'insights' ? 'default' : 'ghost'} size="sm" onClick={() => setMainView('insights')} className={cn("gap-2 transition-all", mainView === 'insights' && "bg-primary text-primary-foreground")}>
+            <Button data-tour="tab-visualizaciones" variant={mainView === 'insights' ? 'default' : 'ghost'} size="sm" onClick={() => setMainView('insights')} className={cn("gap-2 transition-all", mainView === 'insights' && "bg-primary text-primary-foreground")}>
               <TrendingUp className="w-4 h-4" />
               Visualizaciones
             </Button>
@@ -947,6 +947,9 @@ export const AdvertisingResearch = ({
       }
       if (state.isBookPanelOpen !== undefined) {
         setIsBookPanelOpen(state.isBookPanelOpen);
+      }
+      if (state.mainView !== undefined) {
+        setMainView(state.mainView);
       }
     }} />
 

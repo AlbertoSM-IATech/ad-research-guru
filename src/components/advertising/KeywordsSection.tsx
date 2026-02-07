@@ -611,14 +611,14 @@ export const KeywordsSection = ({
           
           {/* View Toggle: Editorial / Ads */}
           <div className="flex items-center gap-2 p-1 bg-muted rounded-lg">
-            <Button variant={functionalView === 'editorial' ? 'default' : 'ghost'} size="sm" onClick={() => {
+            <Button data-tour="btn-estudio-kw" variant={functionalView === 'editorial' ? 'default' : 'ghost'} size="sm" onClick={() => {
             setFunctionalView('editorial');
             updateFunctionalView('editorial');
           }} className={cn("gap-2 transition-all", functionalView === 'editorial' && "bg-primary text-primary-foreground")}>
               <BookOpen className="w-4 h-4" />
               Estudio de Keywords
             </Button>
-            <Button variant={functionalView === 'ads' ? 'default' : 'ghost'} size="sm" onClick={() => {
+            <Button data-tour="tab-ads" variant={functionalView === 'ads' ? 'default' : 'ghost'} size="sm" onClick={() => {
             if (!hasAdsAccess) {
               setShowPlanUpgradeModal(true);
               return;
@@ -749,7 +749,7 @@ export const KeywordsSection = ({
               <Upload className="w-4 h-4" />
               Importar datos
             </Button>}
-          {functionalView === 'ads' && <Button size="sm" onClick={() => setShowAmazonAdsImport(true)} className="gap-2 bg-primary hover:bg-primary/90">
+          {functionalView === 'ads' && <Button data-tour="btn-import-ads" size="sm" onClick={() => setShowAmazonAdsImport(true)} className="gap-2 bg-primary hover:bg-primary/90">
               <Upload className="w-4 h-4" />
               Importar Amazon ADS
             </Button>}
