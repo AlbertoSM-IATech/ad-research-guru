@@ -33,7 +33,9 @@ import { PlanUpgradeModal } from './PlanUpgradeModal';
 import { AcosSparkline } from './AcosSparkline';
 import { AcosAlertsTray } from './AcosAlertsTray';
 import { AdvancedImportModal } from './AdvancedImportModal';
-import { AmazonAdsImportPlaceholder } from './AmazonAdsImportPlaceholder';
+import { AmazonAdsImportWizard } from './amazon-ads/AmazonAdsImportWizard';
+import { AmazonAdsDashboard } from './amazon-ads/AmazonAdsDashboard';
+import { useAmazonAdsData } from '@/hooks/useAmazonAdsData';
 import { type Keyword, type CampaignType, type CompetitionLevel, type RelevanceLevel, type IntentType, type KeywordState, type BookInfo, type BookEconomy, type HistoryEntry, type AdsData, RELEVANCE_LEVELS, INTENT_TYPES, KEYWORD_STATES, calculateRelevance, classifyIntent } from '@/types/advertising';
 import { calculateMarketScore, getDefaultMarketData, KEYWORD_STATUS_OPTIONS, type KeywordStatus } from '@/lib/market-score';
 import { createKeywordDefaults } from '@/lib/keyword-helpers';
@@ -1317,9 +1319,8 @@ export const KeywordsSection = ({
       {/* External Import Modal (Editorial view) */}
       <AdvancedImportModal isOpen={showExternalImportModal} onClose={() => setShowExternalImportModal(false)} onImport={handleBulkImport} marketplaceId={marketplaceId} existingKeywords={keywords} />
       
-      {/* Amazon ADS Import Placeholder (Ads view) */}
-      <AmazonAdsImportPlaceholder isOpen={showAmazonAdsImport} onClose={() => setShowAmazonAdsImport(false)} />
-
+      {/* Amazon ADS Import Wizard (Ads view) */}
+      <AmazonAdsImportWizard isOpen={showAmazonAdsImport} onClose={() => setShowAmazonAdsImport(false)} defaultMarketplace={marketplaceId} />
       {/* History Modal */}
       <KeywordHistoryModal keyword={historyKeyword} isOpen={!!historyKeyword} onClose={() => setHistoryKeyword(null)} />
 
