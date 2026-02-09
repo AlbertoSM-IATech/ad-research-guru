@@ -39,12 +39,14 @@ export const Step3Mapping = ({ files, onFilesChange }: Step3MappingProps) => {
       try {
         const buffer = await f.file.arrayBuffer();
         const workbook = XLSX.read(buffer, { type: 'array' });
-        const previewRows = readSheetRows(workbook, sheetName, 20);
+        const allRows = readSheetRows(workbook, sheetName);
+        const previewRows = allRows.slice(0, 20);
         return {
           ...f,
           selectedSheet: sheetName,
           mappings: sheet.mappings,
           previewRows,
+          allRawRows: allRows,
         };
       } catch {
         return { ...f, selectedSheet: sheetName, mappings: sheet.mappings };

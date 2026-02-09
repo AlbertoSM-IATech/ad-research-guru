@@ -30,7 +30,12 @@ export const Step4Validation = ({
     const searchTerms = new Set<string>();
 
     for (const file of readyFiles) {
-      if (!file.mappings || !file.previewRows) continue;
+      if (!file.mappings) continue;
+      const rows = file.allRawRows ?? file.previewRows ?? [];
+      if (rows.length === 0) {
+        blockingErrors.push(`${file.file.name}: El archivo está vacío o no se pudo leer`);
+        continue;
+      }
 
       // Check missing required fields
       const missing = getMissingRequired(file.mappings.filter(m => m.internalField !== '_skip'));
@@ -39,15 +44,9 @@ export const Step4Validation = ({
         blockingErrors.push(`${file.file.name}: Faltan columnas requeridas: ${names}`);
       }
 
-      // Check if any rows exist
-      if (!file.previewRows || file.previewRows.length === 0) {
-        blockingErrors.push(`${file.file.name}: El archivo está vacío o no se pudo leer`);
-        continue;
-      }
-
       // Parse all rows for validation
       const activeMappings = file.mappings.filter(m => m.internalField !== '_skip');
-      const parsed = parseAllRows(file.previewRows, activeMappings);
+      const parsed = parseAllRows(rows, activeMappings);
 
       for (const row of parsed) {
         if (row.errors.length > 0) {
