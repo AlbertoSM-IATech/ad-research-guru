@@ -23,9 +23,22 @@ export const Step2Upload = ({ files, onFilesChange }: Step2UploadProps) => {
 
     try {
       if (isCSV) {
-        // Parse CSV with PapaParse
-        const text = await file.text();
-        const result = Papa.parse(text, { header: true, skipEmptyLines: true });
+        // Parse CSV — handle BOM and auto-detect delimiter (; or , or \t)
+        let text = await file.text();
+        // Strip UTF-8 BOM if present
+        if (text.charCodeAt(0) === 0xFEFF) {
+          text = text.slice(1);
+        }
+        // Auto-detect delimiter from first line
+        const firstLine = text.split('\n')[0] ?? '';
+        const semiCount = (firstLine.match(/;/g) ?? []).length;
+        const commaCount = (firstLine.match(/,/g) ?? []).length;
+        const tabCount = (firstLine.match(/\t/g) ?? []).length;
+        let delimiter = ',';
+        if (semiCount > commaCount && semiCount > tabCount) delimiter = ';';
+        else if (tabCount > commaCount && tabCount > semiCount) delimiter = '\t';
+
+        const result = Papa.parse(text, { header: true, skipEmptyLines: true, delimiter });
         const headers = result.meta.fields ?? [];
         const mappings = autoMapColumns(headers);
         const allRows = result.data as Record<string, unknown>[];
