@@ -87,13 +87,28 @@ export function normalizeDate(raw: unknown): string | null {
     return str.slice(0, 10);
   }
 
-  // EU format
+  // EU or US format: DD/MM/YYYY or MM/DD/YYYY
   const match = str.match(EU_RE);
   if (match) {
-    const [, day, month, year] = match;
-    const d = day.padStart(2, '0');
-    const m = month.padStart(2, '0');
-    return `${year}-${m}-${d}`;
+    const [, part1, part2, year] = match;
+    const p1 = parseInt(part1, 10);
+    const p2 = parseInt(part2, 10);
+    
+    let day: string, month: string;
+    if (p1 > 12) {
+      // p1 must be day (EU: DD/MM/YYYY)
+      day = part1.padStart(2, '0');
+      month = part2.padStart(2, '0');
+    } else if (p2 > 12) {
+      // p2 must be day (US: MM/DD/YYYY)
+      month = part1.padStart(2, '0');
+      day = part2.padStart(2, '0');
+    } else {
+      // Ambiguous — default to DD/MM/YYYY (EU)
+      day = part1.padStart(2, '0');
+      month = part2.padStart(2, '0');
+    }
+    return `${year}-${month}-${day}`;
   }
 
   // Try JS Date as last resort
