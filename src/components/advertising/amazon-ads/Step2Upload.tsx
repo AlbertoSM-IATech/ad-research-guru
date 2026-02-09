@@ -28,15 +28,17 @@ export const Step2Upload = ({ files, onFilesChange }: Step2UploadProps) => {
         const result = Papa.parse(text, { header: true, skipEmptyLines: true });
         const headers = result.meta.fields ?? [];
         const mappings = autoMapColumns(headers);
-        const previewRows = result.data.slice(0, 20) as Record<string, unknown>[];
+        const allRows = result.data as Record<string, unknown>[];
+        const previewRows = allRows.slice(0, 20);
 
         return {
           ...uploadedFile,
           status: 'ready',
-          sheets: [{ name: file.name, rowCount: result.data.length, headers, confidence: mappings.length >= 3 ? 'high' : 'medium', mappings }],
+          sheets: [{ name: file.name, rowCount: allRows.length, headers, confidence: mappings.length >= 3 ? 'high' : 'medium', mappings }],
           selectedSheet: file.name,
           mappings,
           previewRows,
+          allRawRows: allRows,
         };
       } else {
         // Parse Excel
@@ -49,7 +51,8 @@ export const Step2Upload = ({ files, onFilesChange }: Step2UploadProps) => {
         }
 
         const bestSheet = sheets[0];
-        const previewRows = readSheetRows(workbook, bestSheet.name, 20);
+        const allRows = readSheetRows(workbook, bestSheet.name);
+        const previewRows = allRows.slice(0, 20);
 
         return {
           ...uploadedFile,
@@ -58,6 +61,7 @@ export const Step2Upload = ({ files, onFilesChange }: Step2UploadProps) => {
           selectedSheet: bestSheet.name,
           mappings: bestSheet.mappings,
           previewRows,
+          allRawRows: allRows,
         };
       }
     } catch (e) {

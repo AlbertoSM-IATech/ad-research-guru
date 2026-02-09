@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Progress } from '@/components/ui/progress';
-import { Button } from '@/components/ui/button';
-import { CheckCircle, BarChart3, ListChecks } from 'lucide-react';
+import { CheckCircle } from 'lucide-react';
+import { parseAllRows } from '@/lib/amazon-ads/row-parser';
 import { parsedRowToMetrics } from '@/lib/amazon-ads/row-parser';
+import { aggregateByTarget, matchAggregatesToKeywords, buildAdsDataUpdate } from '@/lib/amazon-ads/import-aggregator';
 import type {
   UploadedFile,
   WizardConfig,
@@ -11,58 +12,100 @@ import type {
   AdsEntityAdGroup,
   AdsEntityTarget,
   AdsDailyMetrics,
+  ImportAgg,
+  AmazonAdsImportResult,
 } from '@/types/amazon-ads';
+import type { Keyword } from '@/types/advertising';
 
 interface Step5ImportProps {
   files: UploadedFile[];
   config: WizardConfig;
+  keywords: Keyword[];
+  scopeId: string;
   adsData: {
     importData: (batch: AdsImportBatch, campaigns: AdsEntityCampaign[], adgroups: AdsEntityAdGroup[], targets: AdsEntityTarget[], metrics: AdsDailyMetrics[]) => void;
   };
-  bookId?: string;
-  onComplete: () => void;
+  onUpdateKeyword: (id: string, updates: Partial<Keyword>) => void;
+  mode: 'replace' | 'accumulate';
+  /** Resolved manual matches: normalizedText -> keywordId | null (ignored) */
+  manualResolutions: Map<string, string | null>;
+  onImportDone: (result: AmazonAdsImportResult) => void;
+  onAggregatesReady: (aggregates: ImportAgg[], matched: ReturnType<typeof matchAggregatesToKeywords>) => void;
 }
 
-type Phase = 'analyzing' | 'normalizing' | 'saving' | 'done';
+type Phase = 'parsing' | 'aggregating' | 'matching' | 'applying' | 'done';
 
 const PHASE_LABELS: Record<Phase, string> = {
-  analyzing: 'Analizando datos...',
-  normalizing: 'Normalizando métricas...',
-  saving: 'Guardando en almacenamiento local...',
+  parsing: 'Parseando filas...',
+  aggregating: 'Agregando métricas por target...',
+  matching: 'Vinculando con keywords...',
+  applying: 'Aplicando datos a keywords...',
   done: '¡Importación completada!',
 };
 
 const PHASE_PROGRESS: Record<Phase, number> = {
-  analyzing: 25,
-  normalizing: 50,
-  saving: 75,
+  parsing: 20,
+  aggregating: 40,
+  matching: 60,
+  applying: 80,
   done: 100,
 };
 
-export const Step5Import = ({ files, config, adsData, bookId, onComplete }: Step5ImportProps) => {
-  const [phase, setPhase] = useState<Phase>('analyzing');
-  const [stats, setStats] = useState({ rows: 0, campaigns: 0, adgroups: 0, targets: 0 });
+function delay(ms: number): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+export const Step5Import = ({
+  files,
+  config,
+  keywords,
+  scopeId,
+  adsData,
+  onUpdateKeyword,
+  mode,
+  manualResolutions,
+  onImportDone,
+  onAggregatesReady,
+}: Step5ImportProps) => {
+  const [phase, setPhase] = useState<Phase>('parsing');
+  const [hasRun, setHasRun] = useState(false);
 
   const runImport = useCallback(async () => {
-    setPhase('analyzing');
-    await delay(300);
+    if (hasRun) return;
+    setHasRun(true);
 
-    const readyFiles = files.filter(f => f.status === 'ready' && f.parsedRows);
+    setPhase('parsing');
+    await delay(200);
 
-    // Collect all parsed rows
-    const allParsedRows = readyFiles.flatMap(f => f.parsedRows ?? []);
-    const validRows = allParsedRows.filter(r => r.errors.length === 0);
+    const readyFiles = files.filter(f => f.status === 'ready' && f.mappings);
 
-    setPhase('normalizing');
-    await delay(300);
+    // Parse ALL rows (use allRawRows if available, else previewRows)
+    const allParsed = readyFiles.flatMap(f => {
+      const rows = f.allRawRows ?? f.previewRows ?? [];
+      const mappings = (f.mappings ?? []).filter(m => m.internalField !== '_skip');
+      return parseAllRows(rows, mappings);
+    });
 
-    // Convert to daily metrics
+    const validRows = allParsed.filter(r => r.errors.length === 0);
+    const rejectedRows = allParsed.filter(r => r.errors.length > 0);
+    const rejectsSample = rejectedRows.slice(0, 10).map((r, i) => ({
+      rowIndex: i,
+      reason: r.errors.join('; '),
+    }));
+
+    setPhase('aggregating');
+    await delay(200);
+
+    // Aggregate by target text
+    const aggregates = aggregateByTarget(validRows);
+
+    // Also save to the internal store for dashboard
     const batchId = `batch-${Date.now()}`;
     const metrics: AdsDailyMetrics[] = validRows.map(row =>
       parsedRowToMetrics(row, config.marketplace, config.adType, config.currency, batchId)
     );
 
-    // Extract entities
+    // Extract entities for internal store
     const campaignMap = new Map<string, AdsEntityCampaign>();
     const adgroupMap = new Map<string, AdsEntityAdGroup>();
     const targetMap = new Map<string, AdsEntityTarget>();
@@ -78,7 +121,6 @@ export const Step5Import = ({ files, config, adsData, bookId, onComplete }: Step
           marketplace: config.marketplace,
         });
       }
-
       if (row.adGroupName || row.adGroupId) {
         const agKey = `${campaignKey}|${(row.adGroupId ?? row.adGroupName ?? '').toLowerCase()}`;
         if (!adgroupMap.has(agKey)) {
@@ -90,7 +132,6 @@ export const Step5Import = ({ files, config, adsData, bookId, onComplete }: Step
           });
         }
       }
-
       if (row.targetText || row.targetId) {
         const agKey = `${campaignKey}|${(row.adGroupId ?? row.adGroupName ?? '').toLowerCase()}`;
         const tKey = `${agKey}|${(row.targetId ?? row.targetText ?? '').toLowerCase()}`;
@@ -107,10 +148,7 @@ export const Step5Import = ({ files, config, adsData, bookId, onComplete }: Step
       }
     }
 
-    setPhase('saving');
-    await delay(200);
-
-    // Create batch record
+    // Save to internal store (for dashboard)
     const batch: AdsImportBatch = {
       id: batchId,
       createdAt: new Date().toISOString(),
@@ -119,22 +157,17 @@ export const Step5Import = ({ files, config, adsData, bookId, onComplete }: Step
       adType: config.adType,
       attributionWindow: config.attributionWindow,
       label: config.label,
-      sourceFiles: readyFiles.map(f => ({
-        name: f.file.name,
-        size: f.file.size,
-        hash: f.id,
-      })),
+      sourceFiles: readyFiles.map(f => ({ name: f.file.name, size: f.file.size, hash: f.id })),
       status: validRows.length > 0 ? 'success' : 'failed',
       stats: {
         rowsImported: validRows.length,
-        rowsRejected: allParsedRows.length - validRows.length,
+        rowsRejected: rejectedRows.length,
         campaignsDetected: campaignMap.size,
         adgroupsDetected: adgroupMap.size,
         targetsDetected: targetMap.size,
       },
     };
 
-    // Persist everything
     adsData.importData(
       batch,
       Array.from(campaignMap.values()),
@@ -143,52 +176,76 @@ export const Step5Import = ({ files, config, adsData, bookId, onComplete }: Step
       metrics,
     );
 
-    setStats({
-      rows: validRows.length,
-      campaigns: campaignMap.size,
-      adgroups: adgroupMap.size,
-      targets: targetMap.size,
-    });
+    setPhase('matching');
+    await delay(200);
+
+    // Match aggregates to keywords
+    const matchResult = matchAggregatesToKeywords(aggregates, keywords);
+
+    // Signal aggregates ready for Step6 (matching resolution)
+    onAggregatesReady(aggregates, matchResult);
+
+    // Apply manual resolutions: move resolved from unmatched to matched
+    for (const [normalizedText, keywordId] of manualResolutions) {
+      if (keywordId === null) continue; // ignored
+      const aggItem = matchResult.unmatched.find(a => a.normalizedText === normalizedText);
+      if (aggItem) {
+        matchResult.matched.push({ keywordId, normalizedText, agg: aggItem });
+        const idx = matchResult.unmatched.indexOf(aggItem);
+        if (idx >= 0) matchResult.unmatched.splice(idx, 1);
+      }
+    }
+
+    setPhase('applying');
+    await delay(200);
+
+    // Apply matched data to keyword.adsData
+    let appliedCount = 0;
+    for (const m of matchResult.matched) {
+      const kw = keywords.find(k => k.id === m.keywordId);
+      if (!kw) continue;
+      const newAdsData = buildAdsDataUpdate(m.agg, kw.adsData, mode);
+      onUpdateKeyword(m.keywordId, { adsData: newAdsData });
+      appliedCount++;
+    }
+
+    const result: AmazonAdsImportResult = {
+      scopeId,
+      rowsImported: validRows.length,
+      rowsRejected: rejectedRows.length,
+      rejectsSample,
+      aggregates,
+      matched: matchResult.matched.map(m => ({ keywordId: m.keywordId, normalizedText: m.normalizedText })),
+      unmatched: matchResult.unmatched.map(u => ({
+        normalizedText: u.normalizedText,
+        sampleOriginal: u.originalTexts[0] ?? u.normalizedText,
+        clicks: u.clicks,
+        spend: u.spend,
+      })),
+      appliedKeywordUpdates: appliedCount,
+    };
 
     setPhase('done');
-  }, [files, config, adsData]);
+    onImportDone(result);
+  }, [files, config, keywords, scopeId, adsData, onUpdateKeyword, mode, manualResolutions, onImportDone, onAggregatesReady, hasRun]);
 
   useEffect(() => {
     runImport();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [runImport]);
 
   return (
     <div className="space-y-6 py-4">
-      {/* Progress bar */}
       <div className="space-y-2">
         <Progress value={PHASE_PROGRESS[phase]} className="h-2" />
         <p className="text-sm text-center font-medium">{PHASE_LABELS[phase]}</p>
       </div>
-
-      {/* Done state */}
       {phase === 'done' && (
-        <div className="space-y-4 text-center">
+        <div className="text-center">
           <CheckCircle className="h-12 w-12 text-green-600 mx-auto" />
-          <div>
-            <p className="text-lg font-semibold">Importación completada</p>
-            <p className="text-sm text-muted-foreground mt-1">
-              {stats.rows} filas importadas · {stats.campaigns} campañas · {stats.adgroups} grupos · {stats.targets} targets
-            </p>
-          </div>
-
-          <div className="flex justify-center gap-3 pt-2">
-            <Button onClick={onComplete} className="gap-2">
-              <BarChart3 className="h-4 w-4" />
-              Ver dashboard
-            </Button>
-          </div>
+          <p className="text-lg font-semibold mt-2">Procesamiento completo</p>
+          <p className="text-xs text-muted-foreground">Revisa el resumen a continuación.</p>
         </div>
       )}
     </div>
   );
 };
-
-function delay(ms: number): Promise<void> {
-  return new Promise(resolve => setTimeout(resolve, ms));
-}

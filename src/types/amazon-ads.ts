@@ -250,4 +250,40 @@ export interface UploadedFile {
   mappings?: ColumnMapping[];
   previewRows?: Record<string, unknown>[];
   parsedRows?: ParsedRow[];
+  allRawRows?: Record<string, unknown>[];
+}
+
+// ------ Import aggregation result ------
+export type ReportType = 'targeting' | 'search_terms' | 'campaign' | 'unknown';
+
+export interface ImportAgg {
+  normalizedText: string;
+  originalTexts: string[];
+  impressions: number;
+  clicks: number;
+  spend: number;
+  orders: number;
+  sales: number;
+  units: number;
+  campaignNames: string[];
+  adGroupNames: string[];
+  matchTypes: string[];
+  sourceReportType: ReportType;
+}
+
+export interface KeywordMatchResult {
+  keywordId: string;
+  normalizedText: string;
+  action: 'matched' | 'ignored' | 'create';
+}
+
+export interface AmazonAdsImportResult {
+  scopeId: string;
+  rowsImported: number;
+  rowsRejected: number;
+  rejectsSample: Array<{ rowIndex: number; reason: string }>;
+  aggregates: ImportAgg[];
+  matched: Array<{ keywordId: string; normalizedText: string }>;
+  unmatched: Array<{ normalizedText: string; sampleOriginal: string; clicks: number; spend: number }>;
+  appliedKeywordUpdates: number;
 }
