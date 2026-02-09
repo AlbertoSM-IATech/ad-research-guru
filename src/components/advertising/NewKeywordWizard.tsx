@@ -476,7 +476,7 @@ export function NewKeywordWizard({
                 <Input
                   id="keyword"
                   value={step1.keyword}
-                  onChange={(e) => setStep1({ ...step1, keyword: normalizeKeyword(e.target.value) })}
+                  onChange={(e) => setStep1({ ...step1, keyword: e.target.value })}
                   placeholder="Introduce la keyword..."
                   autoFocus
                   className={hasDuplicate ? 'border-destructive' : ''}
