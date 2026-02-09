@@ -16,7 +16,7 @@ import { CampaignSelect } from './CampaignSelect';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, ReferenceLine } from 'recharts';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { calcularAcosEquilibrioPorcentaje, calcularGastoAcumulado, calcularVentasAcumuladas, calcularAcosActualPorcentaje, calcularAcosSiguienteClickPorcentaje, calcularConversionPorcentaje, calcularBeneficioAhora, calcularBeneficioSiguienteClick, calcularGuiasFase, determinarAcosBadge, obtenerDatosFaltantes, formatearPorcentaje, formatearMoneda } from '@/lib/acosEquilibrio';
+import { calcularAcosEquilibrioPorcentaje, calcularGastoAcumulado, calcularVentasAcumuladas, calcularAcosActualPorcentaje, calcularAcosSiguienteClickPorcentaje, calcularConversionPorcentaje, calcularBeneficioAhora, calcularBeneficioSiguienteClick, determinarAcosBadge, obtenerDatosFaltantes, formatearPorcentaje, formatearMoneda } from '@/lib/acosEquilibrio';
 interface AcosEquilibrioSectionProps {
   adsData: AdsData | undefined;
   bookEconomy: BookEconomy;
@@ -43,10 +43,6 @@ export const AcosEquilibrioSection = ({
   const [pedidos, setPedidos] = useState<string>('');
   const [faseActual, setFaseActual] = useState<AdsFase | undefined>(undefined);
   const [campaignName, setCampaignName] = useState<string>('');
-  const [guiaLanzamiento, setGuiaLanzamiento] = useState<string>('');
-  const [guiaDominio, setGuiaDominio] = useState<string>('');
-  const [guiaBeneficio, setGuiaBeneficio] = useState<string>('');
-
   // Deep fingerprint for adsData to avoid stale data from shallow reference comparison
   const adsDataFingerprint = useMemo(() => JSON.stringify(adsData ?? null), [adsData]);
 
@@ -58,9 +54,6 @@ export const AcosEquilibrioSection = ({
     setPedidos(adsData?.pedidos?.toString() ?? '');
     setFaseActual(adsData?.faseActual);
     setCampaignName(adsData?.campaignName ?? '');
-    setGuiaLanzamiento(adsData?.guiaLanzamiento?.toString() ?? '');
-    setGuiaDominio(adsData?.guiaDominio?.toString() ?? '');
-    setGuiaBeneficio(adsData?.guiaBeneficio?.toString() ?? '');
   }, [adsDataFingerprint]);
 
   // Update parent when values change
@@ -140,28 +133,10 @@ export const AcosEquilibrioSection = ({
   // Beneficio = Ventas - Gasto (corrected)
   const beneficioAhora = useMemo(() => calcularBeneficioAhora(ventasCalculadas ?? undefined, gastoCalculado ?? undefined), [ventasCalculadas, gastoCalculado]);
   const beneficioSiguiente = useMemo(() => calcularBeneficioSiguienteClick(adsData?.pedidos, bookEconomy.precioLibro, gastoCalculado ?? undefined, adsData?.cpcActual), [adsData?.pedidos, bookEconomy.precioLibro, gastoCalculado, adsData?.cpcActual]);
-  const guiasPrecalculadas = useMemo(() => calcularGuiasFase(acosEquilibrio), [acosEquilibrio]);
+  
   const badgeType = useMemo(() => determinarAcosBadge(acosEquilibrio, acosActual, acosSiguiente), [acosEquilibrio, acosActual, acosSiguiente]);
   const datosFaltantes = useMemo(() => obtenerDatosFaltantes(bookEconomy.precioLibro, bookEconomy.regaliasPorVenta, adsData?.clicks, adsData?.cpcActual, adsData?.pedidos), [bookEconomy, adsData]);
 
-  // Precalculate guides when ACOS equilibrio is available
-  useEffect(() => {
-    if (acosEquilibrio !== null && !guiaLanzamiento && !guiaDominio && !guiaBeneficio) {
-      if (guiasPrecalculadas.lanzamiento !== null) {
-        setGuiaLanzamiento(guiasPrecalculadas.lanzamiento.toFixed(1));
-        updateAdsData('guiaLanzamiento', guiasPrecalculadas.lanzamiento);
-      }
-      if (guiasPrecalculadas.dominio !== null) {
-        setGuiaDominio(guiasPrecalculadas.dominio.toFixed(1));
-        updateAdsData('guiaDominio', guiasPrecalculadas.dominio);
-      }
-      if (guiasPrecalculadas.beneficio !== null) {
-        setGuiaBeneficio(guiasPrecalculadas.beneficio.toFixed(1));
-        updateAdsData('guiaBeneficio', guiasPrecalculadas.beneficio);
-      }
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [acosEquilibrio]);
   const getBadgeContent = () => {
     switch (badgeType) {
       case 'bajo-pe':
@@ -357,45 +332,6 @@ export const AcosEquilibrioSection = ({
         </div>
       </div>
 
-      {/* Guías de fase (colapsable) */}
-      {acosEquilibrio !== null && <div className="p-3 rounded-lg border border-border bg-muted/30 space-y-3">
-          <div className="flex items-center justify-between">
-            <Label className="text-xs text-muted-foreground">Guías de fase (orientativas)</Label>
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Info className="w-3.5 h-3.5 text-muted-foreground cursor-help" />
-                </TooltipTrigger>
-                <TooltipContent className="max-w-xs">
-                  Guías orientativas basadas en ACOS de equilibrio. Puedes editarlas.
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          </div>
-          <div className="grid grid-cols-3 gap-2">
-            <div className="space-y-1">
-              <Label className="text-[10px] text-muted-foreground">Lanzamiento</Label>
-              <div className="relative">
-                <Input type="number" min={0} step={0.1} value={guiaLanzamiento} onChange={e => handleNumberChange('guiaLanzamiento', e.target.value, setGuiaLanzamiento)} className="h-7 text-xs pr-6" />
-                <span className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground text-xs">%</span>
-              </div>
-            </div>
-            <div className="space-y-1">
-              <Label className="text-[10px] text-muted-foreground">Dominio</Label>
-              <div className="relative">
-                <Input type="number" min={0} step={0.1} value={guiaDominio} onChange={e => handleNumberChange('guiaDominio', e.target.value, setGuiaDominio)} className="h-7 text-xs pr-6" />
-                <span className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground text-xs">%</span>
-              </div>
-            </div>
-            <div className="space-y-1">
-              <Label className="text-[10px] text-muted-foreground">Beneficio</Label>
-              <div className="relative">
-                <Input type="number" min={0} step={0.1} value={guiaBeneficio} onChange={e => handleNumberChange('guiaBeneficio', e.target.value, setGuiaBeneficio)} className="h-7 text-xs pr-6" />
-                <span className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground text-xs">%</span>
-              </div>
-            </div>
-          </div>
-        </div>}
 
       {/* BLOQUE 2: RESULTADOS */}
       <div className="space-y-3">
