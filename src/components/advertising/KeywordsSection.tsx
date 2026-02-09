@@ -36,6 +36,7 @@ import { AdvancedImportModal } from './AdvancedImportModal';
 import { AmazonAdsImportWizard } from './amazon-ads/AmazonAdsImportWizard';
 import { AmazonAdsDashboard } from './amazon-ads/AmazonAdsDashboard';
 import { useAmazonAdsData } from '@/hooks/useAmazonAdsData';
+import { useAmazonAdsSync } from '@/hooks/useAmazonAdsSync';
 import { type Keyword, type CampaignType, type CompetitionLevel, type RelevanceLevel, type IntentType, type KeywordState, type BookInfo, type BookEconomy, type HistoryEntry, type AdsData, RELEVANCE_LEVELS, INTENT_TYPES, KEYWORD_STATES, calculateRelevance, classifyIntent } from '@/types/advertising';
 import { calculateMarketScore, getDefaultMarketData, KEYWORD_STATUS_OPTIONS, type KeywordStatus } from '@/lib/market-score';
 import { createKeywordDefaults } from '@/lib/keyword-helpers';
@@ -173,6 +174,10 @@ export const KeywordsSection = ({
     campaigns,
     addCampaign
   } = useCampaigns(keywords);
+
+  // Amazon Ads sync hook
+  const { store: amazonAdsStore } = useAmazonAdsData(marketplaceId);
+  const amazonAdsSync = useAmazonAdsSync(keywords, amazonAdsStore);
 
   // Plan access check
   const userPlan = getCurrentPlan();
@@ -1325,7 +1330,7 @@ export const KeywordsSection = ({
       <KeywordHistoryModal keyword={historyKeyword} isOpen={!!historyKeyword} onClose={() => setHistoryKeyword(null)} />
 
       {/* Keyword Detail Panel */}
-      <KeywordDetailPanel keyword={selectedKeyword} isOpen={!!selectedKeywordId} onClose={() => setSelectedKeywordId(null)} onSave={handleKeywordDetailSave} marketplaceId={marketplaceId} bookEconomy={bookEconomy} defaultTab={functionalView === 'ads' ? 'ads' : 'nicho'} allKeywords={keywords} />
+      <KeywordDetailPanel keyword={selectedKeyword} isOpen={!!selectedKeywordId} onClose={() => setSelectedKeywordId(null)} onSave={handleKeywordDetailSave} marketplaceId={marketplaceId} bookEconomy={bookEconomy} defaultTab={functionalView === 'ads' ? 'ads' : 'nicho'} allKeywords={keywords} amazonAdsSync={amazonAdsSync} onLinkTargets={(keywordId, targetKeys) => onUpdate(keywordId, { amazonAdsTargetKeys: targetKeys })} onUnlinkTargets={(keywordId) => onUpdate(keywordId, { amazonAdsTargetKeys: [] })} />
       
       {/* New Keyword Wizard */}
       <NewKeywordWizard open={isWizardOpen} onOpenChange={setIsWizardOpen} onComplete={handleWizardComplete} marketplaceId={marketplaceId} bookInfo={bookInfo} bookEconomy={bookEconomy} existingKeywords={keywords} initialKeyword={wizardInitialKeyword} onOpenExistingKeyword={handleOpenExistingKeyword} campaigns={campaigns} onAddCampaign={addCampaign} />

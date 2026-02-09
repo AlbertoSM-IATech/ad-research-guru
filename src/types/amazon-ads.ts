@@ -202,6 +202,35 @@ export interface ValidationResult {
   searchTermsDetected: number;
 }
 
+// ------ Imported Ads Metrics (aggregated for keyword sync) ------
+export interface ImportedAdsMetrics {
+  impressions: number;
+  clicks: number;
+  spend: number;
+  sales: number;
+  orders: number;
+  units: number;
+  ctr: number | null;
+  cpc: number | null;
+  cvr: number | null;
+  acos: number | null;
+  roas: number | null;
+  dateRange: { from: string; to: string }; // YYYY-MM-DD
+  targetKeys: string[];
+  lastSyncAt: string; // ISO
+}
+
+// ------ Match suggestion ------
+export type MatchConfidence = 'exact' | 'partial';
+
+export interface MatchSuggestion {
+  keywordId: string;
+  targetKey: string;
+  targetText: string;
+  campaignName: string;
+  confidence: MatchConfidence;
+}
+
 // ------ Wizard state ------
 export interface WizardConfig {
   marketplace: string;
