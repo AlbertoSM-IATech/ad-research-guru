@@ -1,112 +1,101 @@
 
 
-# Plan: Importar datos Amazon Ads
+# Plan: Sincronizar datos Amazon Ads con la tabla de keywords y panel lateral
 
-## Resumen
+## El problema
 
-Implementar el sistema completo de importacion de datos de Amazon Ads: wizard de 5 pasos, modelo de datos, parsing/normalizacion, dashboard post-importacion y recomendaciones accionables. Todo con persistencia en localStorage separada del sistema existente.
+Actualmente hay dos sistemas de datos desconectados:
 
----
+1. **Keyword.adsData** (manual): cada keyword tiene `clicks`, `cpcActual`, `pedidos`, `impresiones`, etc. introducidos a mano. Es lo que muestra la tabla de "Gestion de Ads" y el panel lateral.
+2. **Amazon Ads Store** (importado): datos por campana/target/adgroup con metricas diarias (`impressions`, `clicks`, `spend`, `sales`, `orders`). Viven en un localStorage separado.
 
-## Fase 1: Modelo de datos + Parsing + Normalizacion
+La tabla y el panel lateral solo leen de `keyword.adsData`. Los datos importados no llegan ahi.
 
-### Archivos nuevos a crear:
+## Solucion propuesta: Enlace keyword-target + agregacion automatica
 
-1. **`src/types/amazon-ads.ts`** -- Interfaces completas: AdsImportBatch, AdsEntityCampaign, AdsEntityAdGroup, AdsEntityTarget, AdsDailyMetrics, RecommendationRule, ThresholdConfig.
+La idea es crear un **puente** entre ambos sistemas sin romper la entrada manual existente:
 
-2. **`src/lib/amazon-ads/column-aliases.ts`** -- Diccionario de sinonimos EN/ES para columnas tipicas de Amazon Ads (impressions/impresiones, clicks/clics, spend/gasto, etc.).
+### 1. Anadir campo de enlace en cada keyword
 
-3. **`src/lib/amazon-ads/normalizers.ts`** -- Funciones para normalizar numeros (1.234,56 y 1,234.56), fechas (YYYY-MM-DD, DD/MM/YYYY a ISO), y eliminar simbolos de moneda.
+Anadir un campo opcional `amazonAdsTargetKeys?: string[]` en la interfaz `Keyword`. Este campo almacena las claves de targets/campanas del store de Amazon Ads que corresponden a esa keyword.
 
-4. **`src/lib/amazon-ads/column-mapper.ts`** -- Auto-mapeo de columnas del archivo al esquema interno usando aliases. Devuelve confianza Alta/Media/Baja.
+### 2. Crear un hook de sincronizacion
 
-5. **`src/lib/amazon-ads/sheet-detector.ts`** -- Deteccion de pestanas en Excel, analisis de headers para determinar la mejor pestana y tipo de datos.
+Un nuevo hook `useAmazonAdsSync` que:
+- Recibe las keywords y el store de Amazon Ads.
+- Para cada keyword que tenga `amazonAdsTargetKeys`, agrega las metricas diarias correspondientes (suma de impressions, clicks, spend, sales, orders por periodo).
+- Devuelve un mapa `keywordId -> metricas agregadas de Amazon Ads`.
 
-6. **`src/lib/amazon-ads/row-parser.ts`** -- Parseo fila a fila: extraccion de entidades, normalizacion de metricas, generacion de hash anti-duplicados.
+### 3. Enriquecer keyword.adsData con datos importados
 
-7. **`src/lib/amazon-ads/metrics-calculator.ts`** -- Calculo de metricas derivadas (CTR, CPC, CVR, ACOS, ROAS) con safe division (null si divisor es 0).
+En lugar de sobreescribir los datos manuales, el sistema:
+- Agrega metricas importadas y las inyecta en `keyword.adsData` cuando el usuario lo confirme (boton "Sincronizar desde Amazon Ads").
+- O bien muestra ambas fuentes en paralelo en el panel lateral: una seccion "Datos manuales" y otra "Datos Amazon Ads (importados)".
 
-8. **`src/lib/amazon-ads/recommendations.ts`** -- Motor de reglas para generar recomendaciones accionables con umbrales configurables.
+**Opcion recomendada**: Auto-match + confirmacion. El sistema intenta hacer match automatico entre el texto de la keyword y los `targetText` del store importado, y el usuario confirma o corrige.
 
-9. **`src/hooks/useAmazonAdsData.ts`** -- Hook para gestionar estado de datos importados en localStorage (`amazon-ads:{bookId}:v1`). CRUD de batches, entidades y metricas. Upsert por hash.
+### 4. Auto-matching inteligente
 
----
+Logica de matching:
+- Normalizar ambos textos (lowercase, trim, eliminar acentos).
+- Si `keyword.keyword` coincide exactamente con algun `target.targetText` del store importado, proponer enlace.
+- Si hay coincidencia parcial (contenido), proponer con confianza media.
+- El usuario puede enlazar manualmente desde el panel lateral (dropdown con targets disponibles).
 
-## Fase 2: Wizard de importacion (5 pasos)
+### 5. Visualizacion en tabla y panel lateral
 
-### Archivos nuevos a crear:
+**En la tabla de Ads**:
+- Si una keyword tiene datos importados enlazados, mostrar un icono pequeno (ej: nube con flecha) junto a las metricas para indicar que vienen de Amazon Ads.
+- Las metricas importadas (clicks, spend, sales, orders, impressions) llenan automaticamente los campos equivalentes de adsData.
 
-10. **`src/components/advertising/amazon-ads/AmazonAdsImportWizard.tsx`** -- Wizard modal principal con 5 pasos, control de navegacion y estado global del proceso de importacion.
-
-11. **`src/components/advertising/amazon-ads/Step1Config.tsx`** -- Paso 1: Selectores de marketplace, moneda, tipo de anuncio (SP/SB/SD), ventana de atribucion (7/14/30d), campo de etiqueta.
-
-12. **`src/components/advertising/amazon-ads/Step2Upload.tsx`** -- Paso 2: Zona drag-and-drop multi-archivo con lista de archivos y estados (pendiente/analizando/listo/error).
-
-13. **`src/components/advertising/amazon-ads/Step3Mapping.tsx`** -- Paso 3: Selector de pestana para Excel multi-hoja, preview de 20 filas, panel de columnas detectadas, editor de mapeo manual.
-
-14. **`src/components/advertising/amazon-ads/Step4Validation.tsx`** -- Paso 4: Errores bloqueantes, warnings, resumen de filas validas/descartadas y entidades detectadas.
-
-15. **`src/components/advertising/amazon-ads/Step5Import.tsx`** -- Paso 5: Barra de progreso (Analizando, Normalizando, Guardando, Finalizado), CTAs post-importacion.
-
-### Archivos a modificar:
-
-16. **`src/components/advertising/KeywordsSection.tsx`** -- Reemplazar la importacion y uso de `AmazonAdsImportPlaceholder` por `AmazonAdsImportWizard`. Anadir renderizado condicional del dashboard de Amazon Ads cuando hay datos importados.
-
-### Archivos a eliminar:
-
-17. **`src/components/advertising/AmazonAdsImportPlaceholder.tsx`** -- Se elimina por completo, sustituido por el wizard funcional.
+**En el panel lateral (KeywordDetailPanel)**:
+- Nueva seccion "Amazon Ads" debajo de la seccion de Ads existente.
+- Muestra metricas agregadas del periodo seleccionado.
+- Boton para cambiar el enlace target o desvincular.
+- Historico diario disponible (grafico de tendencia con datos importados).
 
 ---
 
-## Fase 3: Dashboard post-importacion + Recomendaciones
+## Detalle tecnico
 
-### Archivos nuevos a crear:
+### Archivos a modificar
 
-18. **`src/components/advertising/amazon-ads/AmazonAdsDashboard.tsx`** -- Dashboard con tarjetas de metricas globales (gasto total, ventas, ACOS global, CTR medio, CPC medio, campanas activas), top 5 campanas por gasto/ventas/peor ACOS.
+1. **`src/types/advertising.ts`**: Anadir `amazonAdsTargetKeys?: string[]` a la interfaz `Keyword` y `importedAdsData?: ImportedAdsMetrics` a `AdsData`.
 
-19. **`src/components/advertising/amazon-ads/CampaignTable.tsx`** -- Tabla de campanas con filtros (rango de fechas, adType, buscador por nombre), ordenacion por todas las metricas, semaforo por fila (verde/amarillo/rojo).
+2. **`src/types/amazon-ads.ts`**: Anadir interfaz `ImportedAdsMetrics` con los campos agregados (impressions, clicks, spend, sales, orders, ctr, cpc, acos, roas, dateRange).
 
-20. **`src/components/advertising/amazon-ads/RecommendationsPanel.tsx`** -- Seccion "Que haria ahora" con tarjetas agrupadas: fugas de clics, gasto sin retorno, candidatos a escalar, limpieza de search terms, optimizacion CTR. Cada tarjeta con explicacion y acciones sugeridas.
+### Archivos nuevos a crear
 
-21. **`src/components/advertising/amazon-ads/ThresholdConfig.tsx`** -- Popover para configurar umbrales por marketplace (ACOS objetivo, clicks minimos, gasto minimo para reglas).
+3. **`src/hooks/useAmazonAdsSync.ts`**: Hook que recibe keywords + amazonAdsStore y devuelve:
+   - `matchSuggestions`: mapa de keyword.id a targets sugeridos (auto-match).
+   - `aggregatedMetrics`: mapa de keyword.id a metricas agregadas del store.
+   - `linkKeywordToTargets(keywordId, targetKeys[])`: funcion para enlazar.
+   - `unlinkKeyword(keywordId)`: funcion para desvincular.
 
-### Archivos a modificar:
+4. **`src/components/advertising/amazon-ads/KeywordAdsLinkPanel.tsx`**: Componente para el panel lateral que muestra metricas importadas y permite gestionar el enlace keyword-target.
 
-22. **`src/hooks/useLocalPersistence.ts`** -- Anadir prefijo `amazon-ads:` al `clearBookStorage` para que el reset de datos tambien limpie los datos importados de Amazon Ads.
+### Archivos a modificar
 
----
+5. **`src/components/advertising/KeywordsSection.tsx`**: Usar `useAmazonAdsSync` para enriquecer la tabla de Ads. Si hay datos importados, mostrar icono indicador y rellenar metricas.
 
-## Detalles tecnicos clave
+6. **`src/components/advertising/KeywordDetailPanel.tsx`**: Anadir seccion "Amazon Ads (importados)" con metricas agregadas y gestion del enlace.
 
-### Modelo de datos (localStorage separado)
+### Flujo del usuario
 
-- Clave: `amazon-ads:{bookId}:v1`
-- Estructura: `{ version: 1, batches: [...], campaigns: [...], adgroups: [...], targets: [...], dailyMetrics: [...], thresholds: {...} }`
-- Completamente independiente de `ad-research:{bookId}:v2`
+```text
+1. Usuario importa datos Amazon Ads (wizard existente)
+2. El sistema detecta matches entre keywords y targets importados
+3. En la tabla, aparece un aviso: "3 keywords tienen datos Amazon Ads disponibles"
+4. El usuario puede:
+   a) Aceptar todos los matches sugeridos (boton bulk)
+   b) Revisar uno a uno desde el panel lateral
+5. Al enlazar, las metricas importadas se reflejan en la tabla
+6. Los datos manuales previos se preservan (no se sobreescriben)
+```
 
-### Anti-duplicados
+### Regla de prioridad de datos
 
-- Hash por fila: combinacion de date + entityKey + adType + marketplace + metricas principales
-- Modo por defecto: Sustituir (upsert). Modo "Mantener ambos" oculto tras boton Avanzado.
-
-### Reglas de recomendaciones
-
-| Regla | Condicion | Accion sugerida |
-|---|---|---|
-| Fuga de clics | clicks >= N, orders == 0 | Bajar puja, pausar target |
-| Gasto sin retorno | spend > X, sales < Y | Reducir presupuesto |
-| Candidato a escalar | ACOS < objetivo, orders > 0 | Subir presupuesto/puja |
-| Search term negativo | spend > 0, orders == 0 | Sugerir como negativa |
-| Search term ganador | orders > 0 | Pasar a exact/phrase |
-| CTR bajo | CTR < umbral, impressions altas | Revisar relevancia |
-
-### Dependencias
-
-- No se instalan paquetes nuevos. Se usa `xlsx` y `papaparse` ya instalados.
-
-### Impacto en codigo existente
-
-- **KeywordsSection.tsx**: cambio minimo, solo swap de componente placeholder por wizard + renderizado condicional de dashboard.
-- **useLocalPersistence.ts**: una linea adicional en clearBookStorage.
-- Todo lo demas son archivos nuevos sin tocar la tabla ni el panel lateral existentes.
+- Si hay datos importados Y manuales, los importados tienen prioridad (son mas fiables).
+- Los datos manuales se mantienen como fallback y para campos que no existen en la importacion (faseActual, guias de ACOS).
+- En el panel lateral se muestra un indicador claro de la fuente: "Manual" vs "Amazon Ads".
 
