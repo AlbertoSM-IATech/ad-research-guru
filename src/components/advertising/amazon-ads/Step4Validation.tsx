@@ -1,8 +1,9 @@
 import { useEffect } from 'react';
-import { AlertCircle, AlertTriangle, CheckCircle, Info } from 'lucide-react';
+import { AlertCircle, AlertTriangle, CheckCircle, Info, Download } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { parseAllRows } from '@/lib/amazon-ads/row-parser';
 import { getMissingRequired } from '@/lib/amazon-ads/column-mapper';
+import { detectReportLevel, type DetectedReportLevel } from '@/lib/amazon-ads/column-aliases';
 import type { UploadedFile, WizardConfig, ValidationResult } from '@/types/amazon-ads';
 
 interface Step4ValidationProps {
@@ -31,6 +32,28 @@ export const Step4Validation = ({
 
     for (const file of readyFiles) {
       if (!file.mappings) continue;
+
+      // ── REPORT-LEVEL DETECTION (critical for Italian campaign-only CSVs) ──
+      const activeMappings = file.mappings.filter(m => m.internalField !== '_skip');
+      const mappedFields = activeMappings.map(m => m.internalField);
+      const reportLevel = detectReportLevel(mappedFields);
+
+      if (reportLevel === 'campaign_only') {
+        blockingErrors.push(
+          `${file.file.name}: Este archivo es un informe a nivel CAMPAÑA. ` +
+          `No contiene columnas de Palabra clave / Target / Término de búsqueda, ` +
+          `por lo que NO se puede rellenar la tabla de keywords.`
+        );
+        continue; // skip further parsing for this file
+      }
+
+      if (reportLevel === 'unknown') {
+        warnings.push(
+          `${file.file.name}: No se detectó columna de keyword/target ni de campaña. ` +
+          `Revisa el mapeo de columnas.`
+        );
+      }
+
       const rows = file.allRawRows ?? file.previewRows ?? [];
       if (rows.length === 0) {
         blockingErrors.push(`${file.file.name}: El archivo está vacío o no se pudo leer`);
@@ -38,14 +61,13 @@ export const Step4Validation = ({
       }
 
       // Check missing required fields
-      const missing = getMissingRequired(file.mappings.filter(m => m.internalField !== '_skip'));
+      const missing = getMissingRequired(activeMappings);
       if (missing.length > 0) {
         const names = missing.map(m => m.internalField).join(', ');
         blockingErrors.push(`${file.file.name}: Faltan columnas requeridas: ${names}`);
       }
 
       // Parse all rows for validation
-      const activeMappings = file.mappings.filter(m => m.internalField !== '_skip');
       const parsed = parseAllRows(rows, activeMappings);
 
       for (const row of parsed) {
@@ -107,6 +129,22 @@ export const Step4Validation = ({
           {validationResult.blockingErrors.map((e, i) => (
             <p key={i} className="text-xs text-destructive/80 ml-6">{e}</p>
           ))}
+        </div>
+      )}
+
+      {/* Campaign-only report guidance */}
+      {validationResult.blockingErrors.some(e => e.includes('nivel CAMPAÑA')) && (
+        <div className="bg-muted/50 border rounded-lg p-4 space-y-2">
+          <p className="text-sm font-semibold flex items-center gap-2">
+            <Download className="h-4 w-4" />
+            ¿Cómo descargar el informe correcto?
+          </p>
+          <ol className="text-xs text-muted-foreground space-y-1 list-decimal list-inside ml-2">
+            <li>Ve a la consola de Amazon Ads → Informes / Reports.</li>
+            <li>Selecciona tipo: <strong>Segmentación (Targeting)</strong> o <strong>Términos de búsqueda (Search terms)</strong>.</li>
+            <li>Asegúrate de que el CSV incluya una columna como: <em>Keyword, Parola chiave, Palabra clave, Targeting, Customer Search Term, Termine di ricerca del cliente</em>.</li>
+            <li>Descárgalo en formato .xlsx o .csv y vuelve a importarlo aquí.</li>
+          </ol>
         </div>
       )}
 
