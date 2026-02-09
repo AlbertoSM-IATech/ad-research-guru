@@ -33,10 +33,7 @@ import { PlanUpgradeModal } from './PlanUpgradeModal';
 import { AcosSparkline } from './AcosSparkline';
 import { AcosAlertsTray } from './AcosAlertsTray';
 import { AdvancedImportModal } from './AdvancedImportModal';
-import { AmazonAdsImportWizard } from './amazon-ads/AmazonAdsImportWizard';
-import { AmazonAdsDashboard } from './amazon-ads/AmazonAdsDashboard';
-import { useAmazonAdsData } from '@/hooks/useAmazonAdsData';
-import { useAmazonAdsSync } from '@/hooks/useAmazonAdsSync';
+import { AmazonAdsImportPlaceholder } from './AmazonAdsImportPlaceholder';
 import { type Keyword, type CampaignType, type CompetitionLevel, type RelevanceLevel, type IntentType, type KeywordState, type BookInfo, type BookEconomy, type HistoryEntry, type AdsData, RELEVANCE_LEVELS, INTENT_TYPES, KEYWORD_STATES, calculateRelevance, classifyIntent } from '@/types/advertising';
 import { calculateMarketScore, getDefaultMarketData, KEYWORD_STATUS_OPTIONS, type KeywordStatus } from '@/lib/market-score';
 import { createKeywordDefaults } from '@/lib/keyword-helpers';
@@ -161,17 +158,6 @@ export const KeywordsSection = ({
   const [adsHistoryKeyword, setAdsHistoryKeyword] = useState<Keyword | null>(null);
   const [showPlanUpgradeModal, setShowPlanUpgradeModal] = useState(false);
 
-  // Amazon Ads Dashboard visibility (persisted)
-  const [showAmazonAdsDashboard, setShowAmazonAdsDashboard] = useState<boolean>(() => {
-    try {
-      return localStorage.getItem(`ads-dashboard-visible:${marketplaceId}`) === 'true';
-    } catch { return false; }
-  });
-  const toggleDashboard = useCallback((show: boolean) => {
-    setShowAmazonAdsDashboard(show);
-    try { localStorage.setItem(`ads-dashboard-visible:${marketplaceId}`, String(show)); } catch {}
-  }, [marketplaceId]);
-
   // Filter presets hook
   const {
     presets,
@@ -185,27 +171,6 @@ export const KeywordsSection = ({
     campaigns,
     addCampaign
   } = useCampaigns(keywords);
-
-  // Amazon Ads sync hook
-  const amazonAdsData = useAmazonAdsData(marketplaceId);
-  const { store: amazonAdsStore } = amazonAdsData;
-  const amazonAdsSync = useAmazonAdsSync(keywords, amazonAdsStore);
-
-  // Handle import complete — show dashboard + toast
-  const handleAmazonAdsImportComplete = useCallback((result: import('@/types/amazon-ads').AmazonAdsImportResult) => {
-    setShowAmazonAdsImport(false);
-    toggleDashboard(true);
-    toast({
-      title: `Importación aplicada: ${result.appliedKeywordUpdates} keywords actualizadas`,
-      description: result.unmatched.length > 0
-        ? `${result.unmatched.length} targets sin coincidencia`
-        : 'Todos los targets vinculados correctamente',
-    });
-    // Scroll to dashboard
-    requestAnimationFrame(() => {
-      document.getElementById('amazon-ads-dashboard')?.scrollIntoView({ behavior: 'smooth' });
-    });
-  }, [toggleDashboard, toast]);
 
   // Plan access check
   const userPlan = getCurrentPlan();
@@ -999,31 +964,6 @@ export const KeywordsSection = ({
       {/* Bulk actions (Editorial) */}
       {functionalView === 'editorial' && <BulkEditorialStatusToolbar selectedCount={selectedIds.size} onChangeStatus={handleBulkChangeKeywordStatus} onQuickValidate={() => handleBulkChangeKeywordStatus('valid')} />}
 
-      {/* Amazon Ads Dashboard (shown when data exists and toggled on) */}
-      {functionalView === 'ads' && amazonAdsData.hasData && (
-        <div id="amazon-ads-dashboard" className="space-y-2">
-          <div className="flex items-center justify-between">
-            <Button
-              variant="ghost"
-              size="sm"
-              className="text-xs gap-1"
-              onClick={() => toggleDashboard(!showAmazonAdsDashboard)}
-            >
-              {showAmazonAdsDashboard ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
-              {showAmazonAdsDashboard ? 'Ocultar dashboard' : 'Mostrar dashboard'}
-            </Button>
-          </div>
-          {showAmazonAdsDashboard && (
-            <AmazonAdsDashboard
-              store={amazonAdsStore}
-              entityNames={amazonAdsData.entityNames}
-              getThresholds={amazonAdsData.getThresholds}
-              setThresholds={amazonAdsData.setThresholds}
-              onClear={amazonAdsData.clearAll}
-            />
-          )}
-        </div>
-      )}
       {/* Content - Table with DnD column reordering */}
       <DndContext sensors={dndSensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
         <div className="rounded-lg border border-border overflow-hidden">
@@ -1377,20 +1317,14 @@ export const KeywordsSection = ({
       {/* External Import Modal (Editorial view) */}
       <AdvancedImportModal isOpen={showExternalImportModal} onClose={() => setShowExternalImportModal(false)} onImport={handleBulkImport} marketplaceId={marketplaceId} existingKeywords={keywords} />
       
-      {/* Amazon ADS Import Wizard (Ads view) */}
-      <AmazonAdsImportWizard
-        isOpen={showAmazonAdsImport}
-        onClose={() => setShowAmazonAdsImport(false)}
-        scopeId={marketplaceId}
-        keywords={keywords}
-        onUpdateKeyword={(id, updates) => onUpdate(id, updates)}
-        onImportComplete={handleAmazonAdsImportComplete}
-      />
+      {/* Amazon ADS Import Placeholder (Ads view) */}
+      <AmazonAdsImportPlaceholder isOpen={showAmazonAdsImport} onClose={() => setShowAmazonAdsImport(false)} />
+
       {/* History Modal */}
       <KeywordHistoryModal keyword={historyKeyword} isOpen={!!historyKeyword} onClose={() => setHistoryKeyword(null)} />
 
       {/* Keyword Detail Panel */}
-      <KeywordDetailPanel keyword={selectedKeyword} isOpen={!!selectedKeywordId} onClose={() => setSelectedKeywordId(null)} onSave={handleKeywordDetailSave} marketplaceId={marketplaceId} bookEconomy={bookEconomy} defaultTab={functionalView === 'ads' ? 'ads' : 'nicho'} allKeywords={keywords} amazonAdsSync={amazonAdsSync} onLinkTargets={(keywordId, targetKeys) => onUpdate(keywordId, { amazonAdsTargetKeys: targetKeys })} onUnlinkTargets={(keywordId) => onUpdate(keywordId, { amazonAdsTargetKeys: [] })} />
+      <KeywordDetailPanel keyword={selectedKeyword} isOpen={!!selectedKeywordId} onClose={() => setSelectedKeywordId(null)} onSave={handleKeywordDetailSave} marketplaceId={marketplaceId} bookEconomy={bookEconomy} defaultTab={functionalView === 'ads' ? 'ads' : 'nicho'} allKeywords={keywords} />
       
       {/* New Keyword Wizard */}
       <NewKeywordWizard open={isWizardOpen} onOpenChange={setIsWizardOpen} onComplete={handleWizardComplete} marketplaceId={marketplaceId} bookInfo={bookInfo} bookEconomy={bookEconomy} existingKeywords={keywords} initialKeyword={wizardInitialKeyword} onOpenExistingKeyword={handleOpenExistingKeyword} campaigns={campaigns} onAddCampaign={addCampaign} />

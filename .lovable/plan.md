@@ -1,101 +1,77 @@
+# Plan: Needs Attention & Ads History - COMPLETED
 
+## A) Fix: Keywords con "necesita atención" - DONE ✅
 
-# Plan: Sincronizar datos Amazon Ads con la tabla de keywords y panel lateral
+### Problema Resuelto
+Las keywords con ACOS > PE ahora son visibles en ambos módulos con badge visual.
 
-## El problema
+### Implementación
+1. **Filtro `needsAttention`** añadido a `AdsFiltersState` en `AdvancedFiltersAds.tsx`
+2. **Badge visual "Atención"** en las filas de la tabla cuando ACOS > PE
+3. **Contador y toggle** "Necesitan atención: X" en la barra de herramientas (vista Ads)
+4. **Lógica de filtrado** implementada en `KeywordsSection.tsx`
 
-Actualmente hay dos sistemas de datos desconectados:
+### Archivos Modificados
+- `src/components/advertising/AdvancedFiltersAds.tsx` - Añadido campo `needsAttention: boolean`
+- `src/components/advertising/KeywordsSection.tsx` - Badge visual + contador + filtro
+- `src/lib/filter-presets.ts` - Actualizado default state
 
-1. **Keyword.adsData** (manual): cada keyword tiene `clicks`, `cpcActual`, `pedidos`, `impresiones`, etc. introducidos a mano. Es lo que muestra la tabla de "Gestion de Ads" y el panel lateral.
-2. **Amazon Ads Store** (importado): datos por campana/target/adgroup con metricas diarias (`impressions`, `clicks`, `spend`, `sales`, `orders`). Viven en un localStorage separado.
-
-La tabla y el panel lateral solo leen de `keyword.adsData`. Los datos importados no llegan ahi.
-
-## Solucion propuesta: Enlace keyword-target + agregacion automatica
-
-La idea es crear un **puente** entre ambos sistemas sin romper la entrada manual existente:
-
-### 1. Anadir campo de enlace en cada keyword
-
-Anadir un campo opcional `amazonAdsTargetKeys?: string[]` en la interfaz `Keyword`. Este campo almacena las claves de targets/campanas del store de Amazon Ads que corresponden a esa keyword.
-
-### 2. Crear un hook de sincronizacion
-
-Un nuevo hook `useAmazonAdsSync` que:
-- Recibe las keywords y el store de Amazon Ads.
-- Para cada keyword que tenga `amazonAdsTargetKeys`, agrega las metricas diarias correspondientes (suma de impressions, clicks, spend, sales, orders por periodo).
-- Devuelve un mapa `keywordId -> metricas agregadas de Amazon Ads`.
-
-### 3. Enriquecer keyword.adsData con datos importados
-
-En lugar de sobreescribir los datos manuales, el sistema:
-- Agrega metricas importadas y las inyecta en `keyword.adsData` cuando el usuario lo confirme (boton "Sincronizar desde Amazon Ads").
-- O bien muestra ambas fuentes en paralelo en el panel lateral: una seccion "Datos manuales" y otra "Datos Amazon Ads (importados)".
-
-**Opcion recomendada**: Auto-match + confirmacion. El sistema intenta hacer match automatico entre el texto de la keyword y los `targetText` del store importado, y el usuario confirma o corrige.
-
-### 4. Auto-matching inteligente
-
-Logica de matching:
-- Normalizar ambos textos (lowercase, trim, eliminar acentos).
-- Si `keyword.keyword` coincide exactamente con algun `target.targetText` del store importado, proponer enlace.
-- Si hay coincidencia parcial (contenido), proponer con confianza media.
-- El usuario puede enlazar manualmente desde el panel lateral (dropdown con targets disponibles).
-
-### 5. Visualizacion en tabla y panel lateral
-
-**En la tabla de Ads**:
-- Si una keyword tiene datos importados enlazados, mostrar un icono pequeno (ej: nube con flecha) junto a las metricas para indicar que vienen de Amazon Ads.
-- Las metricas importadas (clicks, spend, sales, orders, impressions) llenan automaticamente los campos equivalentes de adsData.
-
-**En el panel lateral (KeywordDetailPanel)**:
-- Nueva seccion "Amazon Ads" debajo de la seccion de Ads existente.
-- Muestra metricas agregadas del periodo seleccionado.
-- Boton para cambiar el enlace target o desvincular.
-- Historico diario disponible (grafico de tendencia con datos importados).
+### Criterios de Aceptación ✅
+- [x] KW con ACOS > PE sigue visible en tabla
+- [x] Muestra badge "Atención" en rojo
+- [x] Puedo editar sus métricas Ads
+- [x] Toggle "Necesitan atención" filtra solo esas KW
+- [x] No hay filtros ocultos que excluyan keywords
 
 ---
 
-## Detalle tecnico
+## B) Feature: Historial de métricas Ads - DONE ✅
 
-### Archivos a modificar
+### Implementación
+1. **Sección "Historial de Métricas"** integrada en `AcosEquilibrioSection.tsx`
+2. **Snapshots manuales** con botón "Guardar snapshot"
+3. **Gráfico de evolución** con líneas para Clicks, Pedidos, ACOS
+4. **Línea de referencia** para ACOS PE
+5. **Selector de rango** (7d / 30d / 90d / Todo)
+6. **Deltas de tendencia** (Δ Clicks, Δ Pedidos, Δ ACOS)
+7. **Tabla compacta** de snapshots con eliminación
 
-1. **`src/types/advertising.ts`**: Anadir `amazonAdsTargetKeys?: string[]` a la interfaz `Keyword` y `importedAdsData?: ImportedAdsMetrics` a `AdsData`.
+### Archivos Modificados
+- `src/components/advertising/AcosEquilibrioSection.tsx` - Añadido componente `AdsHistorySection`
 
-2. **`src/types/amazon-ads.ts`**: Anadir interfaz `ImportedAdsMetrics` con los campos agregados (impressions, clicks, spend, sales, orders, ctr, cpc, acos, roas, dateRange).
-
-### Archivos nuevos a crear
-
-3. **`src/hooks/useAmazonAdsSync.ts`**: Hook que recibe keywords + amazonAdsStore y devuelve:
-   - `matchSuggestions`: mapa de keyword.id a targets sugeridos (auto-match).
-   - `aggregatedMetrics`: mapa de keyword.id a metricas agregadas del store.
-   - `linkKeywordToTargets(keywordId, targetKeys[])`: funcion para enlazar.
-   - `unlinkKeyword(keywordId)`: funcion para desvincular.
-
-4. **`src/components/advertising/amazon-ads/KeywordAdsLinkPanel.tsx`**: Componente para el panel lateral que muestra metricas importadas y permite gestionar el enlace keyword-target.
-
-### Archivos a modificar
-
-5. **`src/components/advertising/KeywordsSection.tsx`**: Usar `useAmazonAdsSync` para enriquecer la tabla de Ads. Si hay datos importados, mostrar icono indicador y rellenar metricas.
-
-6. **`src/components/advertising/KeywordDetailPanel.tsx`**: Anadir seccion "Amazon Ads (importados)" con metricas agregadas y gestion del enlace.
-
-### Flujo del usuario
-
-```text
-1. Usuario importa datos Amazon Ads (wizard existente)
-2. El sistema detecta matches entre keywords y targets importados
-3. En la tabla, aparece un aviso: "3 keywords tienen datos Amazon Ads disponibles"
-4. El usuario puede:
-   a) Aceptar todos los matches sugeridos (boton bulk)
-   b) Revisar uno a uno desde el panel lateral
-5. Al enlazar, las metricas importadas se reflejan en la tabla
-6. Los datos manuales previos se preservan (no se sobreescriben)
+### Modelo de Datos (ya existente)
+```typescript
+interface AdsHistoryEntry {
+  id: string;
+  timestamp: Date;
+  clicks: number;
+  cpcActual: number;
+  pedidos: number;
+  gasto: number;
+  ventas: number;
+  acosActual: number | null;
+  beneficio: number | null;
+}
 ```
 
-### Regla de prioridad de datos
+### Criterios de Aceptación ✅
+- [x] Puedo guardar snapshot del estado actual
+- [x] Veo histórico de ACOS, clicks, pedidos
+- [x] Evolución por rango (7/30/90/todo)
+- [x] Gráfico con línea de referencia PE
+- [x] Puedo eliminar snapshots individuales
 
-- Si hay datos importados Y manuales, los importados tienen prioridad (son mas fiables).
-- Los datos manuales se mantienen como fallback y para campos que no existen en la importacion (faseActual, guias de ACOS).
-- En el panel lateral se muestra un indicador claro de la fuente: "Manual" vs "Amazon Ads".
+---
 
+## Notas Técnicas
+
+### Lógica de "Needs Attention"
+- Es un **flag derivado**, no un estado persistido
+- Se calcula como: `acosActual > acosEquilibrio`
+- El campo `status` (pending/valid/discarded) no cambia automáticamente
+- Las keywords nunca desaparecen por tener mal ACOS
+
+### Historial
+- Los snapshots se guardan en `keyword.adsData.history[]`
+- Si ya existe snapshot del día, se actualiza en lugar de duplicar
+- Los gráficos usan Recharts con línea de referencia PE

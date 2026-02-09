@@ -13,8 +13,6 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { cn } from '@/lib/utils';
 import { Info, Save, RotateCcw, Sparkles, BookOpen, Megaphone, Maximize2, Minimize2, CheckCircle2, Clock } from 'lucide-react';
 import type { Keyword, BookEconomy, AdsData } from '@/types/advertising';
-import type { UseAmazonAdsSyncResult } from '@/hooks/useAmazonAdsSync';
-import { KeywordAdsLinkPanel } from './amazon-ads/KeywordAdsLinkPanel';
 import { getAutoStatusFromScore } from '@/lib/keyword-builder';
 import { type MarketData, type MarketStructure, type CatalogSignals, type EditorialData, type TrafficSource, type KeywordStatus, type BooksOver200ReviewsRange, calculateMarketScore, calculateEditorialScore, getDefaultMarketData, getDefaultEditorialData, getDefaultMarketStructure, getDefaultCatalogSignals, getMarketScoreInfo, getBooksOver200ReviewsPoints, TRAFFIC_SOURCE_OPTIONS, KEYWORD_STATUS_OPTIONS, MARKET_STRUCTURE_CHECKS, CATALOG_SIGNALS_CHECKS, EDITORIAL_CHECKS, BOOKS_OVER_200_REVIEWS_OPTIONS, BOOKS_OVER_200_REVIEWS_FIELD } from '@/lib/market-score';
 import { AcosEquilibrioSection } from './AcosEquilibrioSection';
@@ -30,9 +28,6 @@ interface KeywordDetailPanelProps {
   defaultTab?: 'nicho' | 'ads';
   bookEconomy?: BookEconomy;
   allKeywords?: Keyword[];
-  amazonAdsSync?: UseAmazonAdsSyncResult;
-  onLinkTargets?: (keywordId: string, targetKeys: string[]) => void;
-  onUnlinkTargets?: (keywordId: string) => void;
 }
 
 export const KeywordDetailPanel = ({
@@ -44,9 +39,6 @@ export const KeywordDetailPanel = ({
   defaultTab = 'nicho',
   bookEconomy = DEFAULT_BOOK_ECONOMY,
   allKeywords = [],
-  amazonAdsSync,
-  onLinkTargets,
-  onUnlinkTargets,
 }: KeywordDetailPanelProps) => {
   // Campaigns hook
   const { campaigns, addCampaign } = useCampaigns(allKeywords);
@@ -888,24 +880,6 @@ export const KeywordDetailPanel = ({
               campaigns={campaigns}
               onAddCampaign={addCampaign}
             />
-
-            {/* Amazon Ads Imported Data Section */}
-            {amazonAdsSync && amazonAdsSync.availableTargets.length > 0 && (
-              <>
-                <Separator />
-                <KeywordAdsLinkPanel
-                  keywordId={keyword.id}
-                  keywordText={keyword.keyword}
-                  linkedTargetKeys={keyword.amazonAdsTargetKeys ?? []}
-                  importedMetrics={amazonAdsSync.aggregatedMetrics.get(keyword.id) ?? null}
-                  matchSuggestions={amazonAdsSync.matchSuggestions}
-                  availableTargets={amazonAdsSync.availableTargets}
-                  onLink={(targetKeys) => onLinkTargets?.(keyword.id, targetKeys)}
-                  onUnlink={() => onUnlinkTargets?.(keyword.id)}
-                  isExpanded={isExpanded}
-                />
-              </>
-            )}
           </TabsContent>
         </Tabs>
 

@@ -155,9 +155,6 @@ export interface Keyword {
   
   // ============ ADS DATA (optional, manual) ============
   adsData?: AdsData;
-  
-  // ============ AMAZON ADS LINK ============
-  amazonAdsTargetKeys?: string[]; // Keys from Amazon Ads store (targets/campaigns)
 }
 
 export interface TargetASIN {

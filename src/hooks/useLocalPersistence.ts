@@ -127,12 +127,11 @@ export function savePersistedState(state: Omit<PersistedStateV1, 'version' | 'up
 // Helper to clear all localStorage keys for a specific book
 export function clearBookStorage(bookId?: string): void {
   const prefix = bookId ? `ad-research:${bookId}:` : 'ad-research:';
-  const amazonAdsPrefix = bookId ? `amazon-ads:${bookId}:` : 'amazon-ads:';
   const keysToRemove: string[] = [];
   
   for (let i = 0; i < localStorage.length; i++) {
     const key = localStorage.key(i);
-    if (key && (key.startsWith(prefix) || key.startsWith(amazonAdsPrefix))) {
+    if (key && key.startsWith(prefix)) {
       keysToRemove.push(key);
     }
   }
