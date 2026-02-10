@@ -188,14 +188,16 @@ export function AdsDashboard({
       </div>
 
       {/* Secondary Metrics */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
         <MetricCard title="Clicks Totales" value={metrics.totalClicks.toLocaleString()} icon={<MousePointerClick className="w-5 h-5 text-muted-foreground" />} tooltip="Suma de todos los clicks de Ads" />
         
         <MetricCard title="Conversión Media" value={`${metrics.avgConversion.toFixed(1)}%`} subtitle={metrics.keywordsWithConversion > 0 ? `Basada en ${metrics.keywordsWithConversion} KW con conversión` : "Sin KW con conversión"} icon={<Percent className="w-5 h-5 text-muted-foreground" />} tooltip="Media de conversión calculada solo con keywords que tienen al menos 1 pedido. Las keywords sin conversión no se incluyen." />
         
         <MetricCard title="KW Bajo PE" value={metrics.belowPeKeywords.toString()} subtitle={`${(metrics.belowPeKeywords / Math.max(metrics.keywordsWithAdsData, 1) * 100).toFixed(0)}% del total`} icon={<CheckCircle2 className="w-5 h-5 text-green-500" />} valueClassName="text-green-600 dark:text-green-400" tooltip="Keywords con ACOS actual por debajo del ACOS PE (punto de equilibrio)." />
         
-        <MetricCard title="KW Sobre PE" value={metrics.abovePeKeywords.toString()} subtitle={`${(metrics.abovePeKeywords / Math.max(metrics.keywordsWithAdsData, 1) * 100).toFixed(0)}% del total`} icon={<XCircle className="w-5 h-5 text-red-500" />} valueClassName="text-red-600 dark:text-red-400" tooltip="Keywords con ACOS actual por encima del ACOS PE (requieren atención)." />
+        <MetricCard title="KW Recuperables" value={metrics.recoverableKeywords.toString()} subtitle={`${(metrics.recoverableKeywords / Math.max(metrics.keywordsWithAdsData, 1) * 100).toFixed(0)}% del total`} icon={<AlertTriangle className="w-5 h-5 text-amber-500" />} valueClassName="text-amber-600 dark:text-amber-400" tooltip="Keywords con ACOS por encima del PE pero que con 1 sola venta adicional bajarían del PE. Son las más cercanas a ser rentables." />
+
+        <MetricCard title="KW Sobre PE" value={metrics.abovePeKeywords.toString()} subtitle={`${(metrics.abovePeKeywords / Math.max(metrics.keywordsWithAdsData, 1) * 100).toFixed(0)}% del total`} icon={<XCircle className="w-5 h-5 text-red-500" />} valueClassName="text-red-600 dark:text-red-400" tooltip="Keywords con ACOS actual por encima del ACOS PE y no recuperables con 1 venta." />
       </div>
 
       {/* Rentability Distribution */}

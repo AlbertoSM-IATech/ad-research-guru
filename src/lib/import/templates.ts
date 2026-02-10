@@ -266,14 +266,23 @@ export function autoMapHeaders(
   templateId: ImportSource
 ): Record<string, ImportableFieldKey | 'ignore'> {
   const template = IMPORT_TEMPLATES[templateId];
+  const customTemplate = IMPORT_TEMPLATES['custom'];
   const mappings: Record<string, ImportableFieldKey | 'ignore'> = {};
+  
+  // Build combined aliases: selected template first, then custom as fallback
+  const allAliases: Record<string, string[]> = { ...customTemplate.headerAliases };
+  for (const [fieldKey, aliases] of Object.entries(template.headerAliases)) {
+    const existing = allAliases[fieldKey] ?? [];
+    const merged = [...new Set([...aliases, ...existing])];
+    allAliases[fieldKey] = merged;
+  }
   
   headers.forEach(header => {
     const normalizedHeader = header.toLowerCase().trim();
     let matched = false;
     
-    // Check each field's aliases
-    for (const [fieldKey, aliases] of Object.entries(template.headerAliases)) {
+    // Check each field's aliases (exact match)
+    for (const [fieldKey, aliases] of Object.entries(allAliases)) {
       if (aliases.some(alias => alias.toLowerCase() === normalizedHeader)) {
         mappings[header] = fieldKey as ImportableFieldKey;
         matched = true;
@@ -283,7 +292,7 @@ export function autoMapHeaders(
     
     // If no match, try partial matching
     if (!matched) {
-      for (const [fieldKey, aliases] of Object.entries(template.headerAliases)) {
+      for (const [fieldKey, aliases] of Object.entries(allAliases)) {
         if (aliases.some(alias => 
           normalizedHeader.includes(alias.toLowerCase()) ||
           alias.toLowerCase().includes(normalizedHeader)
