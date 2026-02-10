@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -11,7 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
-import { Info, Save, RotateCcw, Sparkles, BookOpen, Megaphone, Maximize2, Minimize2, CheckCircle2, Clock, Link2 } from 'lucide-react';
+import { Info, Save, RotateCcw, Sparkles, BookOpen, Megaphone, Maximize2, Minimize2, CheckCircle2, Clock, Link2, ChevronUp, ChevronDown } from 'lucide-react';
 import type { Keyword, BookEconomy, AdsData } from '@/types/advertising';
 import { getAutoStatusFromScore } from '@/lib/keyword-builder';
 import { type MarketData, type MarketStructure, type CatalogSignals, type EditorialData, type TrafficSource, type KeywordStatus, type BooksOver200ReviewsRange, calculateMarketScore, calculateEditorialScore, getDefaultMarketData, getDefaultEditorialData, getDefaultMarketStructure, getDefaultCatalogSignals, getMarketScoreInfo, getBooksOver200ReviewsPoints, TRAFFIC_SOURCE_OPTIONS, KEYWORD_STATUS_OPTIONS, MARKET_STRUCTURE_CHECKS, CATALOG_SIGNALS_CHECKS, EDITORIAL_CHECKS, BOOKS_OVER_200_REVIEWS_OPTIONS, BOOKS_OVER_200_REVIEWS_FIELD } from '@/lib/market-score';
@@ -29,7 +29,24 @@ interface KeywordDetailPanelProps {
   defaultTab?: 'nicho' | 'ads';
   bookEconomy?: BookEconomy;
   allKeywords?: Keyword[];
+  visibleKeywordIds?: string[];
+  onNavigate?: (keywordId: string) => void;
 }
+
+const PANEL_MIN_WIDTH = 400;
+const PANEL_MAX_WIDTH_PERCENT = 0.8;
+const PANEL_WIDTH_KEY = 'panel-detail-width';
+
+const getStoredWidth = (): number => {
+  try {
+    const stored = localStorage.getItem(PANEL_WIDTH_KEY);
+    if (stored) {
+      const w = parseInt(stored, 10);
+      if (!isNaN(w) && w >= PANEL_MIN_WIDTH) return w;
+    }
+  } catch {}
+  return 700;
+};
 
 export const KeywordDetailPanel = ({
   keyword,
@@ -40,12 +57,78 @@ export const KeywordDetailPanel = ({
   defaultTab = 'nicho',
   bookEconomy = DEFAULT_BOOK_ECONOMY,
   allKeywords = [],
+  visibleKeywordIds = [],
+  onNavigate,
 }: KeywordDetailPanelProps) => {
   // Campaigns hook
   const { campaigns, addCampaign } = useCampaigns(allKeywords);
   // Panel state
-  const [isExpanded, setIsExpanded] = useState(true); // Panel siempre expandido por defecto
+  const [isExpanded, setIsExpanded] = useState(true);
   const [activeTab, setActiveTab] = useState<'nicho' | 'ads'>(defaultTab);
+  const [panelWidth, setPanelWidth] = useState(getStoredWidth);
+  const isResizingRef = useRef(false);
+  const startXRef = useRef(0);
+  const startWidthRef = useRef(0);
+
+  // Navigation logic
+  const currentIndex = useMemo(() => {
+    if (!keyword || visibleKeywordIds.length === 0) return -1;
+    return visibleKeywordIds.indexOf(keyword.id);
+  }, [keyword, visibleKeywordIds]);
+
+  const canGoPrev = currentIndex > 0;
+  const canGoNext = currentIndex >= 0 && currentIndex < visibleKeywordIds.length - 1;
+
+  const handlePrev = useCallback(() => {
+    if (canGoPrev && onNavigate) {
+      onNavigate(visibleKeywordIds[currentIndex - 1]);
+    }
+  }, [canGoPrev, onNavigate, visibleKeywordIds, currentIndex]);
+
+  const handleNext = useCallback(() => {
+    if (canGoNext && onNavigate) {
+      onNavigate(visibleKeywordIds[currentIndex + 1]);
+    }
+  }, [canGoNext, onNavigate, visibleKeywordIds, currentIndex]);
+
+  // Resize handlers
+  const handleResizeMouseDown = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    isResizingRef.current = true;
+    startXRef.current = e.clientX;
+    startWidthRef.current = panelWidth;
+
+    const maxWidth = window.innerWidth * PANEL_MAX_WIDTH_PERCENT;
+
+    const handleMouseMove = (moveEvent: MouseEvent) => {
+      const delta = startXRef.current - moveEvent.clientX; // dragging left = wider
+      const newWidth = Math.min(maxWidth, Math.max(PANEL_MIN_WIDTH, startWidthRef.current + delta));
+      setPanelWidth(newWidth);
+    };
+
+    const handleMouseUp = () => {
+      isResizingRef.current = false;
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+      // Persist
+      try { localStorage.setItem(PANEL_WIDTH_KEY, String(Math.round(panelWidth))); } catch {}
+    };
+
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+  }, [panelWidth]);
+
+  // Persist width on change (debounced via mouseUp above, but also on unmount)
+  useEffect(() => {
+    if (isOpen) {
+      try { localStorage.setItem(PANEL_WIDTH_KEY, String(Math.round(panelWidth))); } catch {}
+    }
+  }, [panelWidth, isOpen]);
   
   // Market Data state
   const [searchVolume, setSearchVolume] = useState(0);
@@ -282,33 +365,51 @@ export const KeywordDetailPanel = ({
 
   return (
     <Sheet open={isOpen} onOpenChange={open => !open && onClose()}>
-      <SheetContent className={cn(
-        "w-full overflow-y-auto transition-all duration-300",
-        isExpanded ? "sm:max-w-4xl" : "sm:max-w-xl"
-      )}>
+      <SheetContent
+        className="w-full overflow-y-auto p-0"
+        style={{ maxWidth: `${panelWidth}px`, width: `${panelWidth}px` }}
+      >
+        {/* Resize handle on left edge */}
+        <div
+          className="absolute left-0 top-0 h-full w-1.5 cursor-col-resize z-50 hover:bg-primary/40 active:bg-primary transition-colors"
+          onMouseDown={handleResizeMouseDown}
+        />
+
+        <div className="p-6 pl-4">
         <SheetHeader className="flex flex-col gap-2 pr-8">
-          <div className="flex flex-row items-center justify-between">
+          <div className="flex flex-row items-center justify-between gap-2">
+            {/* Navigation buttons */}
+            {visibleKeywordIds.length > 1 && onNavigate && (
+              <div className="flex items-center gap-0.5 shrink-0">
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button variant="ghost" size="icon" className="h-7 w-7" disabled={!canGoPrev} onClick={handlePrev}>
+                        <ChevronUp className="w-4 h-4" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>Anterior</TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+                <span className="text-xs text-muted-foreground tabular-nums">
+                  {currentIndex + 1}/{visibleKeywordIds.length}
+                </span>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button variant="ghost" size="icon" className="h-7 w-7" disabled={!canGoNext} onClick={handleNext}>
+                        <ChevronDown className="w-4 h-4" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>Siguiente</TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
+            )}
+
             <SheetTitle className="text-lg font-semibold truncate flex-1">
               {keywordText || keyword.keyword}
             </SheetTitle>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setIsExpanded(!isExpanded)}
-              className="gap-1 text-xs"
-            >
-              {isExpanded ? (
-                <>
-                  <Minimize2 className="w-4 h-4" />
-                  Contraer
-                </>
-              ) : (
-                <>
-                  <Maximize2 className="w-4 h-4" />
-                  Expandir
-                </>
-              )}
-            </Button>
           </div>
 
           {/* Edit keyword */}
@@ -933,6 +1034,7 @@ export const KeywordDetailPanel = ({
             <Save className="w-4 h-4" />
             Guardar
           </Button>
+        </div>
         </div>
       </SheetContent>
     </Sheet>
