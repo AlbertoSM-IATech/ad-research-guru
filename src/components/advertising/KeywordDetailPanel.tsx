@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -11,13 +11,15 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
-import { Info, Save, RotateCcw, Sparkles, BookOpen, Megaphone, Maximize2, Minimize2, CheckCircle2, Clock, ArrowUp, ArrowDown } from 'lucide-react';
+import { Info, Save, RotateCcw, Sparkles, BookOpen, Megaphone, Maximize2, Minimize2, CheckCircle2, Clock, Link2, ChevronUp, ChevronDown } from 'lucide-react';
 import type { Keyword, BookEconomy, AdsData } from '@/types/advertising';
 import { getAutoStatusFromScore } from '@/lib/keyword-builder';
 import { type MarketData, type MarketStructure, type CatalogSignals, type EditorialData, type TrafficSource, type KeywordStatus, type BooksOver200ReviewsRange, calculateMarketScore, calculateEditorialScore, getDefaultMarketData, getDefaultEditorialData, getDefaultMarketStructure, getDefaultCatalogSignals, getMarketScoreInfo, getBooksOver200ReviewsPoints, TRAFFIC_SOURCE_OPTIONS, KEYWORD_STATUS_OPTIONS, MARKET_STRUCTURE_CHECKS, CATALOG_SIGNALS_CHECKS, EDITORIAL_CHECKS, BOOKS_OVER_200_REVIEWS_OPTIONS, BOOKS_OVER_200_REVIEWS_FIELD } from '@/lib/market-score';
 import { AcosEquilibrioSection } from './AcosEquilibrioSection';
 import { useCampaigns } from '@/hooks/useCampaigns';
 import { DEFAULT_BOOK_ECONOMY } from '@/hooks/useLocalPersistence';
+import { KEYWORD_PURPOSE_OPTIONS, type KeywordPurpose } from '@/lib/market-score';
+
 interface KeywordDetailPanelProps {
   keyword: Keyword | null;
   isOpen: boolean;
@@ -27,7 +29,25 @@ interface KeywordDetailPanelProps {
   defaultTab?: 'nicho' | 'ads';
   bookEconomy?: BookEconomy;
   allKeywords?: Keyword[];
+  visibleKeywordIds?: string[];
+  onNavigate?: (keywordId: string) => void;
 }
+
+const PANEL_MIN_WIDTH = 400;
+const PANEL_MAX_WIDTH_PERCENT = 0.8;
+const PANEL_WIDTH_KEY = 'panel-detail-width';
+
+const getStoredWidth = (): number => {
+  try {
+    const stored = localStorage.getItem(PANEL_WIDTH_KEY);
+    if (stored) {
+      const w = parseInt(stored, 10);
+      if (!isNaN(w) && w >= PANEL_MIN_WIDTH) return w;
+    }
+  } catch {}
+  return 700;
+};
+
 export const KeywordDetailPanel = ({
   keyword,
   isOpen,
@@ -36,17 +56,80 @@ export const KeywordDetailPanel = ({
   marketplaceId = 'us',
   defaultTab = 'nicho',
   bookEconomy = DEFAULT_BOOK_ECONOMY,
-  allKeywords = []
+  allKeywords = [],
+  visibleKeywordIds = [],
+  onNavigate,
 }: KeywordDetailPanelProps) => {
   // Campaigns hook
-  const {
-    campaigns,
-    addCampaign
-  } = useCampaigns(allKeywords);
+  const { campaigns, addCampaign } = useCampaigns(allKeywords);
   // Panel state
-  const [isExpanded, setIsExpanded] = useState(true); // Panel siempre expandido por defecto
+  const [isExpanded, setIsExpanded] = useState(true);
   const [activeTab, setActiveTab] = useState<'nicho' | 'ads'>(defaultTab);
+  const [panelWidth, setPanelWidth] = useState(getStoredWidth);
+  const isResizingRef = useRef(false);
+  const startXRef = useRef(0);
+  const startWidthRef = useRef(0);
 
+  // Navigation logic
+  const currentIndex = useMemo(() => {
+    if (!keyword || visibleKeywordIds.length === 0) return -1;
+    return visibleKeywordIds.indexOf(keyword.id);
+  }, [keyword, visibleKeywordIds]);
+
+  const canGoPrev = currentIndex > 0;
+  const canGoNext = currentIndex >= 0 && currentIndex < visibleKeywordIds.length - 1;
+
+  const handlePrev = useCallback(() => {
+    if (canGoPrev && onNavigate) {
+      onNavigate(visibleKeywordIds[currentIndex - 1]);
+    }
+  }, [canGoPrev, onNavigate, visibleKeywordIds, currentIndex]);
+
+  const handleNext = useCallback(() => {
+    if (canGoNext && onNavigate) {
+      onNavigate(visibleKeywordIds[currentIndex + 1]);
+    }
+  }, [canGoNext, onNavigate, visibleKeywordIds, currentIndex]);
+
+  // Resize handlers
+  const handleResizeMouseDown = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    isResizingRef.current = true;
+    startXRef.current = e.clientX;
+    startWidthRef.current = panelWidth;
+
+    const maxWidth = window.innerWidth * PANEL_MAX_WIDTH_PERCENT;
+
+    const handleMouseMove = (moveEvent: MouseEvent) => {
+      const delta = startXRef.current - moveEvent.clientX; // dragging left = wider
+      const newWidth = Math.min(maxWidth, Math.max(PANEL_MIN_WIDTH, startWidthRef.current + delta));
+      setPanelWidth(newWidth);
+    };
+
+    const handleMouseUp = () => {
+      isResizingRef.current = false;
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+      // Persist
+      try { localStorage.setItem(PANEL_WIDTH_KEY, String(Math.round(panelWidth))); } catch {}
+    };
+
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+  }, [panelWidth]);
+
+  // Persist width on change (debounced via mouseUp above, but also on unmount)
+  useEffect(() => {
+    if (isOpen) {
+      try { localStorage.setItem(PANEL_WIDTH_KEY, String(Math.round(panelWidth))); } catch {}
+    }
+  }, [panelWidth, isOpen]);
+  
   // Market Data state
   const [searchVolume, setSearchVolume] = useState(0);
   const [competitors, setCompetitors] = useState(0);
@@ -69,10 +152,10 @@ export const KeywordDetailPanel = ({
 
   // Keyword text (editable)
   const [keywordText, setKeywordText] = useState('');
-
+  
   // Ads Data state
   const [adsData, setAdsData] = useState<AdsData | undefined>(undefined);
-
+  
   // Sync timestamp state
   const [lastSyncTime, setLastSyncTime] = useState<Date | null>(null);
 
@@ -93,7 +176,7 @@ export const KeywordDetailPanel = ({
   // Uses deep content comparison via keywordFingerprint to catch ALL changes
   useEffect(() => {
     if (!keyword || !isOpen) return;
-
+    
     // Keyword text
     setKeywordText(keyword.keyword || '');
 
@@ -142,6 +225,7 @@ export const KeywordDetailPanel = ({
 
     // Ads data
     setAdsData(keyword.adsData);
+    
     setLastSyncTime(new Date());
   }, [keywordFingerprint, isOpen]);
 
@@ -260,55 +344,127 @@ export const KeywordDetailPanel = ({
     setLastSyncTime(new Date());
     // Auto-save adsData changes immediately
     if (keyword) {
-      onSave(keyword.id, {
-        adsData: newAdsData
-      });
+      onSave(keyword.id, { adsData: newAdsData });
     }
   };
-
+  
   // Format sync time for display
   const formatSyncTime = (date: Date | null) => {
     if (!date) return null;
-    return date.toLocaleTimeString('es-ES', {
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit'
-    });
+    return date.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
   };
+
   if (!keyword) return null;
+  
   const getScoreBarColor = (score: number) => {
     if (score >= 70) return 'bg-green-500';
     if (score >= 50) return 'bg-blue-500';
     if (score >= 30) return 'bg-yellow-500';
     return 'bg-red-500';
   };
-  return <Sheet open={isOpen} onOpenChange={open => !open && onClose()}>
-      <SheetContent className={cn("w-full overflow-y-auto transition-all duration-300", isExpanded ? "sm:max-w-4xl" : "sm:max-w-xl")}>
+
+  return (
+    <Sheet open={isOpen} onOpenChange={open => !open && onClose()}>
+      <SheetContent
+        className="w-full overflow-y-auto p-0"
+        style={{ maxWidth: `${panelWidth}px`, width: `${panelWidth}px` }}
+      >
+        {/* Resize handle on left edge */}
+        <div
+          className="absolute left-0 top-0 h-full w-1.5 cursor-col-resize z-50 hover:bg-primary/40 active:bg-primary transition-colors"
+          onMouseDown={handleResizeMouseDown}
+        />
+
+        <div className="p-6 pl-4">
         <SheetHeader className="flex flex-col gap-2 pr-8">
-          <div className="flex flex-row items-center justify-between">
+          <div className="flex flex-row items-center justify-between gap-2">
+            {/* Navigation buttons */}
+            {visibleKeywordIds.length > 1 && onNavigate && (
+              <div className="flex items-center gap-0.5 shrink-0">
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button variant="ghost" size="icon" className="h-7 w-7" disabled={!canGoPrev} onClick={handlePrev}>
+                        <ChevronUp className="w-4 h-4" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>Anterior</TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+                <span className="text-xs text-muted-foreground tabular-nums">
+                  {currentIndex + 1}/{visibleKeywordIds.length}
+                </span>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button variant="ghost" size="icon" className="h-7 w-7" disabled={!canGoNext} onClick={handleNext}>
+                        <ChevronDown className="w-4 h-4" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>Siguiente</TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
+            )}
+
             <SheetTitle className="text-lg font-semibold truncate flex-1">
               {keywordText || keyword.keyword}
             </SheetTitle>
-            <Button variant="ghost" size="sm" onClick={() => setIsExpanded(!isExpanded)} className="gap-1 text-xs">
-              {isExpanded ? <>
-                  <Minimize2 className="w-4 h-4" />
-                  Contraer
-                </> : <>
-                  <Maximize2 className="w-4 h-4" />
-                  Expandir
-                </>}
-            </Button>
           </div>
 
           {/* Edit keyword */}
           <div className="space-y-2">
             <Label htmlFor="keywordText">Keyword</Label>
-            <Input id="keywordText" value={keywordText} onChange={e => setKeywordText(e.target.value)} placeholder="Escribe la keyword…" />
+            <Input
+              id="keywordText"
+              value={keywordText}
+              onChange={(e) => setKeywordText(e.target.value)}
+              placeholder="Escribe la keyword…"
+            />
+          </div>
+
+          {/* Purpose selector */}
+          <div className="space-y-2">
+            <div className="flex items-center gap-1">
+              <Label>Propósito</Label>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Info className="w-3.5 h-3.5 text-muted-foreground cursor-help" />
+                  </TooltipTrigger>
+                  <TooltipContent side="top" className="max-w-xs">
+                    Controla en qué vista aparece esta keyword: Estudio de Keywords, Gestión de Ads, o ambas.
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
+            <Select
+              value={keyword.purpose || 'both'}
+              onValueChange={(value: string) => {
+                onSave(keyword.id, { purpose: value as KeywordPurpose });
+              }}
+            >
+              <SelectTrigger className="h-8">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {KEYWORD_PURPOSE_OPTIONS.map(opt => (
+                  <SelectItem key={opt.value} value={opt.value}>
+                    <div className="flex items-center gap-2">
+                      {opt.value === 'editorial' && <BookOpen className="w-3.5 h-3.5" />}
+                      {opt.value === 'ads' && <Megaphone className="w-3.5 h-3.5" />}
+                      {opt.value === 'both' && <Link2 className="w-3.5 h-3.5" />}
+                      {opt.label}
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         </SheetHeader>
 
         {/* Tabs Nicho / Ads */}
-        <Tabs value={activeTab} onValueChange={v => setActiveTab(v as 'nicho' | 'ads')} className="mt-4">
+        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'nicho' | 'ads')} className="mt-4">
           <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="nicho" className="gap-2">
               <BookOpen className="w-4 h-4" />
@@ -337,8 +493,8 @@ export const KeywordDetailPanel = ({
               <div className="space-y-2">
                 <div className="h-3 bg-muted rounded-full overflow-hidden">
                   <div className={cn('h-full transition-all duration-300', getScoreBarColor(scoreBreakdown.total))} style={{
-                  width: `${scoreBreakdown.total}%`
-                }} />
+                    width: `${scoreBreakdown.total}%`
+                  }} />
                 </div>
                 <div className="flex justify-between text-xs text-muted-foreground">
                   <span>0</span>
@@ -362,7 +518,7 @@ export const KeywordDetailPanel = ({
                         <span>Volumen</span>
                         <span className="font-mono">{scoreBreakdown.volume.points}/{scoreBreakdown.volume.max}</span>
                       </div>
-                      <div className="flex justify-between text-primary mx-0 px-[20px]">
+                      <div className="flex justify-between">
                         <span>Competidores</span>
                         <span className="font-mono">{scoreBreakdown.competitors.points}/{scoreBreakdown.competitors.max}</span>
                       </div>
@@ -370,22 +526,24 @@ export const KeywordDetailPanel = ({
                         <span>Precio</span>
                         <span className="font-mono">{scoreBreakdown.price.points}/{scoreBreakdown.price.max}</span>
                       </div>
-                      <ArrowUp className="flex justify-between">
+                      <div className="flex justify-between">
                         <span>Regalías</span>
                         <span className="font-mono">{scoreBreakdown.royalties.points}/{scoreBreakdown.royalties.max}</span>
-                      </ArrowUp>
+                      </div>
                       <div className="flex justify-between text-primary">
                         <span>Demanda</span>
-                        <span className="text-primary font-sans text-sm font-bold">{scoreBreakdown.marketStructure.points}/{scoreBreakdown.marketStructure.max}</span>
+                        <span className="font-mono">{scoreBreakdown.marketStructure.points}/{scoreBreakdown.marketStructure.max}</span>
                       </div>
                       <div className="flex justify-between text-primary">
                         <span>Competencia</span>
                         <span className="font-mono">{scoreBreakdown.catalogSignals.points}/{scoreBreakdown.catalogSignals.max}</span>
                       </div>
-                      {scoreBreakdown.penalties.points !== 0 && <ArrowDown className="flex justify-between text-red-500">
+                      {scoreBreakdown.penalties.points !== 0 && (
+                        <div className="flex justify-between text-red-500">
                           <span>Penalizaciones</span>
                           <span className="font-mono">{scoreBreakdown.penalties.points}</span>
-                        </ArrowDown>}
+                        </div>
+                      )}
                     </div>
                   </TooltipContent>
                 </Tooltip>
@@ -494,12 +652,14 @@ export const KeywordDetailPanel = ({
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {TRAFFIC_SOURCE_OPTIONS.map(opt => <SelectItem key={opt.value} value={opt.value}>
+                    {TRAFFIC_SOURCE_OPTIONS.map(opt => (
+                      <SelectItem key={opt.value} value={opt.value}>
                         <div className="flex items-center gap-2">
                           <Badge variant="outline" className={opt.color}>{opt.label}</Badge>
                           {opt.penalty !== 0 && <span className="text-xs text-muted-foreground">({opt.penalty})</span>}
                         </div>
-                      </SelectItem>)}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -531,12 +691,17 @@ export const KeywordDetailPanel = ({
               </div>
               
               <div className={cn("grid gap-2", isExpanded ? "grid-cols-3" : "grid-cols-2")}>
-                {MARKET_STRUCTURE_CHECKS.map(check => <div key={check.id} className="flex items-center justify-between p-2 rounded bg-muted/30">
+                {MARKET_STRUCTURE_CHECKS.map(check => (
+                  <div key={check.id} className="flex items-center justify-between p-2 rounded bg-muted/30">
                     <div className="flex items-center gap-2">
-                      <Checkbox id={check.id} checked={marketStructureChecks[check.id as keyof MarketStructure] ?? false} onCheckedChange={checked => setMarketStructureChecks({
-                    ...marketStructureChecks,
-                    [check.id]: checked === true
-                  })} />
+                      <Checkbox 
+                        id={check.id} 
+                        checked={marketStructureChecks[check.id as keyof MarketStructure] ?? false} 
+                        onCheckedChange={checked => setMarketStructureChecks({
+                          ...marketStructureChecks,
+                          [check.id]: checked === true
+                        })} 
+                      />
                       <Label htmlFor={check.id} className="text-xs cursor-pointer">
                         {check.label}
                       </Label>
@@ -552,7 +717,8 @@ export const KeywordDetailPanel = ({
                       </TooltipProvider>
                     </div>
                     <span className="text-[10px] text-green-600 dark:text-green-400">+{check.points}</span>
-                  </div>)}
+                  </div>
+                ))}
               </div>
             </div>
 
@@ -598,17 +764,22 @@ export const KeywordDetailPanel = ({
                     </TooltipProvider>
                   </div>
                   <div className="flex items-center justify-between gap-4">
-                    <Select value={catalogSignalsChecks.booksOver200ReviewsRange ?? ''} onValueChange={value => setCatalogSignalsChecks({
-                    ...catalogSignalsChecks,
-                    booksOver200ReviewsRange: (value || null) as BooksOver200ReviewsRange
-                  })}>
+                    <Select 
+                      value={catalogSignalsChecks.booksOver200ReviewsRange ?? ''} 
+                      onValueChange={value => setCatalogSignalsChecks({
+                        ...catalogSignalsChecks,
+                        booksOver200ReviewsRange: (value || null) as BooksOver200ReviewsRange
+                      })}
+                    >
                       <SelectTrigger className="w-40 h-8 text-sm">
                         <SelectValue placeholder="Seleccionar..." />
                       </SelectTrigger>
                       <SelectContent>
-                        {BOOKS_OVER_200_REVIEWS_OPTIONS.map(option => <SelectItem key={option.value} value={option.value}>
+                        {BOOKS_OVER_200_REVIEWS_OPTIONS.map(option => (
+                          <SelectItem key={option.value} value={option.value}>
                             {option.label}
-                          </SelectItem>)}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                     <span className="text-xs text-green-600 dark:text-green-400">
@@ -640,12 +811,17 @@ export const KeywordDetailPanel = ({
                 </div>
                 
                 {/* Checks booleanos restantes */}
-                {CATALOG_SIGNALS_CHECKS.filter(check => !(check as any).autoCalculated).map(check => <div key={check.id} className="flex items-center justify-between p-2 rounded bg-muted/30">
+                {CATALOG_SIGNALS_CHECKS.filter(check => !(check as any).autoCalculated).map(check => (
+                  <div key={check.id} className="flex items-center justify-between p-2 rounded bg-muted/30">
                     <div className="flex items-center gap-2">
-                      <Checkbox id={check.id} checked={catalogSignalsChecks[check.id as keyof CatalogSignals] as boolean ?? false} onCheckedChange={checked => setCatalogSignalsChecks({
-                    ...catalogSignalsChecks,
-                    [check.id]: checked === true
-                  })} />
+                      <Checkbox 
+                        id={check.id} 
+                        checked={catalogSignalsChecks[check.id as keyof CatalogSignals] as boolean ?? false} 
+                        onCheckedChange={checked => setCatalogSignalsChecks({
+                          ...catalogSignalsChecks,
+                          [check.id]: checked === true
+                        })} 
+                      />
                       <Label htmlFor={check.id} className="text-sm cursor-pointer">
                         {check.label}
                       </Label>
@@ -661,7 +837,8 @@ export const KeywordDetailPanel = ({
                       </TooltipProvider>
                     </div>
                     <span className="text-xs text-green-600 dark:text-green-400">+{check.points}</span>
-                  </div>)}
+                  </div>
+                ))}
               </div>
             </div>
 
@@ -695,11 +872,16 @@ export const KeywordDetailPanel = ({
               </p>
               
               <div className="space-y-2">
-                {EDITORIAL_CHECKS.map(check => <div key={check.id} className="flex items-center space-x-3 p-2 rounded bg-muted/30">
-                    <Checkbox id={check.id} checked={editorialChecks[check.id] === true} onCheckedChange={checked => setEditorialChecks({
-                  ...editorialChecks,
-                  [check.id]: checked === true
-                })} />
+                {EDITORIAL_CHECKS.map(check => (
+                  <div key={check.id} className="flex items-center space-x-3 p-2 rounded bg-muted/30">
+                    <Checkbox 
+                      id={check.id} 
+                      checked={editorialChecks[check.id] === true} 
+                      onCheckedChange={checked => setEditorialChecks({
+                        ...editorialChecks,
+                        [check.id]: checked === true
+                      })} 
+                    />
                     <Label htmlFor={check.id} className="cursor-pointer text-sm">
                       {check.label}
                     </Label>
@@ -713,7 +895,8 @@ export const KeywordDetailPanel = ({
                         </TooltipContent>
                       </Tooltip>
                     </TooltipProvider>
-                  </div>)}
+                  </div>
+                ))}
               </div>
               
               <div className="space-y-2">
@@ -730,7 +913,13 @@ export const KeywordDetailPanel = ({
                     </Tooltip>
                   </TooltipProvider>
                 </div>
-                <Textarea id="editorialNotes" value={editorialNotes} onChange={e => setEditorialNotes(e.target.value)} placeholder="Observaciones para decisión editorial..." rows={3} />
+                <Textarea 
+                  id="editorialNotes" 
+                  value={editorialNotes} 
+                  onChange={e => setEditorialNotes(e.target.value)} 
+                  placeholder="Observaciones para decisión editorial..." 
+                  rows={3} 
+                />
               </div>
             </div>
 
@@ -744,25 +933,35 @@ export const KeywordDetailPanel = ({
               
               <div className="space-y-2">
                 <Label htmlFor="notes">Notas generales</Label>
-                <Textarea id="notes" value={notes} onChange={e => setNotes(e.target.value)} placeholder="Notas adicionales..." rows={3} />
+                <Textarea 
+                  id="notes" 
+                  value={notes} 
+                  onChange={e => setNotes(e.target.value)} 
+                  placeholder="Notas adicionales..." 
+                  rows={3} 
+                />
               </div>
               
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <Label>Estado</Label>
-                  {statusManuallySet && <Button variant="ghost" size="sm" onClick={handleResetToAutoStatus} className="text-xs text-muted-foreground gap-1">
+                  {statusManuallySet && (
+                    <Button variant="ghost" size="sm" onClick={handleResetToAutoStatus} className="text-xs text-muted-foreground gap-1">
                       <Sparkles className="w-3 h-3" />
                       Volver a automático
-                    </Button>}
+                    </Button>
+                  )}
                 </div>
                 <Select value={status} onValueChange={handleStatusChange}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {KEYWORD_STATUS_OPTIONS.map(opt => <SelectItem key={opt.value} value={opt.value}>
+                    {KEYWORD_STATUS_OPTIONS.map(opt => (
+                      <SelectItem key={opt.value} value={opt.value}>
                         <Badge variant="outline" className={opt.color}>{opt.label}</Badge>
-                      </SelectItem>)}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
                 <p className="text-xs text-muted-foreground">
@@ -775,12 +974,14 @@ export const KeywordDetailPanel = ({
           {/* ========== TAB ADS ========== */}
           <TabsContent value="ads" className="space-y-6 py-4">
             {/* Sync indicator */}
-            {lastSyncTime && <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-green-500/10 border border-green-500/20 text-green-700 dark:text-green-300">
+            {lastSyncTime && (
+              <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-green-500/10 border border-green-500/20 text-green-700 dark:text-green-300">
                 <CheckCircle2 className="w-4 h-4" />
                 <span className="text-xs font-medium">Sincronizado</span>
                 <Clock className="w-3 h-3 ml-auto opacity-70" />
                 <span className="text-xs opacity-70">{formatSyncTime(lastSyncTime)}</span>
-              </div>}
+              </div>
+            )}
             
             {/* Contexto mínimo de mercado */}
             <div className="p-4 rounded-lg border border-border bg-muted/30">
@@ -812,7 +1013,14 @@ export const KeywordDetailPanel = ({
             <Separator />
 
             {/* ACOS & Equilibrio Section */}
-            <AcosEquilibrioSection adsData={adsData} bookEconomy={bookEconomy} onAdsDataChange={handleAdsDataChange} isExpanded={isExpanded} campaigns={campaigns} onAddCampaign={addCampaign} />
+            <AcosEquilibrioSection
+              adsData={adsData}
+              bookEconomy={bookEconomy}
+              onAdsDataChange={handleAdsDataChange}
+              isExpanded={isExpanded}
+              campaigns={campaigns}
+              onAddCampaign={addCampaign}
+            />
           </TabsContent>
         </Tabs>
 
@@ -827,6 +1035,8 @@ export const KeywordDetailPanel = ({
             Guardar
           </Button>
         </div>
+        </div>
       </SheetContent>
-    </Sheet>;
+    </Sheet>
+  );
 };
