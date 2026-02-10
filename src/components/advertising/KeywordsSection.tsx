@@ -33,7 +33,7 @@ import { PlanUpgradeModal } from './PlanUpgradeModal';
 import { AcosSparkline } from './AcosSparkline';
 import { AcosAlertsTray } from './AcosAlertsTray';
 import { AdvancedImportModal } from './AdvancedImportModal';
-import { AmazonAdsImportPlaceholder } from './AmazonAdsImportPlaceholder';
+import { AmazonAdsImportModal } from './AmazonAdsImportModal';
 import { type Keyword, type CampaignType, type CompetitionLevel, type RelevanceLevel, type IntentType, type KeywordState, type BookInfo, type BookEconomy, type HistoryEntry, type AdsData, RELEVANCE_LEVELS, INTENT_TYPES, KEYWORD_STATES, calculateRelevance, classifyIntent } from '@/types/advertising';
 import { calculateMarketScore, getDefaultMarketData, KEYWORD_STATUS_OPTIONS, type KeywordStatus } from '@/lib/market-score';
 import { createKeywordDefaults } from '@/lib/keyword-helpers';
@@ -71,9 +71,10 @@ const DEFAULT_ADS_WIDTHS: ColumnWidths = {
   volume: 80,
   competitors: 90,
   acosPE: 65,
-  clicks: 60,
   impresiones: 70,
+  clicks: 60,
   ctr: 60,
+  cpc: 70,
   pedidos: 60,
   gasto: 65,
   ventas: 65,
@@ -86,7 +87,7 @@ const DEFAULT_ADS_WIDTHS: ColumnWidths = {
 
 // Default column orders (reorderable columns only - checkbox, star, keyword are fixed)
 const DEFAULT_EDITORIAL_ORDER = ['volume', 'competitors', 'marketScore', 'status'];
-const DEFAULT_ADS_ORDER = ['campaign', 'acosPE', 'clicks', 'impresiones', 'ctr', 'pedidos', 'gasto', 'ventas', 'acos', 'acosSig', 'tendencia', 'conversion', 'beneficio'];
+const DEFAULT_ADS_ORDER = ['campaign', 'acosPE', 'impresiones', 'clicks', 'ctr', 'cpc', 'pedidos', 'gasto', 'ventas', 'acos', 'acosSig', 'tendencia', 'conversion', 'beneficio'];
 interface KeywordsSectionProps {
   keywords: Keyword[];
   onAdd: (keyword: Omit<Keyword, 'id' | 'createdAt' | 'updatedAt'> | Keyword) => void;
@@ -735,6 +736,13 @@ export const KeywordsSection = ({
             <InfoTooltip content="Frecuencia con la que los clientes hacen clic en tu anuncio cuando se muestra. Un CTR del 3-5% es considerado óptimo." />
           </div>
         </DraggableResizableHeader>;
+      case 'cpc':
+        return <DraggableResizableHeader key={colKey} columnKey="cpc" width={columnWidths.cpc || 70} onResize={setColumnWidth}>
+          <div className="flex items-center gap-1">
+            CPC
+            <InfoTooltip content="Coste por clic actual." />
+          </div>
+        </DraggableResizableHeader>;
       case 'pedidos':
         return <DraggableResizableHeader key={colKey} columnKey="pedidos" width={columnWidths.pedidos} onResize={setColumnWidth} className="cursor-pointer hover:text-foreground" onClick={() => handleSort('pedidos')}>
           <div className="flex items-center gap-1">
@@ -1017,10 +1025,10 @@ export const KeywordsSection = ({
               const conversion = calcularConversionPorcentaje(ads?.pedidos, ads?.clicks);
               const acosEquilibrio = bookEconomy.precioLibro > 0 && bookEconomy.regaliasPorVenta > 0 ? bookEconomy.regaliasPorVenta / bookEconomy.precioLibro * 100 : null;
 
-              // Inline update handler for ads data with auto-click logic
-              const handleInlineAdsUpdate = (field: 'clicks' | 'cpcActual' | 'pedidos', value: string) => {
-                const numValue = value === '' ? undefined : parseFloat(value);
-                if (value !== '' && (isNaN(numValue!) || numValue! < 0)) return;
+              // Inline update handler for ads data with auto-click logic + auto CTR
+              const handleInlineAdsUpdate = (field: 'clicks' | 'cpcActual' | 'pedidos' | 'impresiones', value: string | number) => {
+                const numValue = value === '' ? undefined : typeof value === 'number' ? value : parseFloat(value);
+                if (value !== '' && (numValue === undefined || isNaN(numValue) || numValue < 0)) return;
                 const baseAds = (ads ?? {}) as AdsData;
                 let updatedAdsData: AdsData = {
                   ...baseAds,
@@ -1041,6 +1049,14 @@ export const KeywordsSection = ({
                     updatedAdsData.clicks = numValue;
                   }
                 }
+
+                // Auto CTR calculation
+                const finalClicks = updatedAdsData.clicks ?? 0;
+                const finalImpr = updatedAdsData.impresiones ?? 0;
+                if (finalImpr > 0) {
+                  updatedAdsData.ctr = Math.round((finalClicks / finalImpr) * 10000) / 100;
+                }
+
                 onUpdate(keyword.id, {
                   adsData: updatedAdsData
                 });
@@ -1120,12 +1136,12 @@ export const KeywordsSection = ({
                       {acosEquilibrio !== null ? `${acosEquilibrio.toFixed(1)}%` : '—'}
                     </TableCell>;
                   case 'clicks':
-                    return <TableCell key={colKey} className="tabular-nums text-xs text-muted-foreground">
-                      {ads?.clicks ?? '—'}
+                    return <TableCell key={colKey} className="tabular-nums text-xs" onClick={e => e.stopPropagation()}>
+                      <InlineEditableCell value={ads?.clicks ?? 0} type="number" min={0} onSave={value => handleInlineAdsUpdate('clicks', value)} className="text-xs" />
                     </TableCell>;
                   case 'impresiones':
-                    return <TableCell key={colKey} className="tabular-nums text-xs text-muted-foreground">
-                      {ads?.impresiones?.toLocaleString() ?? '—'}
+                    return <TableCell key={colKey} className="tabular-nums text-xs" onClick={e => e.stopPropagation()}>
+                      <InlineEditableCell value={ads?.impresiones ?? 0} type="number" min={0} onSave={value => handleInlineAdsUpdate('impresiones', value)} formatter={v => Number(v || 0).toLocaleString()} className="text-xs" />
                     </TableCell>;
                   case 'ctr':
                     return <TableCell key={colKey} className="tabular-nums text-xs">
@@ -1133,9 +1149,13 @@ export const KeywordsSection = ({
                         {ads?.ctr !== undefined ? `${ads.ctr.toFixed(2)}%` : '—'}
                       </span>
                     </TableCell>;
+                  case 'cpc':
+                    return <TableCell key={colKey} className="tabular-nums text-xs" onClick={e => e.stopPropagation()}>
+                      <InlineEditableCell value={ads?.cpcActual ?? 0} type="number" min={0} onSave={value => handleInlineAdsUpdate('cpcActual', value)} formatter={v => `$${Number(v || 0).toFixed(2)}`} className="text-xs" />
+                    </TableCell>;
                   case 'pedidos':
-                    return <TableCell key={colKey} className="tabular-nums text-xs text-muted-foreground">
-                      {ads?.pedidos ?? '—'}
+                    return <TableCell key={colKey} className="tabular-nums text-xs" onClick={e => e.stopPropagation()}>
+                      <InlineEditableCell value={ads?.pedidos ?? 0} type="number" min={0} onSave={value => handleInlineAdsUpdate('pedidos', value)} className="text-xs" />
                     </TableCell>;
                   case 'gasto':
                     return <TableCell key={colKey} className="tabular-nums text-xs text-muted-foreground">
@@ -1317,8 +1337,8 @@ export const KeywordsSection = ({
       {/* External Import Modal (Editorial view) */}
       <AdvancedImportModal isOpen={showExternalImportModal} onClose={() => setShowExternalImportModal(false)} onImport={handleBulkImport} marketplaceId={marketplaceId} existingKeywords={keywords} />
       
-      {/* Amazon ADS Import Placeholder (Ads view) */}
-      <AmazonAdsImportPlaceholder isOpen={showAmazonAdsImport} onClose={() => setShowAmazonAdsImport(false)} />
+      {/* Amazon ADS Import Modal (Ads view) */}
+      <AmazonAdsImportModal isOpen={showAmazonAdsImport} onClose={() => setShowAmazonAdsImport(false)} keywords={keywords} onUpdateKeyword={onUpdate} onAddBulk={onAddBulk} addCampaign={addCampaign} bookEconomy={bookEconomy} marketplaceId={marketplaceId} />
 
       {/* History Modal */}
       <KeywordHistoryModal keyword={historyKeyword} isOpen={!!historyKeyword} onClose={() => setHistoryKeyword(null)} />

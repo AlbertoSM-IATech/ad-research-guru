@@ -193,6 +193,30 @@ export const AcosEquilibrioSection = ({
         </div>
       </div>
 
+      {/* Pedidos faltantes para PE */}
+      {gastoCalculado !== null && gastoCalculado > 0 && bookEconomy.regaliasPorVenta > 0 && (() => {
+        const pedidosNecesarios = Math.ceil(gastoCalculado / bookEconomy.regaliasPorVenta);
+        const pedidosActuales = adsData?.pedidos ?? 0;
+        const pedidosFaltan = Math.max(0, pedidosNecesarios - pedidosActuales);
+        return (
+          <div className="p-3 rounded-lg border border-border bg-muted/30 space-y-1">
+            <p className="text-xs text-muted-foreground">
+              <span className="font-medium">Pedidos necesarios para PE</span> (manteniendo gasto actual): <span className="font-bold text-foreground">{pedidosNecesarios}</span>
+            </p>
+            {pedidosFaltan > 0 && (
+              <p className="text-xs">
+                Te faltan: <span className="font-bold text-amber-600 dark:text-amber-400">{pedidosFaltan}</span> pedido{pedidosFaltan !== 1 ? 's' : ''}
+              </p>
+            )}
+            {pedidosFaltan === 0 && (
+              <p className="text-xs text-green-600 dark:text-green-400 font-medium">
+                ✅ Ya has alcanzado el punto de equilibrio
+              </p>
+            )}
+          </div>
+        );
+      })()}
+
       {/* Quick Action Buttons */}
       <div className="flex flex-wrap items-center gap-2 p-3 rounded-lg border border-border bg-muted/30">
         <span className="text-xs text-muted-foreground font-medium">Acciones rápidas:</span>

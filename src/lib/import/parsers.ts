@@ -22,7 +22,7 @@ export function parseDelimitedText(text: string): ParsedTable {
   const result = Papa.parse<Record<string, string>>(trimmed, {
     header: true,
     skipEmptyLines: true,
-    transformHeader: (header) => header.trim(),
+    transformHeader: (header) => header.replace(/^\uFEFF/, '').trim(),
     transform: (value) => value.trim(),
   });
 
