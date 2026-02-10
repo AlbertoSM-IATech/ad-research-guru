@@ -23,6 +23,7 @@ import { AdsHistoryPanel } from './AdsHistoryPanel';
 import { KeywordDetailPanel } from './KeywordDetailPanel';
 import { MarketScoreCell } from './MarketScoreCell';
 import { NewKeywordWizard } from './NewKeywordWizard';
+import { NewAdsKeywordWizard } from './NewAdsKeywordWizard';
 import { KeywordExportCSV } from './KeywordExportCSV';
 import { KeywordComparisonPanel } from './KeywordComparisonPanel';
 import { ResizableTableHeader } from './ResizableTableHeader';
@@ -151,6 +152,7 @@ export const KeywordsSection = ({
   const [quickAddKeyword, setQuickAddKeyword] = useState('');
   const [historyKeyword, setHistoryKeyword] = useState<Keyword | null>(null);
   const [isWizardOpen, setIsWizardOpen] = useState(false);
+  const [isAdsWizardOpen, setIsAdsWizardOpen] = useState(false);
   const [wizardInitialKeyword, setWizardInitialKeyword] = useState('');
   // Single source of truth: store only the ID, derive the keyword from keywords array
   const [selectedKeywordId, setSelectedKeywordId] = useState<string | null>(null);
@@ -242,7 +244,11 @@ export const KeywordsSection = ({
   const handleQuickAdd = () => {
     if (!quickAddKeyword.trim()) return;
     setWizardInitialKeyword(quickAddKeyword.trim());
-    setIsWizardOpen(true);
+    if (functionalView === 'ads') {
+      setIsAdsWizardOpen(true);
+    } else {
+      setIsWizardOpen(true);
+    }
     setQuickAddKeyword('');
   };
 
@@ -271,7 +277,11 @@ export const KeywordsSection = ({
   // Open wizard for new keyword
   const handleOpenNewKeywordWizard = () => {
     setWizardInitialKeyword('');
-    setIsWizardOpen(true);
+    if (functionalView === 'ads') {
+      setIsAdsWizardOpen(true);
+    } else {
+      setIsWizardOpen(true);
+    }
   };
   const handleSort = (field: SortField) => {
     let newOrder: SortOrder;
@@ -1412,6 +1422,9 @@ export const KeywordsSection = ({
       
       {/* New Keyword Wizard */}
       <NewKeywordWizard open={isWizardOpen} onOpenChange={setIsWizardOpen} onComplete={handleWizardComplete} marketplaceId={marketplaceId} bookInfo={bookInfo} bookEconomy={bookEconomy} existingKeywords={keywords} initialKeyword={wizardInitialKeyword} onOpenExistingKeyword={handleOpenExistingKeyword} campaigns={campaigns} onAddCampaign={addCampaign} defaultPurpose={functionalView === 'ads' ? 'ads' : 'editorial'} />
+      
+      {/* New Ads Keyword Wizard */}
+      <NewAdsKeywordWizard open={isAdsWizardOpen} onOpenChange={setIsAdsWizardOpen} onComplete={handleWizardComplete} marketplaceId={marketplaceId} existingKeywords={keywords} initialKeyword={wizardInitialKeyword} campaigns={campaigns} onAddCampaign={addCampaign} onOpenExistingKeyword={handleOpenExistingKeyword} />
       
       {/* Keyword Comparison Panel */}
       <KeywordComparisonPanel items={keywords.filter(k => selectedIds.has(k.id)).slice(0, 2)} type="keyword" isOpen={isComparisonOpen} onClose={() => setIsComparisonOpen(false)} onRemove={id => {
