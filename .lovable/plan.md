@@ -1,37 +1,44 @@
 
-# Navegacion entre keywords y panel redimensionable
+# Añadir campos de Ads al importador CSV y soporte italiano
 
-## Que se va a hacer
+## Problema
 
-1. **Botones Anterior/Siguiente en el panel lateral**: Dos botones (flecha arriba y flecha abajo) en el header del panel para navegar entre las keywords visibles en la tabla sin cerrar el panel.
+1. El campo "Acquisti" (pedidos en italiano) no se reconoce porque no esta en los alias de ninguna plantilla
+2. Campos como "Pedidos", "Clicks", "Impresiones" y "CPC" no aparecen como opciones en el selector de mapeo del Paso 2, asi que el usuario no puede asignarlos manualmente
 
-2. **Panel redimensionable manualmente**: Reemplazar el ancho fijo del Sheet por un sistema donde el usuario puede arrastrar el borde izquierdo del panel para ajustar el ancho a su gusto. El ancho elegido se guarda en localStorage.
+## Solucion
 
-## Detalles tecnicos
+### 1. Ampliar IMPORTABLE_FIELDS con campos de Ads
 
-### Navegacion prev/next
+Añadir los siguientes campos al array `IMPORTABLE_FIELDS` en `src/lib/import/templates.ts`:
 
-- Agregar dos nuevas props a `KeywordDetailPanel`:
-  - `visibleKeywordIds: string[]` - lista ordenada de IDs de keywords visibles en la tabla (de `filteredKeywords`)
-  - `onNavigate: (keywordId: string) => void` - callback para cambiar la keyword seleccionada (llama a `setSelectedKeywordId`)
+- `clicks` - Clicks
+- `impressions` - Impresiones  
+- `orders` - Pedidos
+- `spend` - Gasto
+- `sales` - Ventas
 
-- En el header del panel, junto al titulo, mostrar botones ChevronUp/ChevronDown con el indice actual (ej: "3 de 15")
-- Desactivar ChevronUp si es la primera, ChevronDown si es la ultima
+### 2. Añadir alias en italiano (y otros idiomas) a las plantillas
 
-### Panel redimensionable
+En la plantilla `custom` (y opcionalmente en las demas), añadir alias italianos:
 
-- Sobreescribir el ancho del `SheetContent` con un estilo dinamico controlado por estado
-- Agregar un handle de arrastre en el borde izquierdo del panel (similar al patron de `ResizableTableHeader`)
-- Ancho minimo: 400px, maximo: 80% del viewport
-- Persistir el ancho en localStorage con clave `panel-detail-width`
+- `orders`: "Acquisti", "Ordini", "Pedidos", "Orders"
+- `clicks`: "Clic", "Clicks", "Click"
+- `impressions`: "Impressioni", "Impresiones", "Impressions"
+- `spend`: "Spesa", "Gasto", "Spend", "Cost"
+- `sales`: "Vendite", "Ventas", "Sales"
 
-### Archivos a modificar
+### 3. Procesar los nuevos campos en AdvancedImportModal
 
-1. **`src/components/advertising/KeywordDetailPanel.tsx`**
-   - Nuevas props: `visibleKeywordIds`, `onNavigate`
-   - Botones prev/next en el SheetHeader
-   - Handle de resize en el borde izquierdo del SheetContent
-   - Estado de ancho con persistencia en localStorage
+En `processRows` de `AdvancedImportModal.tsx`, añadir los nuevos campos al `mappedData` y al crear la keyword, inyectar los valores en el objeto `adsData`.
 
-2. **`src/components/advertising/KeywordsSection.tsx`**
-   - Pasar `visibleKeywordIds` (array de IDs de `filteredKeywords`) y `onNavigate` (que llama a `setSelectedKeywordId`) al KeywordDetailPanel
+## Archivos a modificar
+
+1. **`src/lib/import/templates.ts`**
+   - Ampliar `IMPORTABLE_FIELDS` con clicks, impressions, orders, spend, sales
+   - Añadir alias italianos/españoles/ingleses en la plantilla custom (y en las demas para cobertura)
+
+2. **`src/components/advertising/AdvancedImportModal.tsx`**
+   - Ampliar `ParsedRow.mappedData` para incluir los nuevos campos
+   - En `processRows`, parsear los nuevos campos numericos
+   - En `handleImport`, inyectar los valores en `adsData` de la keyword creada
