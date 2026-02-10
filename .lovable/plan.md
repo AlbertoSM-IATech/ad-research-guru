@@ -1,77 +1,80 @@
-# Plan: Needs Attention & Ads History - COMPLETED
 
-## A) Fix: Keywords con "necesita atención" - DONE ✅
 
-### Problema Resuelto
-Las keywords con ACOS > PE ahora son visibles en ambos módulos con badge visual.
+# Separar Keywords entre Estudio de Nicho y Gestion de Ads
 
-### Implementación
-1. **Filtro `needsAttention`** añadido a `AdsFiltersState` en `AdvancedFiltersAds.tsx`
-2. **Badge visual "Atención"** en las filas de la tabla cuando ACOS > PE
-3. **Contador y toggle** "Necesitan atención: X" en la barra de herramientas (vista Ads)
-4. **Lógica de filtrado** implementada en `KeywordsSection.tsx`
+## Situacion actual
 
-### Archivos Modificados
-- `src/components/advertising/AdvancedFiltersAds.tsx` - Añadido campo `needsAttention: boolean`
-- `src/components/advertising/KeywordsSection.tsx` - Badge visual + contador + filtro
-- `src/lib/filter-presets.ts` - Actualizado default state
+Ambas vistas (Estudio de Nicho y Gestion de Ads) muestran exactamente las mismas keywords porque comparten el mismo array `keywordsByMarket` sin ningun filtro. Cada keyword ya tiene un campo `purpose` con valores posibles: `editorial`, `ads` o `both`, pero no se usa para filtrar.
 
-### Criterios de Aceptación ✅
-- [x] KW con ACOS > PE sigue visible en tabla
-- [x] Muestra badge "Atención" en rojo
-- [x] Puedo editar sus métricas Ads
-- [x] Toggle "Necesitan atención" filtra solo esas KW
-- [x] No hay filtros ocultos que excluyan keywords
+## Solucion
 
----
+Usar el campo `purpose` existente como filtro principal, y agregar un boton "Enviar a..." para mover keywords entre vistas.
 
-## B) Feature: Historial de métricas Ads - DONE ✅
+### Paso 1 - Filtrar keywords por vista
 
-### Implementación
-1. **Sección "Historial de Métricas"** integrada en `AcosEquilibrioSection.tsx`
-2. **Snapshots manuales** con botón "Guardar snapshot"
-3. **Gráfico de evolución** con líneas para Clicks, Pedidos, ACOS
-4. **Línea de referencia** para ACOS PE
-5. **Selector de rango** (7d / 30d / 90d / Todo)
-6. **Deltas de tendencia** (Δ Clicks, Δ Pedidos, Δ ACOS)
-7. **Tabla compacta** de snapshots con eliminación
+En `KeywordsSection.tsx`, antes de aplicar los filtros existentes, filtrar segun `functionalView`:
 
-### Archivos Modificados
-- `src/components/advertising/AcosEquilibrioSection.tsx` - Añadido componente `AdsHistorySection`
+- Vista **Estudio de Nicho** (`editorial`): mostrar solo keywords con `purpose === 'editorial'` o `purpose === 'both'`
+- Vista **Gestion de Ads** (`ads`): mostrar solo keywords con `purpose === 'ads'` o `purpose === 'both'`
 
-### Modelo de Datos (ya existente)
-```typescript
-interface AdsHistoryEntry {
-  id: string;
-  timestamp: Date;
-  clicks: number;
-  cpcActual: number;
-  pedidos: number;
-  gasto: number;
-  ventas: number;
-  acosActual: number | null;
-  beneficio: number | null;
-}
+### Paso 2 - Asignar purpose automaticamente al crear/importar
+
+- **Wizard (NewKeywordWizard)**: detectar desde que vista se abre y asignar `purpose` automaticamente (`editorial` si se abre desde Estudio, `ads` si se abre desde Gestion de Ads)
+- **Import CSV keywords** (AdvancedImportModal): asignar `purpose = 'editorial'` (solo se abre desde vista editorial)
+- **Import Amazon Ads** (AmazonAdsImportModal): asignar `purpose = 'ads'` a keywords creadas
+- **Import en lote** (handleAddBulkKeywords): respetar el purpose que traiga cada keyword
+
+### Paso 3 - Boton "Enviar a..." en la tabla
+
+Agregar acciones para mover keywords entre vistas:
+
+- En la barra de acciones bulk (cuando hay keywords seleccionadas): boton "Enviar a Estudio de Nicho" o "Enviar a Gestion de Ads" segun la vista actual
+- Al pulsar, cambia el `purpose` de las keywords seleccionadas:
+  - Desde Editorial -> cambia purpose a `both` (la mantiene en editorial y la agrega a ads)
+  - Desde Ads -> cambia purpose a `both` (la mantiene en ads y la agrega a editorial)
+- Opcion adicional: "Mover a..." (quitar de la vista actual y poner solo en la otra): cambia purpose a `ads` o `editorial` exclusivamente
+
+### Paso 4 - Indicador visual
+
+- Badge discreto en cada keyword que esta en ambas vistas (`purpose === 'both'`), mostrando un icono de enlace o texto "Ambas"
+- En el panel lateral (KeywordDetailPanel): selector de `purpose` para poder cambiar manualmente si una keyword es editorial, ads o ambas
+
+## Detalles tecnicos
+
+### Archivos a modificar
+
+1. **`src/components/advertising/KeywordsSection.tsx`**
+   - Agregar filtro por `purpose` en el `useMemo` de `filteredAndSortedKeywords`
+   - Pasar `functionalView` al wizard para auto-asignar purpose
+   - Agregar botones "Enviar a..." en toolbar de seleccion bulk
+   - Badge visual para keywords con `purpose === 'both'`
+
+2. **`src/components/advertising/NewKeywordWizard.tsx`**
+   - Recibir prop `defaultPurpose: KeywordPurpose` 
+   - Usar como valor por defecto del campo purpose en Step 1
+
+3. **`src/components/advertising/AmazonAdsImportModal.tsx`**
+   - Asignar `purpose: 'ads'` a las keywords nuevas creadas durante la importacion
+
+4. **`src/components/advertising/AdvancedImportModal.tsx`**
+   - Asignar `purpose: 'editorial'` a las keywords importadas
+
+5. **`src/components/advertising/KeywordDetailPanel.tsx`**
+   - Agregar selector de `purpose` (editorial / ads / ambas) para cambio manual
+
+6. **`src/components/advertising/BulkActionsToolbar.tsx`** (o inline en KeywordsSection)
+   - Botones "Enviar a Ads" / "Enviar a Estudio" / "Mover a..."
+
+### Logica de filtrado (pseudocodigo)
+
+```text
+if functionalView === 'editorial':
+  keywords.filter(k => k.purpose === 'editorial' || k.purpose === 'both')
+if functionalView === 'ads':
+  keywords.filter(k => k.purpose === 'ads' || k.purpose === 'both')
 ```
 
-### Criterios de Aceptación ✅
-- [x] Puedo guardar snapshot del estado actual
-- [x] Veo histórico de ACOS, clicks, pedidos
-- [x] Evolución por rango (7/30/90/todo)
-- [x] Gráfico con línea de referencia PE
-- [x] Puedo eliminar snapshots individuales
+### Migracion de datos existentes
 
----
+Las keywords existentes que ya tienen `purpose: 'both'` (el default actual) seguiran apareciendo en ambas vistas. El usuario puede reasignarlas manualmente usando la seleccion bulk o el panel lateral.
 
-## Notas Técnicas
-
-### Lógica de "Needs Attention"
-- Es un **flag derivado**, no un estado persistido
-- Se calcula como: `acosActual > acosEquilibrio`
-- El campo `status` (pending/valid/discarded) no cambia automáticamente
-- Las keywords nunca desaparecen por tener mal ACOS
-
-### Historial
-- Los snapshots se guardan en `keyword.adsData.history[]`
-- Si ya existe snapshot del día, se actualiza en lugar de duplicar
-- Los gráficos usan Recharts con línea de referencia PE
