@@ -11,13 +11,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
-import { Info, Save, RotateCcw, Sparkles, BookOpen, Megaphone, Maximize2, Minimize2, CheckCircle2, Clock } from 'lucide-react';
+import { Info, Save, RotateCcw, Sparkles, BookOpen, Megaphone, Maximize2, Minimize2, CheckCircle2, Clock, Link2 } from 'lucide-react';
 import type { Keyword, BookEconomy, AdsData } from '@/types/advertising';
 import { getAutoStatusFromScore } from '@/lib/keyword-builder';
 import { type MarketData, type MarketStructure, type CatalogSignals, type EditorialData, type TrafficSource, type KeywordStatus, type BooksOver200ReviewsRange, calculateMarketScore, calculateEditorialScore, getDefaultMarketData, getDefaultEditorialData, getDefaultMarketStructure, getDefaultCatalogSignals, getMarketScoreInfo, getBooksOver200ReviewsPoints, TRAFFIC_SOURCE_OPTIONS, KEYWORD_STATUS_OPTIONS, MARKET_STRUCTURE_CHECKS, CATALOG_SIGNALS_CHECKS, EDITORIAL_CHECKS, BOOKS_OVER_200_REVIEWS_OPTIONS, BOOKS_OVER_200_REVIEWS_FIELD } from '@/lib/market-score';
 import { AcosEquilibrioSection } from './AcosEquilibrioSection';
 import { useCampaigns } from '@/hooks/useCampaigns';
 import { DEFAULT_BOOK_ECONOMY } from '@/hooks/useLocalPersistence';
+import { KEYWORD_PURPOSE_OPTIONS, type KeywordPurpose } from '@/lib/market-score';
 
 interface KeywordDetailPanelProps {
   keyword: Keyword | null;
@@ -319,6 +320,45 @@ export const KeywordDetailPanel = ({
               onChange={(e) => setKeywordText(e.target.value)}
               placeholder="Escribe la keyword…"
             />
+          </div>
+
+          {/* Purpose selector */}
+          <div className="space-y-2">
+            <div className="flex items-center gap-1">
+              <Label>Propósito</Label>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Info className="w-3.5 h-3.5 text-muted-foreground cursor-help" />
+                  </TooltipTrigger>
+                  <TooltipContent side="top" className="max-w-xs">
+                    Controla en qué vista aparece esta keyword: Estudio de Keywords, Gestión de Ads, o ambas.
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
+            <Select
+              value={keyword.purpose || 'both'}
+              onValueChange={(value: string) => {
+                onSave(keyword.id, { purpose: value as KeywordPurpose });
+              }}
+            >
+              <SelectTrigger className="h-8">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {KEYWORD_PURPOSE_OPTIONS.map(opt => (
+                  <SelectItem key={opt.value} value={opt.value}>
+                    <div className="flex items-center gap-2">
+                      {opt.value === 'editorial' && <BookOpen className="w-3.5 h-3.5" />}
+                      {opt.value === 'ads' && <Megaphone className="w-3.5 h-3.5" />}
+                      {opt.value === 'both' && <Link2 className="w-3.5 h-3.5" />}
+                      {opt.label}
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         </SheetHeader>
 
