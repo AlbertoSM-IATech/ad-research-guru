@@ -79,6 +79,7 @@ export function AdsDashboard({
     let totalGasto = 0;
     let totalVentas = 0;
     let keywordsWithAdsData = 0;
+    let keywordsWithConversion = 0;
     let belowPeKeywords = 0;
     let recoverableKeywords = 0;
     let abovePeKeywords = 0;
@@ -97,6 +98,9 @@ export function AdsDashboard({
           keywordsWithAdsData++;
           totalClicks += clicks;
           totalPedidos += pedidos;
+          if (clicks > 0 && pedidos > 0) {
+            keywordsWithConversion++;
+          }
           const gasto = calcularGastoAcumulado(clicks, cpc) ?? 0;
           const ventas = calcularVentasAcumuladas(pedidos, bookEconomy.precioLibro) ?? 0;
           totalGasto += gasto;
@@ -117,7 +121,20 @@ export function AdsDashboard({
       }
     });
     const totalBeneficio = totalVentas - totalGasto;
-    const avgConversion = totalClicks > 0 ? totalPedidos / totalClicks * 100 : 0;
+    // Average conversion only from keywords that actually have conversions
+    let conversionSum = 0;
+    if (keywordsWithConversion > 0) {
+      keywords.forEach(k => {
+        if (k.adsData) {
+          const clicks = typeof k.adsData.clicks === 'number' && Number.isFinite(k.adsData.clicks) ? k.adsData.clicks : 0;
+          const pedidos = typeof k.adsData.pedidos === 'number' && Number.isFinite(k.adsData.pedidos) ? k.adsData.pedidos : 0;
+          if (clicks > 0 && pedidos > 0) {
+            conversionSum += (pedidos / clicks) * 100;
+          }
+        }
+      });
+    }
+    const avgConversion = keywordsWithConversion > 0 ? conversionSum / keywordsWithConversion : 0;
     const acosTotal = totalVentas > 0 ? totalGasto / totalVentas * 100 : null;
     return {
       totalClicks,
@@ -126,6 +143,7 @@ export function AdsDashboard({
       totalVentas,
       totalBeneficio,
       avgConversion,
+      keywordsWithConversion,
       acosTotal,
       acosEquilibrio,
       keywordsWithAdsData,
@@ -173,7 +191,7 @@ export function AdsDashboard({
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <MetricCard title="Clicks Totales" value={metrics.totalClicks.toLocaleString()} icon={<MousePointerClick className="w-5 h-5 text-muted-foreground" />} tooltip="Suma de todos los clicks de Ads" />
         
-        <MetricCard title="Conversión Media" value={`${metrics.avgConversion.toFixed(1)}%`} icon={<Percent className="w-5 h-5 text-muted-foreground" />} tooltip="Porcentaje de clicks que resultan en pedido" />
+        <MetricCard title="Conversión Media" value={`${metrics.avgConversion.toFixed(1)}%`} subtitle={metrics.keywordsWithConversion > 0 ? `Basada en ${metrics.keywordsWithConversion} KW con conversión` : "Sin KW con conversión"} icon={<Percent className="w-5 h-5 text-muted-foreground" />} tooltip="Media de conversión calculada solo con keywords que tienen al menos 1 pedido. Las keywords sin conversión no se incluyen." />
         
         <MetricCard title="KW Bajo PE" value={metrics.belowPeKeywords.toString()} subtitle={`${(metrics.belowPeKeywords / Math.max(metrics.keywordsWithAdsData, 1) * 100).toFixed(0)}% del total`} icon={<CheckCircle2 className="w-5 h-5 text-green-500" />} valueClassName="text-green-600 dark:text-green-400" tooltip="Keywords con ACOS actual por debajo del ACOS PE (punto de equilibrio)." />
         
