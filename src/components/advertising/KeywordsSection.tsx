@@ -858,8 +858,18 @@ export const KeywordsSection = ({
           {functionalView === 'editorial' ? "Esta vista está pensada para decisiones editoriales, no para inversión publicitaria." : "Esta vista está pensada para decisiones de inversión en Ads."}
         </div>
 
-        {/* ADS Dashboard - only in ads view */}
-        {functionalView === 'ads' && hasAdsAccess && <AdsDashboard keywords={keywords} bookEconomy={bookEconomy} currencySymbol={currencySymbol} />}
+        {/* ADS Dashboard - only in ads view, collapsible */}
+        {functionalView === 'ads' && hasAdsAccess && (
+          <details className="group" open>
+            <summary className="flex items-center gap-2 cursor-pointer select-none text-sm font-medium text-muted-foreground hover:text-foreground transition-colors py-1">
+              <ChevronDown className="w-4 h-4 transition-transform group-open:rotate-0 -rotate-90" />
+              Dashboard de rendimiento
+            </summary>
+            <div className="mt-2">
+              <AdsDashboard keywords={keywords} bookEconomy={bookEconomy} currencySymbol={currencySymbol} />
+            </div>
+          </details>
+        )}
         
         {/* ACOS Alerts Tray - only in ads view, shows keywords with ACOS > PE */}
         {functionalView === 'ads' && hasAdsAccess && (
