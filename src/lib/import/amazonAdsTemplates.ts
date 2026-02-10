@@ -73,7 +73,7 @@ const HEADER_ALIASES: Record<AmazonAdsFieldKey, string[]> = {
     'Pedidos', 'Órdenes', 'Pedidos de 7 días', 'Pedidos de 14 días',
     'Orders', '7 Day Total Orders (#)',
     '14 Day Total Orders (#)', 'Total Orders',
-    'Ordini', 'Ordini totali',
+    'Ordini', 'Ordini totali', 'Acquisti',
   ],
   sales: [
     'Ventas', 'Ventas de 7 días', 'Ventas de 14 días',
