@@ -23,6 +23,11 @@ export const IMPORTABLE_FIELDS = [
   { key: 'titleDensity', label: 'Title Density', required: false },
   { key: 'cpc', label: 'CPC Sugerido', required: false },
   { key: 'notes', label: 'Notas', required: false },
+  { key: 'clicks', label: 'Clicks', required: false },
+  { key: 'impressions', label: 'Impresiones', required: false },
+  { key: 'orders', label: 'Pedidos', required: false },
+  { key: 'spend', label: 'Gasto', required: false },
+  { key: 'sales', label: 'Ventas', required: false },
 ] as const;
 
 export type ImportableFieldKey = typeof IMPORTABLE_FIELDS[number]['key'];
@@ -176,6 +181,32 @@ const CUSTOM_TEMPLATE: ImportTemplate = {
       'notas', 'Notas',
       'comments', 'Comments',
       'comentarios', 'Comentarios',
+    ],
+    clicks: [
+      'clicks', 'Clicks', 'CLICKS',
+      'clic', 'Clic', 'click', 'Click',
+    ],
+    impressions: [
+      'impressions', 'Impressions', 'IMPRESSIONS',
+      'impresiones', 'Impresiones',
+      'impressioni', 'Impressioni',
+    ],
+    orders: [
+      'orders', 'Orders', 'ORDERS',
+      'pedidos', 'Pedidos',
+      'acquisti', 'Acquisti',
+      'ordini', 'Ordini',
+    ],
+    spend: [
+      'spend', 'Spend', 'SPEND',
+      'gasto', 'Gasto',
+      'spesa', 'Spesa',
+      'cost', 'Cost',
+    ],
+    sales: [
+      'sales', 'Sales', 'SALES',
+      'ventas', 'Ventas',
+      'vendite', 'Vendite',
     ],
   },
 };

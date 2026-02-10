@@ -60,6 +60,11 @@ interface ParsedRow {
     titleDensity?: number;
     cpc?: number;
     notes?: string;
+    clicks?: number;
+    impressions?: number;
+    orders?: number;
+    spend?: number;
+    sales?: number;
   };
   isValid: boolean;
   isDuplicate: boolean;
@@ -196,6 +201,21 @@ export const AdvancedImportModal = ({
           case 'notes':
             mappedData.notes = rawValue.trim();
             break;
+          case 'clicks':
+            mappedData.clicks = parseNumericValue(rawValue);
+            break;
+          case 'impressions':
+            mappedData.impressions = parseNumericValue(rawValue);
+            break;
+          case 'orders':
+            mappedData.orders = parseNumericValue(rawValue);
+            break;
+          case 'spend':
+            mappedData.spend = parseNumericValue(rawValue);
+            break;
+          case 'sales':
+            mappedData.sales = parseNumericValue(rawValue);
+            break;
         }
       });
 
@@ -250,6 +270,20 @@ export const AdvancedImportModal = ({
           const competitionLevel = row.mappedData.competitors 
             ? deriveCompetitionLevel(row.mappedData.competitors)
             : existing.competitionLevel;
+
+          // Merge ads fields into existing adsData if any new ads fields present
+          const hasNewAdsFields = row.mappedData.clicks !== undefined || row.mappedData.impressions !== undefined || 
+            row.mappedData.orders !== undefined || row.mappedData.spend !== undefined || row.mappedData.sales !== undefined;
+          
+          const mergedAdsData = hasNewAdsFields ? {
+            ...existing.adsData,
+            clicks: row.mappedData.clicks ?? existing.adsData?.clicks ?? 0,
+            impresiones: row.mappedData.impressions ?? existing.adsData?.impresiones ?? 0,
+            pedidos: row.mappedData.orders ?? existing.adsData?.pedidos ?? 0,
+            cpcActual: row.mappedData.cpc ?? existing.adsData?.cpcActual ?? 0,
+            ...(row.mappedData.spend !== undefined ? { gasto: row.mappedData.spend } : {}),
+            ...(row.mappedData.sales !== undefined ? { ventas: row.mappedData.sales } : {}),
+          } : existing.adsData;
           
           toImport.push({
             ...createKeywordDefaults({
@@ -260,7 +294,7 @@ export const AdvancedImportModal = ({
               competitionLevel,
               notes: row.mappedData.notes || existing.notes,
               state: existing.state,
-              adsData: existing.adsData, // Preserve ads data
+              adsData: mergedAdsData,
               history: existing.history, // Preserve history
             }),
             // Preserve other existing fields
@@ -278,6 +312,19 @@ export const AdvancedImportModal = ({
         ? deriveCompetitionLevel(row.mappedData.competitors)
         : 'medium';
 
+      // Build adsData from imported ads fields if any exist
+      const hasAdsFields = row.mappedData.clicks !== undefined || row.mappedData.impressions !== undefined || 
+        row.mappedData.orders !== undefined || row.mappedData.spend !== undefined || row.mappedData.sales !== undefined;
+
+      const adsData = hasAdsFields ? {
+        clicks: row.mappedData.clicks ?? 0,
+        impresiones: row.mappedData.impressions ?? 0,
+        pedidos: row.mappedData.orders ?? 0,
+        cpcActual: row.mappedData.cpc ?? 0,
+        ...(row.mappedData.spend !== undefined ? { gasto: row.mappedData.spend } : {}),
+        ...(row.mappedData.sales !== undefined ? { ventas: row.mappedData.sales } : {}),
+      } : undefined;
+
       toImport.push({
         ...createKeywordDefaults({
           keyword: row.mappedData.keyword!,
@@ -287,6 +334,7 @@ export const AdvancedImportModal = ({
           competitionLevel,
           notes: row.mappedData.notes || '',
           state: 'pending',
+          ...(adsData ? { adsData } : {}),
         }),
         purpose: 'editorial',
       });
