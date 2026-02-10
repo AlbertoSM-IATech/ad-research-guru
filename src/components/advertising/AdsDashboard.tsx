@@ -6,7 +6,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { TrendingUp, TrendingDown, DollarSign, Target, MousePointerClick, ShoppingBag, Calculator, Percent, Info, CheckCircle2, AlertTriangle, XCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { Keyword, BookEconomy } from '@/types/advertising';
-import { calcularGastoAcumulado, calcularVentasAcumuladas, calcularAcosActualPorcentaje, calcularAcosEquilibrioPorcentaje, calcularBeneficioAhora, calcularConversionPorcentaje, formatearPorcentaje, formatearMoneda } from '@/lib/acosEquilibrio';
+import { calcularGastoAcumulado, calcularVentasAcumuladas, calcularAcosActualPorcentaje, calcularAcosEquilibrioPorcentaje, calcularAcosSiguienteClickPorcentaje, calcularBeneficioAhora, calcularConversionPorcentaje, formatearPorcentaje, formatearMoneda } from '@/lib/acosEquilibrio';
 interface AdsDashboardProps {
   keywords: Keyword[];
   bookEconomy: BookEconomy;
@@ -80,6 +80,7 @@ export function AdsDashboard({
     let totalVentas = 0;
     let keywordsWithAdsData = 0;
     let belowPeKeywords = 0;
+    let recoverableKeywords = 0;
     let abovePeKeywords = 0;
 
     const acosEquilibrio = calcularAcosEquilibrioPorcentaje(bookEconomy.precioLibro, bookEconomy.regaliasPorVenta);
@@ -90,13 +91,6 @@ export function AdsDashboard({
         const pedidos = typeof ads.pedidos === 'number' && Number.isFinite(ads.pedidos) ? ads.pedidos : 0;
         const cpc = typeof ads.cpcActual === 'number' && Number.isFinite(ads.cpcActual) ? ads.cpcActual : 0;
         
-        // Only count keywords that have REAL ads data:
-        // - clicks > 0 (have actual clicks)
-        // - OR pedidos > 0 (have actual orders)
-        // - OR (cpc > 0 AND clicks > 0) to avoid counting just configured CPC with no activity
-        // Count as "con datos" only if there's spend basis or sales:
-        // - pedidos > 0 (sales)
-        // - OR clicks > 0 AND cpc > 0 (spend)
         const hasRealAdsActivity = pedidos > 0 || (clicks > 0 && cpc > 0);
         
         if (hasRealAdsActivity) {
@@ -108,11 +102,16 @@ export function AdsDashboard({
           totalGasto += gasto;
           totalVentas += ventas;
 
-          // Distribución basada en ACOS vs ACOS PE (no en "beneficio" por ventas)
           const acosActual = calcularAcosActualPorcentaje(gasto, ventas);
+          const acosSigClick = calcularAcosSiguienteClickPorcentaje(gasto, cpc, ventas, bookEconomy.precioLibro);
           if (acosEquilibrio !== null && acosActual !== null) {
-            if (acosActual <= acosEquilibrio) belowPeKeywords++;
-            else abovePeKeywords++;
+            if (acosActual <= acosEquilibrio) {
+              belowPeKeywords++;
+            } else if (acosSigClick !== null && acosSigClick <= acosEquilibrio) {
+              recoverableKeywords++;
+            } else {
+              abovePeKeywords++;
+            }
           }
         }
       }
@@ -131,6 +130,7 @@ export function AdsDashboard({
       acosEquilibrio,
       keywordsWithAdsData,
       belowPeKeywords,
+      recoverableKeywords,
       abovePeKeywords
     };
   }, [keywords, bookEconomy]);
@@ -190,8 +190,8 @@ export function AdsDashboard({
                   <TooltipTrigger asChild>
                     <Info className="w-3 h-3 text-muted-foreground cursor-help" />
                   </TooltipTrigger>
-                  <TooltipContent>
-                    Proporción de keywords con ACOS por debajo vs por encima del ACOS PE.
+                   <TooltipContent>
+                    Proporción de keywords bajo PE (rentables), recuperables (a 1 compra de bajar del PE) y sobre PE (en pérdida).
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
@@ -202,6 +202,9 @@ export function AdsDashboard({
               <span className="text-green-600 dark:text-green-400">
                 {metrics.belowPeKeywords} bajo PE
               </span>
+              <span className="text-amber-600 dark:text-amber-400">
+                {metrics.recoverableKeywords} recuperables
+              </span>
               <span className="text-red-600 dark:text-red-400">
                 {metrics.abovePeKeywords} sobre PE
               </span>
@@ -209,6 +212,9 @@ export function AdsDashboard({
             <div className="flex gap-1 h-4 rounded-full overflow-hidden">
               <div className="bg-green-500 transition-all" style={{
             width: `${metrics.belowPeKeywords / metrics.keywordsWithAdsData * 100}%`
+          }} />
+              <div className="bg-amber-400 transition-all" style={{
+            width: `${metrics.recoverableKeywords / metrics.keywordsWithAdsData * 100}%`
           }} />
               <div className="bg-red-500 transition-all" style={{
             width: `${metrics.abovePeKeywords / metrics.keywordsWithAdsData * 100}%`
