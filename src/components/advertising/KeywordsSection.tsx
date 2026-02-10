@@ -2,7 +2,6 @@ import { useState, useMemo, useEffect, useCallback } from 'react';
 import { Plus, Search, Trash2, ArrowUpDown, Eye, BookOpen, Megaphone, Info, Star, AlertTriangle, RotateCcw, GitCompare, ChevronUp, ChevronDown, Save, Crown, Upload } from 'lucide-react';
 import { DndContext, closestCenter, type DragEndEvent, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
 import { SortableContext, horizontalListSortingStrategy } from '@dnd-kit/sortable';
-
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -213,11 +212,16 @@ export const KeywordsSection = ({
   const resetColumnOrder = functionalView === 'editorial' ? resetEditorialOrder : resetAdsOrder;
 
   // DnD sensor for column reordering (with activation distance to avoid accidental drags)
-  const dndSensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
-  );
+  const dndSensors = useSensors(useSensor(PointerSensor, {
+    activationConstraint: {
+      distance: 8
+    }
+  }));
   const handleDragEnd = useCallback((event: DragEndEvent) => {
-    const { active, over } = event;
+    const {
+      active,
+      over
+    } = event;
     if (over && active.id !== over.id) {
       reorderColumns(String(active.id), String(over.id));
     }
@@ -456,17 +460,17 @@ export const KeywordsSection = ({
   const revealKeywordAndOpenPanel = useCallback((keywordId: string) => {
     // Clear search
     onSearchTermChange('');
-    
+
     // Reset ADS filters but keep needsAttention to show the alert keywords
     setAdsFilters({
       ...defaultAdsFiltersState,
-      needsAttention: true,
+      needsAttention: true
     });
     persistAdsFilters({
       ...defaultAdsFiltersState,
-      needsAttention: true,
+      needsAttention: true
     });
-    
+
     // Wait for filter update then navigate to keyword page
     requestAnimationFrame(() => {
       const idx = keywords.findIndex(k => k.id === keywordId);
@@ -700,7 +704,6 @@ export const KeywordsSection = ({
         return null;
     }
   };
-
   const renderAdsHeader = (colKey: string) => {
     const isHighlighted = HIGHLIGHTED_COLUMNS.has(colKey);
     switch (colKey) {
@@ -859,27 +862,18 @@ export const KeywordsSection = ({
         </div>
 
         {/* ADS Dashboard - only in ads view, collapsible */}
-        {functionalView === 'ads' && hasAdsAccess && (
-          <details className="group" open>
-            <summary className="flex items-center gap-2 cursor-pointer select-none text-sm font-medium text-muted-foreground hover:text-foreground transition-colors py-1">
+        {functionalView === 'ads' && hasAdsAccess && <details className="group" open>
+            <summary className="gap-2 cursor-pointer select-none text-sm font-medium text-muted-foreground hover:text-foreground transition-colors py-1 items-center justify-start flex flex-row">
               <ChevronDown className="w-4 h-4 transition-transform group-open:rotate-0 -rotate-90" />
               Dashboard de rendimiento
             </summary>
             <div className="mt-2">
               <AdsDashboard keywords={keywords} bookEconomy={bookEconomy} currencySymbol={currencySymbol} />
             </div>
-          </details>
-        )}
+          </details>}
         
         {/* ACOS Alerts Tray - only in ads view, shows keywords with ACOS > PE */}
-        {functionalView === 'ads' && hasAdsAccess && (
-          <AcosAlertsTray
-            keywords={keywords}
-            bookEconomy={bookEconomy}
-            campaigns={campaigns}
-            onKeywordClick={(kw) => revealKeywordAndOpenPanel(kw.id)}
-          />
-        )}
+        {functionalView === 'ads' && hasAdsAccess && <AcosAlertsTray keywords={keywords} bookEconomy={bookEconomy} campaigns={campaigns} onKeywordClick={kw => revealKeywordAndOpenPanel(kw.id)} />}
       </div>
 
       {/* Advanced Filters - positioned above table with toolbar */}
@@ -961,7 +955,10 @@ export const KeywordsSection = ({
           {/* Reset Column Widths & Order */}
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { resetColumnWidths(); resetColumnOrder(); }}>
+              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => {
+              resetColumnWidths();
+              resetColumnOrder();
+            }}>
                 <RotateCcw className="w-3.5 h-3.5" />
               </Button>
             </TooltipTrigger>
@@ -1000,51 +997,65 @@ export const KeywordsSection = ({
       {functionalView === 'editorial' && <BulkEditorialStatusToolbar selectedCount={selectedIds.size} onChangeStatus={handleBulkChangeKeywordStatus} onQuickValidate={() => handleBulkChangeKeywordStatus('valid')} />}
 
       {/* Bulk "Enviar a..." actions */}
-      {selectedIds.size > 0 && (
-        <div className="flex items-center gap-2 p-3 bg-muted/50 rounded-lg border border-border">
+      {selectedIds.size > 0 && <div className="flex items-center gap-2 p-3 bg-muted/50 rounded-lg border border-border">
           <Badge variant="secondary" className="font-medium">
             {selectedIds.size} seleccionadas
           </Badge>
           <div className="h-4 w-px bg-border mx-1" />
-          {functionalView === 'editorial' ? (
-            <>
+          {functionalView === 'editorial' ? <>
               <Button variant="outline" size="sm" className="gap-2" onClick={() => {
-                onUpdateBulk(Array.from(selectedIds), { purpose: 'both' });
-                onSelectedIdsChange(new Set());
-                toast({ title: `${selectedIds.size} keywords enviadas también a Ads`, description: 'Ahora aparecen en ambas vistas.' });
-              }}>
+          onUpdateBulk(Array.from(selectedIds), {
+            purpose: 'both'
+          });
+          onSelectedIdsChange(new Set());
+          toast({
+            title: `${selectedIds.size} keywords enviadas también a Ads`,
+            description: 'Ahora aparecen en ambas vistas.'
+          });
+        }}>
                 <Megaphone className="w-4 h-4" />
                 Enviar también a Ads
               </Button>
               <Button variant="ghost" size="sm" className="gap-2 text-muted-foreground" onClick={() => {
-                onUpdateBulk(Array.from(selectedIds), { purpose: 'ads' });
-                onSelectedIdsChange(new Set());
-                toast({ title: `${selectedIds.size} keywords movidas a Ads`, description: 'Ya no aparecen en Estudio de Keywords.' });
-              }}>
+          onUpdateBulk(Array.from(selectedIds), {
+            purpose: 'ads'
+          });
+          onSelectedIdsChange(new Set());
+          toast({
+            title: `${selectedIds.size} keywords movidas a Ads`,
+            description: 'Ya no aparecen en Estudio de Keywords.'
+          });
+        }}>
                 Mover a Ads (quitar de aquí)
               </Button>
-            </>
-          ) : (
-            <>
+            </> : <>
               <Button variant="outline" size="sm" className="gap-2" onClick={() => {
-                onUpdateBulk(Array.from(selectedIds), { purpose: 'both' });
-                onSelectedIdsChange(new Set());
-                toast({ title: `${selectedIds.size} keywords enviadas también a Estudio`, description: 'Ahora aparecen en ambas vistas.' });
-              }}>
+          onUpdateBulk(Array.from(selectedIds), {
+            purpose: 'both'
+          });
+          onSelectedIdsChange(new Set());
+          toast({
+            title: `${selectedIds.size} keywords enviadas también a Estudio`,
+            description: 'Ahora aparecen en ambas vistas.'
+          });
+        }}>
                 <BookOpen className="w-4 h-4" />
                 Enviar también a Estudio
               </Button>
               <Button variant="ghost" size="sm" className="gap-2 text-muted-foreground" onClick={() => {
-                onUpdateBulk(Array.from(selectedIds), { purpose: 'editorial' });
-                onSelectedIdsChange(new Set());
-                toast({ title: `${selectedIds.size} keywords movidas a Estudio`, description: 'Ya no aparecen en Gestión de Ads.' });
-              }}>
+          onUpdateBulk(Array.from(selectedIds), {
+            purpose: 'editorial'
+          });
+          onSelectedIdsChange(new Set());
+          toast({
+            title: `${selectedIds.size} keywords movidas a Estudio`,
+            description: 'Ya no aparecen en Gestión de Ads.'
+          });
+        }}>
                 Mover a Estudio (quitar de aquí)
               </Button>
-            </>
-          )}
-        </div>
-      )}
+            </>}
+        </div>}
 
       {/* Content - Table with DnD column reordering */}
       <DndContext sensors={dndSensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
@@ -1054,10 +1065,14 @@ export const KeywordsSection = ({
               <TableHeader>
                 <TableRow className="bg-muted/50 hover:bg-muted/50">
                   {/* Fixed columns: checkbox, star, keyword */}
-                  <TableHead style={{ width: columnWidths.checkbox }}>
+                  <TableHead style={{
+                  width: columnWidths.checkbox
+                }}>
                     <Checkbox checked={selectedIds.size === filteredKeywords.length && filteredKeywords.length > 0} onCheckedChange={toggleSelectAll} />
                   </TableHead>
-                  <TableHead style={{ width: columnWidths.star }}>
+                  <TableHead style={{
+                  width: columnWidths.star
+                }}>
                     <div className="flex items-center justify-center">
                       <Star className="w-3.5 h-3.5 text-muted-foreground" />
                     </div>
@@ -1072,12 +1087,12 @@ export const KeywordsSection = ({
                   {/* Reorderable columns rendered in user-defined order */}
                   <SortableContext items={columnOrder} strategy={horizontalListSortingStrategy}>
                     {columnOrder.map(colKey => {
-                      if (functionalView === 'editorial') {
-                        return renderEditorialHeader(colKey);
-                      } else {
-                        return renderAdsHeader(colKey);
-                      }
-                    })}
+                    if (functionalView === 'editorial') {
+                      return renderEditorialHeader(colKey);
+                    } else {
+                      return renderAdsHeader(colKey);
+                    }
+                  })}
                   </SortableContext>
                 </TableRow>
               </TableHeader>
@@ -1087,160 +1102,163 @@ export const KeywordsSection = ({
                       {keywords.length === 0 ? 'No hay keywords. Añade tu primera keyword o importa en lote.' : 'No se encontraron keywords con los filtros aplicados.'}
                     </TableCell>
                   </TableRow> : paginatedKeywords.map(keyword => {
-              const score = getKeywordMarketScore(keyword);
-              const incomplete = isMarketDataIncomplete(keyword);
-              const ads = keyword.adsData;
+                const score = getKeywordMarketScore(keyword);
+                const incomplete = isMarketDataIncomplete(keyword);
+                const ads = keyword.adsData;
 
-              // Auto-calculated values for Ads view
-              const gastoCalculado = calcularGastoAcumulado(ads?.clicks, ads?.cpcActual);
-              const ventasCalculadas = calcularVentasAcumuladas(ads?.pedidos, bookEconomy.precioLibro);
-              const acosActual = calcularAcosActualPorcentaje(gastoCalculado ?? undefined, ventasCalculadas ?? undefined);
-              const acosSiguiente = calcularAcosSiguienteClickPorcentaje(gastoCalculado ?? undefined, ads?.cpcActual, ventasCalculadas ?? undefined, bookEconomy.precioLibro);
-              const conversion = calcularConversionPorcentaje(ads?.pedidos, ads?.clicks);
-              const acosEquilibrio = bookEconomy.precioLibro > 0 && bookEconomy.regaliasPorVenta > 0 ? bookEconomy.regaliasPorVenta / bookEconomy.precioLibro * 100 : null;
+                // Auto-calculated values for Ads view
+                const gastoCalculado = calcularGastoAcumulado(ads?.clicks, ads?.cpcActual);
+                const ventasCalculadas = calcularVentasAcumuladas(ads?.pedidos, bookEconomy.precioLibro);
+                const acosActual = calcularAcosActualPorcentaje(gastoCalculado ?? undefined, ventasCalculadas ?? undefined);
+                const acosSiguiente = calcularAcosSiguienteClickPorcentaje(gastoCalculado ?? undefined, ads?.cpcActual, ventasCalculadas ?? undefined, bookEconomy.precioLibro);
+                const conversion = calcularConversionPorcentaje(ads?.pedidos, ads?.clicks);
+                const acosEquilibrio = bookEconomy.precioLibro > 0 && bookEconomy.regaliasPorVenta > 0 ? bookEconomy.regaliasPorVenta / bookEconomy.precioLibro * 100 : null;
 
-              // Inline update handler for ads data with auto-click logic + auto CTR
-              const handleInlineAdsUpdate = (field: 'clicks' | 'cpcActual' | 'pedidos' | 'impresiones', value: string | number) => {
-                const numValue = value === '' ? undefined : typeof value === 'number' ? value : parseFloat(value);
-                if (value !== '' && (numValue === undefined || isNaN(numValue) || numValue < 0)) return;
-                const baseAds = (ads ?? {}) as AdsData;
-                let updatedAdsData: AdsData = {
-                  ...baseAds,
-                  [field]: numValue
+                // Inline update handler for ads data with auto-click logic + auto CTR
+                const handleInlineAdsUpdate = (field: 'clicks' | 'cpcActual' | 'pedidos' | 'impresiones', value: string | number) => {
+                  const numValue = value === '' ? undefined : typeof value === 'number' ? value : parseFloat(value);
+                  if (value !== '' && (numValue === undefined || isNaN(numValue) || numValue < 0)) return;
+                  const baseAds = (ads ?? {}) as AdsData;
+                  let updatedAdsData: AdsData = {
+                    ...baseAds,
+                    [field]: numValue
+                  };
+
+                  // Auto-click rule: when increasing pedidos, also increase clicks by the same delta.
+                  if (field === 'pedidos' && numValue !== undefined) {
+                    const prevPedidos = baseAds.pedidos ?? 0;
+                    const prevClicks = baseAds.clicks ?? 0;
+                    const delta = numValue - prevPedidos;
+                    if (delta > 0) {
+                      updatedAdsData.clicks = prevClicks + delta;
+                    }
+
+                    // Always keep clicks >= pedidos
+                    if ((updatedAdsData.clicks ?? 0) < numValue) {
+                      updatedAdsData.clicks = numValue;
+                    }
+                  }
+
+                  // Auto CTR calculation
+                  const finalClicks = updatedAdsData.clicks ?? 0;
+                  const finalImpr = updatedAdsData.impresiones ?? 0;
+                  if (finalImpr > 0) {
+                    updatedAdsData.ctr = Math.round(finalClicks / finalImpr * 10000) / 100;
+                  }
+                  onUpdate(keyword.id, {
+                    adsData: updatedAdsData
+                  });
                 };
 
-                // Auto-click rule: when increasing pedidos, also increase clicks by the same delta.
-                if (field === 'pedidos' && numValue !== undefined) {
-                  const prevPedidos = baseAds.pedidos ?? 0;
-                  const prevClicks = baseAds.clicks ?? 0;
-                  const delta = numValue - prevPedidos;
-                  if (delta > 0) {
-                    updatedAdsData.clicks = prevClicks + delta;
-                  }
+                // Check for data inconsistency: clicks < pedidos
+                const hasDataInconsistency = ads?.clicks !== undefined && ads?.pedidos !== undefined && ads.clicks < ads.pedidos;
+                const isMainKeyword = bookInfo.mainKeywordId === keyword.id;
 
-                  // Always keep clicks >= pedidos
-                  if ((updatedAdsData.clicks ?? 0) < numValue) {
-                    updatedAdsData.clicks = numValue;
-                  }
-                }
+                // Handle setting as main keyword
+                const handleSetMainKeyword = (e: React.MouseEvent) => {
+                  e.stopPropagation();
+                  onBookInfoChange({
+                    ...bookInfo,
+                    mainKeywordId: isMainKeyword ? undefined : keyword.id
+                  });
+                };
 
-                // Auto CTR calculation
-                const finalClicks = updatedAdsData.clicks ?? 0;
-                const finalImpr = updatedAdsData.impresiones ?? 0;
-                if (finalImpr > 0) {
-                  updatedAdsData.ctr = Math.round((finalClicks / finalImpr) * 10000) / 100;
-                }
+                // Cell highlight class for ACOS columns
+                const highlightCellClass = "bg-primary/5";
 
-                onUpdate(keyword.id, {
-                  adsData: updatedAdsData
-                });
-              };
-
-              // Check for data inconsistency: clicks < pedidos
-              const hasDataInconsistency = ads?.clicks !== undefined && ads?.pedidos !== undefined && ads.clicks < ads.pedidos;
-              const isMainKeyword = bookInfo.mainKeywordId === keyword.id;
-
-              // Handle setting as main keyword
-              const handleSetMainKeyword = (e: React.MouseEvent) => {
-                e.stopPropagation();
-                onBookInfoChange({
-                  ...bookInfo,
-                  mainKeywordId: isMainKeyword ? undefined : keyword.id
-                });
-              };
-
-              // Cell highlight class for ACOS columns
-              const highlightCellClass = "bg-primary/5";
-
-              // Render a cell by column key for editorial view
-              const renderEditorialCellContent = (colKey: string) => {
-                switch (colKey) {
-                  case 'volume':
-                    return <TableCell key={colKey} className="tabular-nums text-sm" onClick={e => e.stopPropagation()}>
-                      <InlineEditableCell value={keyword.searchVolume || 0} type="number" min={0} onSave={value => handleUpdateWithHistory(keyword.id, { searchVolume: Number(value) })} formatter={v => Number(v || 0).toLocaleString()} className="text-sm" />
+                // Render a cell by column key for editorial view
+                const renderEditorialCellContent = (colKey: string) => {
+                  switch (colKey) {
+                    case 'volume':
+                      return <TableCell key={colKey} className="tabular-nums text-sm" onClick={e => e.stopPropagation()}>
+                      <InlineEditableCell value={keyword.searchVolume || 0} type="number" min={0} onSave={value => handleUpdateWithHistory(keyword.id, {
+                          searchVolume: Number(value)
+                        })} formatter={v => Number(v || 0).toLocaleString()} className="text-sm" />
                     </TableCell>;
-                  case 'competitors':
-                    return <TableCell key={colKey} className="tabular-nums text-sm" onClick={e => e.stopPropagation()}>
+                    case 'competitors':
+                      return <TableCell key={colKey} className="tabular-nums text-sm" onClick={e => e.stopPropagation()}>
                       <div className="flex items-center gap-2">
                         <span className={cn("w-2 h-2 rounded-full flex-shrink-0", (keyword.competitors || 0) < 3000 ? "bg-green-500" : "bg-red-500")} />
-                        <InlineEditableCell value={keyword.competitors || 0} type="number" min={0} onSave={value => handleUpdateWithHistory(keyword.id, { competitors: Number(value) })} formatter={v => Number(v || 0).toLocaleString()} className="text-sm" />
+                        <InlineEditableCell value={keyword.competitors || 0} type="number" min={0} onSave={value => handleUpdateWithHistory(keyword.id, {
+                            competitors: Number(value)
+                          })} formatter={v => Number(v || 0).toLocaleString()} className="text-sm" />
                       </div>
                     </TableCell>;
-                  case 'marketScore':
-                    return <TableCell key={colKey}>
+                    case 'marketScore':
+                      return <TableCell key={colKey}>
                       <MarketScoreCell marketData={keyword.marketData} score={score} isIncomplete={incomplete} onValidate={() => setSelectedKeywordId(keyword.id)} />
                     </TableCell>;
-                  case 'status':
-                    return <TableCell key={colKey} onClick={e => e.stopPropagation()}>
+                    case 'status':
+                      return <TableCell key={colKey} onClick={e => e.stopPropagation()}>
                       <InlineSelectBadge value={keyword.status || 'pending'} options={KEYWORD_STATUS_OPTIONS.map(s => ({
-                        value: s.value,
-                        label: s.label,
-                        color: s.color
-                      }))} onChange={value => handleUpdateWithHistory(keyword.id, {
-                        status: value as KeywordStatus,
-                        statusManuallySet: true
-                      })} />
+                          value: s.value,
+                          label: s.label,
+                          color: s.color
+                        }))} onChange={value => handleUpdateWithHistory(keyword.id, {
+                          status: value as KeywordStatus,
+                          statusManuallySet: true
+                        })} />
                     </TableCell>;
-                  default:
-                    return null;
-                }
-              };
+                    default:
+                      return null;
+                  }
+                };
 
-              // Render a cell by column key for ads view
-              const renderAdsCellContent = (colKey: string) => {
-                const isHighlighted = HIGHLIGHTED_COLUMNS.has(colKey);
-                switch (colKey) {
-                  case 'campaign':
-                    return <TableCell key={colKey} className="text-xs text-muted-foreground truncate max-w-[100px]">
+                // Render a cell by column key for ads view
+                const renderAdsCellContent = (colKey: string) => {
+                  const isHighlighted = HIGHLIGHTED_COLUMNS.has(colKey);
+                  switch (colKey) {
+                    case 'campaign':
+                      return <TableCell key={colKey} className="text-xs text-muted-foreground truncate max-w-[100px]">
                       {ads?.campaignName || '—'}
                     </TableCell>;
-                  case 'volume':
-                    return <TableCell key={colKey} className="tabular-nums text-xs text-muted-foreground">
+                    case 'volume':
+                      return <TableCell key={colKey} className="tabular-nums text-xs text-muted-foreground">
                       {(keyword.searchVolume || 0).toLocaleString()}
                     </TableCell>;
-                  case 'competitors':
-                    return <TableCell key={colKey} className="tabular-nums text-xs text-muted-foreground">
+                    case 'competitors':
+                      return <TableCell key={colKey} className="tabular-nums text-xs text-muted-foreground">
                       <div className="flex items-center gap-2">
                         <span className={cn("w-2 h-2 rounded-full flex-shrink-0", (keyword.competitors || 0) < 3000 ? "bg-green-500" : "bg-red-500")} />
                         {(keyword.competitors || 0).toLocaleString()}
                       </div>
                     </TableCell>;
-                  case 'acosPE':
-                    return <TableCell key={colKey} className="tabular-nums text-xs font-medium text-primary">
+                    case 'acosPE':
+                      return <TableCell key={colKey} className="tabular-nums text-xs font-medium text-primary">
                       {acosEquilibrio !== null ? `${acosEquilibrio.toFixed(1)}%` : '—'}
                     </TableCell>;
-                  case 'clicks':
-                    return <TableCell key={colKey} className="tabular-nums text-xs" onClick={e => e.stopPropagation()}>
+                    case 'clicks':
+                      return <TableCell key={colKey} className="tabular-nums text-xs" onClick={e => e.stopPropagation()}>
                       <InlineEditableCell value={ads?.clicks ?? 0} type="number" min={0} onSave={value => handleInlineAdsUpdate('clicks', value)} className="text-xs" />
                     </TableCell>;
-                  case 'impresiones':
-                    return <TableCell key={colKey} className="tabular-nums text-xs" onClick={e => e.stopPropagation()}>
+                    case 'impresiones':
+                      return <TableCell key={colKey} className="tabular-nums text-xs" onClick={e => e.stopPropagation()}>
                       <InlineEditableCell value={ads?.impresiones ?? 0} type="number" min={0} onSave={value => handleInlineAdsUpdate('impresiones', value)} formatter={v => Number(v || 0).toLocaleString()} className="text-xs" />
                     </TableCell>;
-                  case 'ctr':
-                    return <TableCell key={colKey} className="tabular-nums text-xs">
+                    case 'ctr':
+                      return <TableCell key={colKey} className="tabular-nums text-xs">
                       <span className={cn(ads?.ctr !== undefined ? ads.ctr >= 3 && ads.ctr <= 5 ? 'text-green-600 dark:text-green-400' : ads.ctr < 3 ? 'text-amber-600 dark:text-amber-400' : 'text-muted-foreground' : 'text-muted-foreground')}>
                         {ads?.ctr !== undefined ? `${ads.ctr.toFixed(2)}%` : '—'}
                       </span>
                     </TableCell>;
-                  case 'cpc':
-                    return <TableCell key={colKey} className="tabular-nums text-xs" onClick={e => e.stopPropagation()}>
+                    case 'cpc':
+                      return <TableCell key={colKey} className="tabular-nums text-xs" onClick={e => e.stopPropagation()}>
                       <InlineEditableCell value={ads?.cpcActual ?? 0} type="number" min={0} onSave={value => handleInlineAdsUpdate('cpcActual', value)} formatter={v => `${currencySymbol}${Number(v || 0).toFixed(2)}`} className="text-xs" />
                     </TableCell>;
-                  case 'pedidos':
-                    return <TableCell key={colKey} className="tabular-nums text-xs" onClick={e => e.stopPropagation()}>
+                    case 'pedidos':
+                      return <TableCell key={colKey} className="tabular-nums text-xs" onClick={e => e.stopPropagation()}>
                       <InlineEditableCell value={ads?.pedidos ?? 0} type="number" min={0} onSave={value => handleInlineAdsUpdate('pedidos', value)} className="text-xs" />
                     </TableCell>;
-                  case 'gasto':
-                    return <TableCell key={colKey} className="tabular-nums text-xs text-muted-foreground">
+                    case 'gasto':
+                      return <TableCell key={colKey} className="tabular-nums text-xs text-muted-foreground">
                       {formatearMoneda(gastoCalculado, currencySymbol)}
                     </TableCell>;
-                  case 'ventas':
-                    return <TableCell key={colKey} className="tabular-nums text-xs text-muted-foreground">
+                    case 'ventas':
+                      return <TableCell key={colKey} className="tabular-nums text-xs text-muted-foreground">
                       {formatearMoneda(ventasCalculadas, currencySymbol)}
                     </TableCell>;
-                  case 'acos':
-                    return <TableCell key={colKey} className={cn("tabular-nums text-xs", isHighlighted && highlightCellClass)}>
+                    case 'acos':
+                      return <TableCell key={colKey} className={cn("tabular-nums text-xs", isHighlighted && highlightCellClass)}>
                       <div className="flex items-center gap-1">
                         {acosActual !== null && acosEquilibrio !== null && acosActual > acosEquilibrio && <TooltipProvider>
                             <Tooltip>
@@ -1259,33 +1277,33 @@ export const KeywordsSection = ({
                         </span>
                       </div>
                     </TableCell>;
-                  case 'acosSig':
-                    return <TableCell key={colKey} className={cn("tabular-nums text-xs", isHighlighted && highlightCellClass)}>
+                    case 'acosSig':
+                      return <TableCell key={colKey} className={cn("tabular-nums text-xs", isHighlighted && highlightCellClass)}>
                       <span className={cn("font-semibold", acosSiguiente !== null && acosEquilibrio !== null ? acosSiguiente <= acosEquilibrio ? 'text-green-600 dark:text-green-400' : 'text-amber-600 dark:text-amber-400' : 'text-muted-foreground')}>
                         {formatearPorcentaje(acosSiguiente)}
                       </span>
                     </TableCell>;
-                  case 'tendencia':
-                    return <TableCell key={colKey}>
+                    case 'tendencia':
+                      return <TableCell key={colKey}>
                       <AcosSparkline history={ads?.history} acosEquilibrio={acosEquilibrio} />
                     </TableCell>;
-                  case 'conversion':
-                    return <TableCell key={colKey} className="tabular-nums text-xs text-muted-foreground">
+                    case 'conversion':
+                      return <TableCell key={colKey} className="tabular-nums text-xs text-muted-foreground">
                       {formatearPorcentaje(conversion)}
                     </TableCell>;
-                  case 'beneficio':
-                    return <TableCell key={colKey} className="tabular-nums text-xs">
+                    case 'beneficio':
+                      return <TableCell key={colKey} className="tabular-nums text-xs">
                       <TooltipProvider>
                         <Tooltip>
                           <TooltipTrigger asChild>
                             <span className="cursor-help">
                               {(() => {
-                                const beneficio = gastoCalculado !== null && ventasCalculadas !== null ? ventasCalculadas - gastoCalculado : null;
-                                if (beneficio === null) return '—';
-                                return <span className={beneficio >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}>
+                                  const beneficio = gastoCalculado !== null && ventasCalculadas !== null ? ventasCalculadas - gastoCalculado : null;
+                                  if (beneficio === null) return '—';
+                                  return <span className={beneficio >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}>
                                   {formatearMoneda(beneficio, currencySymbol)}
                                 </span>;
-                              })()}
+                                })()}
                             </span>
                           </TooltipTrigger>
                           <TooltipContent side="left" className="max-w-xs">
@@ -1298,12 +1316,11 @@ export const KeywordsSection = ({
                         </Tooltip>
                       </TooltipProvider>
                     </TableCell>;
-                  default:
-                    return null;
-                }
-              };
-
-              return <TableRow key={keyword.id} className={cn('transition-colors', functionalView === 'editorial' ? getRowScoreClass(score) : hasDataInconsistency ? 'bg-amber-500/10 hover:bg-amber-500/15' : 'hover:bg-muted/30')}>
+                    default:
+                      return null;
+                  }
+                };
+                return <TableRow key={keyword.id} className={cn('transition-colors', functionalView === 'editorial' ? getRowScoreClass(score) : hasDataInconsistency ? 'bg-amber-500/10 hover:bg-amber-500/15' : 'hover:bg-muted/30')}>
                         {/* Fixed cells: checkbox, star, keyword */}
                         <TableCell onClick={e => e.stopPropagation()}>
                           <Checkbox checked={selectedIds.has(keyword.id)} onCheckedChange={() => toggleSelect(keyword.id)} />
@@ -1353,18 +1370,18 @@ export const KeywordsSection = ({
                             {functionalView === 'ads' && <Tooltip>
                                 <TooltipTrigger asChild>
                                   <Button variant="ghost" size="sm" onClick={() => {
-                          const baseAds = (ads ?? {}) as AdsData;
-                          const normalizedAds: AdsData = {
-                            ...baseAds
-                          };
-                          onUpdate(keyword.id, {
-                            adsData: normalizedAds
-                          });
-                          toast({
-                            title: 'Guardado',
-                            description: 'Datos de Ads sincronizados.'
-                          });
-                        }} className="h-7 w-7 p-0 bg-muted/40 hover:bg-muted">
+                            const baseAds = (ads ?? {}) as AdsData;
+                            const normalizedAds: AdsData = {
+                              ...baseAds
+                            };
+                            onUpdate(keyword.id, {
+                              adsData: normalizedAds
+                            });
+                            toast({
+                              title: 'Guardado',
+                              description: 'Datos de Ads sincronizados.'
+                            });
+                          }} className="h-7 w-7 p-0 bg-muted/40 hover:bg-muted">
                                     <Save className="w-4 h-4" />
                                   </Button>
                                 </TooltipTrigger>
@@ -1373,32 +1390,30 @@ export const KeywordsSection = ({
 
                             <div className={cn(isMainKeyword && "text-amber-600 dark:text-amber-400", "flex items-center gap-1")}>
                               <InlineEditableCell value={keyword.keyword} onSave={value => handleUpdateWithHistory(keyword.id, {
-                        keyword: String(value)
-                      })} placeholder="Keyword..." className={cn("font-medium", isMainKeyword && "text-amber-600 dark:text-amber-400")} />
-                              {keyword.purpose === 'both' && (
-                                <Tooltip>
+                          keyword: String(value)
+                        })} placeholder="Keyword..." className={cn("font-medium", isMainKeyword && "text-amber-600 dark:text-amber-400")} />
+                              {keyword.purpose === 'both' && <Tooltip>
                                   <TooltipTrigger asChild>
                                     <Badge variant="outline" className="text-[9px] px-1 py-0 h-4 border-primary/30 text-primary shrink-0">
                                       Ambas
                                     </Badge>
                                   </TooltipTrigger>
                                   <TooltipContent>Esta keyword aparece en Estudio y en Ads</TooltipContent>
-                                </Tooltip>
-                              )}
+                                </Tooltip>}
                             </div>
                           </div>
                         </TableCell>
 
                         {/* Ordered cells rendered in user-defined column order */}
                         {columnOrder.map(colKey => {
-                          if (functionalView === 'editorial') {
-                            return renderEditorialCellContent(colKey);
-                          } else {
-                            return renderAdsCellContent(colKey);
-                          }
-                        })}
+                    if (functionalView === 'editorial') {
+                      return renderEditorialCellContent(colKey);
+                    } else {
+                      return renderAdsCellContent(colKey);
+                    }
+                  })}
                       </TableRow>;
-            })}
+              })}
               </TableBody>
             </Table>
           </div>
@@ -1428,7 +1443,7 @@ export const KeywordsSection = ({
       <KeywordHistoryModal keyword={historyKeyword} isOpen={!!historyKeyword} onClose={() => setHistoryKeyword(null)} />
 
       {/* Keyword Detail Panel */}
-      <KeywordDetailPanel keyword={selectedKeyword} isOpen={!!selectedKeywordId} onClose={() => setSelectedKeywordId(null)} onSave={handleKeywordDetailSave} marketplaceId={marketplaceId} bookEconomy={bookEconomy} defaultTab={functionalView === 'ads' ? 'ads' : 'nicho'} allKeywords={keywords} visibleKeywordIds={filteredKeywords.map(k => k.id)} onNavigate={(id) => setSelectedKeywordId(id)} />
+      <KeywordDetailPanel keyword={selectedKeyword} isOpen={!!selectedKeywordId} onClose={() => setSelectedKeywordId(null)} onSave={handleKeywordDetailSave} marketplaceId={marketplaceId} bookEconomy={bookEconomy} defaultTab={functionalView === 'ads' ? 'ads' : 'nicho'} allKeywords={keywords} visibleKeywordIds={filteredKeywords.map(k => k.id)} onNavigate={id => setSelectedKeywordId(id)} />
       
       {/* New Keyword Wizard */}
       <NewKeywordWizard open={isWizardOpen} onOpenChange={setIsWizardOpen} onComplete={handleWizardComplete} marketplaceId={marketplaceId} bookInfo={bookInfo} bookEconomy={bookEconomy} existingKeywords={keywords} initialKeyword={wizardInitialKeyword} onOpenExistingKeyword={handleOpenExistingKeyword} campaigns={campaigns} onAddCampaign={addCampaign} defaultPurpose={functionalView === 'ads' ? 'ads' : 'editorial'} />
