@@ -10,6 +10,7 @@ import { calcularGastoAcumulado, calcularVentasAcumuladas, calcularAcosActualPor
 interface AdsDashboardProps {
   keywords: Keyword[];
   bookEconomy: BookEconomy;
+  currencySymbol?: string;
 }
 interface MetricCardProps {
   title: string;
@@ -70,7 +71,8 @@ function MetricCard({
 }
 export function AdsDashboard({
   keywords,
-  bookEconomy
+  bookEconomy,
+  currencySymbol = '$'
 }: AdsDashboardProps) {
   // Calculate aggregated metrics
   const metrics = useMemo(() => {
@@ -178,11 +180,11 @@ export function AdsDashboard({
 
       {/* Main Metrics Grid */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <MetricCard title="Gasto Total" value={formatearMoneda(metrics.totalGasto)} subtitle={`${metrics.keywordsWithAdsData} keywords con datos`} icon={<DollarSign className="w-5 h-5 text-muted-foreground" />} tooltip="Suma de todos los gastos de Ads en las keywords" />
+        <MetricCard title="Gasto Total" value={formatearMoneda(metrics.totalGasto, currencySymbol)} subtitle={`${metrics.keywordsWithAdsData} keywords con datos`} icon={<DollarSign className="w-5 h-5 text-muted-foreground" />} tooltip="Suma de todos los gastos de Ads en las keywords" />
         
-        <MetricCard title="Ventas Totales" value={formatearMoneda(metrics.totalVentas)} subtitle={`${metrics.totalPedidos} pedidos`} icon={<ShoppingBag className="w-5 h-5 text-muted-foreground" />} tooltip="Ingresos totales por ventas atribuidas a Ads" />
+        <MetricCard title="Ventas Totales" value={formatearMoneda(metrics.totalVentas, currencySymbol)} subtitle={`${metrics.totalPedidos} pedidos`} icon={<ShoppingBag className="w-5 h-5 text-muted-foreground" />} tooltip="Ingresos totales por ventas atribuidas a Ads" />
         
-        <MetricCard title="Beneficio" value={formatearMoneda(metrics.totalBeneficio)} subtitle={metrics.totalBeneficio >= 0 ? "Rentable" : "En pérdidas"} icon={metrics.totalBeneficio >= 0 ? <TrendingUp className="w-5 h-5 text-green-500" /> : <TrendingDown className="w-5 h-5 text-red-500" />} valueClassName={cn(metrics.totalBeneficio >= 0 ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400")} tooltip="Ventas totales menos gasto total" />
+        <MetricCard title="Beneficio" value={formatearMoneda(metrics.totalBeneficio, currencySymbol)} subtitle={metrics.totalBeneficio >= 0 ? "Rentable" : "En pérdidas"} icon={metrics.totalBeneficio >= 0 ? <TrendingUp className="w-5 h-5 text-green-500" /> : <TrendingDown className="w-5 h-5 text-red-500" />} valueClassName={cn(metrics.totalBeneficio >= 0 ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400")} tooltip="Ventas totales menos gasto total" />
         
         <MetricCard title="ACOS Total" value={formatearPorcentaje(metrics.acosTotal)} subtitle={acosVsEquilibrio === 'profitable' ? "Por debajo del PE ✓" : acosVsEquilibrio === 'losing' ? "Por encima del PE ⚠" : "—"} icon={<Target className="w-5 h-5 text-muted-foreground" />} valueClassName={cn(acosVsEquilibrio === 'profitable' ? "text-green-600 dark:text-green-400" : acosVsEquilibrio === 'losing' ? "text-amber-600 dark:text-amber-400" : "")} tooltip="Advertising Cost of Sales global. Compara con el ACOS de punto de equilibrio." />
       </div>

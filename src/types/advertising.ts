@@ -3,6 +3,8 @@ export type Marketplace = {
   name: string;
   domain: string;
   flag: string;
+  currency: string;      // e.g. 'USD', 'EUR', 'GBP'
+  currencySymbol: string; // e.g. '$', '€', '£'
 };
 
 export type CampaignType = 'SP' | 'SB' | 'SBV' | 'SD';
@@ -187,19 +189,24 @@ export interface AdvertisingCategory {
 }
 
 export const MARKETPLACES: Marketplace[] = [
-  { id: 'us', name: 'Estados Unidos', domain: 'Amazon.com', flag: '🇺🇸' },
-  { id: 'ca', name: 'Canadá', domain: 'Amazon.ca', flag: '🇨🇦' },
-  { id: 'uk', name: 'Reino Unido', domain: 'Amazon.co.uk', flag: '🇬🇧' },
-  { id: 'es', name: 'España', domain: 'Amazon.es', flag: '🇪🇸' },
-  { id: 'de', name: 'Alemania', domain: 'Amazon.de', flag: '🇩🇪' },
-  { id: 'fr', name: 'Francia', domain: 'Amazon.fr', flag: '🇫🇷' },
-  { id: 'it', name: 'Italia', domain: 'Amazon.it', flag: '🇮🇹' },
-  { id: 'au', name: 'Australia', domain: 'Amazon.com.au', flag: '🇦🇺' },
-  { id: 'mx', name: 'México', domain: 'Amazon.com.mx', flag: '🇲🇽' },
-  { id: 'nl', name: 'Países Bajos', domain: 'Amazon.nl', flag: '🇳🇱' },
-  { id: 'se', name: 'Suecia', domain: 'Amazon.se', flag: '🇸🇪' },
-  { id: 'jp', name: 'Japón', domain: 'Amazon.co.jp', flag: '🇯🇵' },
+  { id: 'us', name: 'Estados Unidos', domain: 'Amazon.com', flag: '🇺🇸', currency: 'USD', currencySymbol: '$' },
+  { id: 'ca', name: 'Canadá', domain: 'Amazon.ca', flag: '🇨🇦', currency: 'CAD', currencySymbol: 'CA$' },
+  { id: 'uk', name: 'Reino Unido', domain: 'Amazon.co.uk', flag: '🇬🇧', currency: 'GBP', currencySymbol: '£' },
+  { id: 'es', name: 'España', domain: 'Amazon.es', flag: '🇪🇸', currency: 'EUR', currencySymbol: '€' },
+  { id: 'de', name: 'Alemania', domain: 'Amazon.de', flag: '🇩🇪', currency: 'EUR', currencySymbol: '€' },
+  { id: 'fr', name: 'Francia', domain: 'Amazon.fr', flag: '🇫🇷', currency: 'EUR', currencySymbol: '€' },
+  { id: 'it', name: 'Italia', domain: 'Amazon.it', flag: '🇮🇹', currency: 'EUR', currencySymbol: '€' },
+  { id: 'au', name: 'Australia', domain: 'Amazon.com.au', flag: '🇦🇺', currency: 'AUD', currencySymbol: 'A$' },
+  { id: 'mx', name: 'México', domain: 'Amazon.com.mx', flag: '🇲🇽', currency: 'MXN', currencySymbol: 'MX$' },
+  { id: 'nl', name: 'Países Bajos', domain: 'Amazon.nl', flag: '🇳🇱', currency: 'EUR', currencySymbol: '€' },
+  { id: 'se', name: 'Suecia', domain: 'Amazon.se', flag: '🇸🇪', currency: 'SEK', currencySymbol: 'kr' },
+  { id: 'jp', name: 'Japón', domain: 'Amazon.co.jp', flag: '🇯🇵', currency: 'JPY', currencySymbol: '¥' },
 ];
+
+/** Get currency symbol for a marketplace ID */
+export const getCurrencySymbol = (marketplaceId: string): string => {
+  return MARKETPLACES.find(m => m.id === marketplaceId)?.currencySymbol ?? '$';
+};
 
 export const CAMPAIGN_TYPES: { value: CampaignType; label: string; description: string }[] = [
   { value: 'SP', label: 'Sponsored Products', description: 'Anuncios de productos individuales en resultados de búsqueda' },

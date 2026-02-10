@@ -24,6 +24,7 @@ interface AcosEquilibrioSectionProps {
   isExpanded?: boolean;
   campaigns?: string[];
   onAddCampaign?: (name: string) => void;
+  currencySymbol?: string;
 }
 export const AcosEquilibrioSection = ({
   adsData,
@@ -31,7 +32,8 @@ export const AcosEquilibrioSection = ({
   onAdsDataChange,
   isExpanded = false,
   campaigns = [],
-  onAddCampaign
+  onAddCampaign,
+  currencySymbol = '$'
 }: AcosEquilibrioSectionProps) => {
   const {
     toast
@@ -314,7 +316,7 @@ export const AcosEquilibrioSection = ({
               </TooltipProvider>
             </Label>
             <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">$</span>
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">{currencySymbol}</span>
               <Input id="ads-cpc" type="number" min={0} step={0.01} value={cpcActual} onChange={e => handleNumberChange('cpcActual', e.target.value, setCpcActual)} placeholder="0.00" className="h-9 pl-7" />
             </div>
           </div>
@@ -379,10 +381,10 @@ export const AcosEquilibrioSection = ({
               </TooltipProvider>
             </Label>
             <p className="text-lg font-bold text-foreground">
-              {formatearMoneda(gastoCalculado)}
+              {formatearMoneda(gastoCalculado, currencySymbol)}
             </p>
             {gastoCalculado !== null && <p className="text-[10px] text-muted-foreground">
-                = {adsData?.clicks ?? 0} × ${adsData?.cpcActual?.toFixed(2) ?? '0.00'}
+                = {adsData?.clicks ?? 0} × {currencySymbol}{adsData?.cpcActual?.toFixed(2) ?? '0.00'}
               </p>}
           </div>
 
@@ -400,10 +402,10 @@ export const AcosEquilibrioSection = ({
               </TooltipProvider>
             </Label>
             <p className="text-lg font-bold text-foreground">
-              {formatearMoneda(ventasCalculadas)}
+              {formatearMoneda(ventasCalculadas, currencySymbol)}
             </p>
             {ventasCalculadas !== null && <p className="text-[10px] text-muted-foreground">
-                = {adsData?.pedidos ?? 0} × ${bookEconomy.precioLibro?.toFixed(2) ?? '0.00'}
+                = {adsData?.pedidos ?? 0} × {currencySymbol}{bookEconomy.precioLibro?.toFixed(2) ?? '0.00'}
               </p>}
           </div>
 
@@ -421,7 +423,7 @@ export const AcosEquilibrioSection = ({
               </TooltipProvider>
             </Label>
             <p className={cn("text-lg font-bold", beneficioAhora !== null ? beneficioAhora >= 0 ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400" : "text-muted-foreground")}>
-              {formatearMoneda(beneficioAhora)}
+              {formatearMoneda(beneficioAhora, currencySymbol)}
             </p>
           </div>
 
@@ -439,7 +441,7 @@ export const AcosEquilibrioSection = ({
               </TooltipProvider>
             </Label>
             <p className={cn("text-lg font-bold", beneficioSiguiente !== null ? beneficioSiguiente >= 0 ? "text-green-600 dark:text-green-400" : "text-amber-600 dark:text-amber-400" : "text-muted-foreground")}>
-              {formatearMoneda(beneficioSiguiente)}
+              {formatearMoneda(beneficioSiguiente, currencySymbol)}
             </p>
           </div>
 

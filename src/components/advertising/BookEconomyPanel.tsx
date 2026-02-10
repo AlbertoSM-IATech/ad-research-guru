@@ -8,11 +8,13 @@ import type { BookEconomy } from '@/types/advertising';
 interface BookEconomyPanelProps {
   bookEconomy: BookEconomy;
   onBookEconomyChange: (economy: BookEconomy) => void;
+  currencySymbol?: string;
 }
 
 export const BookEconomyPanel = ({
   bookEconomy,
   onBookEconomyChange,
+  currencySymbol = '$',
 }: BookEconomyPanelProps) => {
   const handlePrecioChange = (value: string) => {
     const numValue = parseFloat(value) || 0;
@@ -64,7 +66,7 @@ export const BookEconomyPanel = ({
               Precio del libro (sin IVA)
             </Label>
             <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">$</span>
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">{currencySymbol}</span>
               <Input
                 id="precioLibro"
                 type="number"
@@ -84,7 +86,7 @@ export const BookEconomyPanel = ({
               Regalías netas por venta
             </Label>
             <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">$</span>
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">{currencySymbol}</span>
               <Input
                 id="regaliasPorVenta"
                 type="number"

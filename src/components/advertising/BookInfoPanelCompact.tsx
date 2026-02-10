@@ -1,7 +1,7 @@
 import { Book, DollarSign, ChevronDown, ChevronUp, Star, TrendingUp, Users } from 'lucide-react';
 import { useState } from 'react';
 import { Input } from '@/components/ui/input';
-import { type BookInfo, type BookEconomy, type Keyword } from '@/types/advertising';
+import { type BookInfo, type BookEconomy, type Keyword, getCurrencySymbol } from '@/types/advertising';
 import { useMemo } from 'react';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -17,15 +17,18 @@ interface BookInfoPanelCompactProps {
   bookEconomy?: BookEconomy;
   onBookEconomyChange?: (economy: BookEconomy) => void;
   keywords?: Keyword[];
+  marketplaceId?: string;
 }
 export const BookInfoPanelCompact = ({
   bookInfo,
   onChange,
   bookEconomy,
   onBookEconomyChange,
-  keywords = []
+  keywords = [],
+  marketplaceId = 'us'
 }: BookInfoPanelCompactProps) => {
   const [isOpen, setIsOpen] = useState(false);
+  const cs = getCurrencySymbol(marketplaceId);
 
   // Get main keyword by ID
   const mainKeyword = useMemo(() => {
@@ -105,10 +108,10 @@ export const BookInfoPanelCompact = ({
             {bookEconomy && <div className="flex items-center gap-3">
                 <DollarSign className="w-4 h-4 text-primary shrink-0" />
                 <span className="text-sm">
-                  <span className="text-muted-foreground">PVP:</span> ${bookEconomy.precioLibro.toFixed(2)}
+                  <span className="text-muted-foreground">PVP:</span> {cs}{bookEconomy.precioLibro.toFixed(2)}
                 </span>
                 <span className="text-sm">
-                  <span className="text-muted-foreground">Regalía:</span> ${bookEconomy.regaliasPorVenta.toFixed(2)}
+                  <span className="text-muted-foreground">Regalía:</span> {cs}{bookEconomy.regaliasPorVenta.toFixed(2)}
                 </span>
                 <TooltipProvider>
                   <Tooltip>
@@ -200,14 +203,14 @@ export const BookInfoPanelCompact = ({
                   <div className="space-y-1">
                     <label className="text-xs text-muted-foreground">Precio (PVP)</label>
                     <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">$</span>
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">{cs}</span>
                       <Input type="number" min={0} step={0.01} value={bookEconomy.precioLibro || ''} onChange={e => handlePrecioChange(e.target.value)} placeholder="0.00" className="pl-7 h-8 text-sm" />
                     </div>
                   </div>
                   <div className="space-y-1">
                     <label className="text-xs text-muted-foreground">Regalías por venta</label>
                     <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">$</span>
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">{cs}</span>
                       <Input type="number" min={0} step={0.01} value={bookEconomy.regaliasPorVenta || ''} onChange={e => handleRegaliasChange(e.target.value)} placeholder="0.00" className="pl-7 h-8 text-sm" />
                     </div>
                   </div>

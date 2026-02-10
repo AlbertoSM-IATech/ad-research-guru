@@ -16,7 +16,7 @@ import {
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Checkbox } from '@/components/ui/checkbox';
-import { type Keyword, type CampaignPlan, estimateBudget, calculateROI } from '@/types/advertising';
+import { type Keyword, type CampaignPlan, estimateBudget, calculateROI, getCurrencySymbol } from '@/types/advertising';
 import { useToast } from '@/hooks/use-toast';
 
 interface CampaignPlanManagerProps {
@@ -28,6 +28,7 @@ interface CampaignPlanManagerProps {
   onAssignKeywords: (planId: string, keywordIds: string[]) => void;
   isOpen: boolean;
   onClose: () => void;
+  currencySymbol?: string;
 }
 
 const PRESET_PLANS = [
@@ -46,6 +47,7 @@ export const CampaignPlanManager = ({
   onAssignKeywords,
   isOpen,
   onClose,
+  currencySymbol = '$',
 }: CampaignPlanManagerProps) => {
   const { toast } = useToast();
   const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null);
@@ -133,7 +135,7 @@ export const CampaignPlanManager = ({
             <div className="flex items-center justify-between">
               <h4 className="font-medium">Planes</h4>
               <Badge variant="outline">
-                Presupuesto total: ${getTotalBudget().toFixed(2)}/día
+                Presupuesto total: {currencySymbol}{getTotalBudget().toFixed(2)}/día
               </Badge>
             </div>
 
@@ -290,7 +292,7 @@ export const CampaignPlanManager = ({
                           </div>
                           <div className="text-center">
                             <p className="text-xs text-muted-foreground">Ingresos</p>
-                            <p className="font-bold text-lg text-green-600">${roiResult.revenue.toFixed(2)}</p>
+                            <p className="font-bold text-lg text-green-600">{currencySymbol}{roiResult.revenue.toFixed(2)}</p>
                           </div>
                           <div className="text-center">
                             <p className="text-xs text-muted-foreground">ROAS</p>

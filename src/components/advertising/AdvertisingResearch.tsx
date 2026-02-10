@@ -759,7 +759,7 @@ export const AdvertisingResearch = ({
         {/* === SECCIÓN 1: CONTEXTO COMPACTO === */}
         {/* Always show compact panel + alerts tray */}
         <section className="mb-4 space-y-2">
-          <BookInfoPanelCompact bookInfo={bookInfo} onChange={setBookInfo} bookEconomy={bookEconomy} onBookEconomyChange={setBookEconomy} keywords={currentKeywords} />
+          <BookInfoPanelCompact bookInfo={bookInfo} onChange={setBookInfo} bookEconomy={bookEconomy} onBookEconomyChange={setBookEconomy} keywords={currentKeywords} marketplaceId={selectedMarketplace} />
         </section>
 
         {/* === SECCIÓN 2: PESTAÑAS PRINCIPALES (Datos / Insights) === */}

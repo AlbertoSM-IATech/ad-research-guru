@@ -13,6 +13,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { cn } from '@/lib/utils';
 import { Info, Save, RotateCcw, Sparkles, BookOpen, Megaphone, Maximize2, Minimize2, CheckCircle2, Clock, Link2, ChevronUp, ChevronDown } from 'lucide-react';
 import type { Keyword, BookEconomy, AdsData } from '@/types/advertising';
+import { getCurrencySymbol } from '@/types/advertising';
 import { getAutoStatusFromScore } from '@/lib/keyword-builder';
 import { type MarketData, type MarketStructure, type CatalogSignals, type EditorialData, type TrafficSource, type KeywordStatus, type BooksOver200ReviewsRange, calculateMarketScore, calculateEditorialScore, getDefaultMarketData, getDefaultEditorialData, getDefaultMarketStructure, getDefaultCatalogSignals, getMarketScoreInfo, getBooksOver200ReviewsPoints, TRAFFIC_SOURCE_OPTIONS, KEYWORD_STATUS_OPTIONS, MARKET_STRUCTURE_CHECKS, CATALOG_SIGNALS_CHECKS, EDITORIAL_CHECKS, BOOKS_OVER_200_REVIEWS_OPTIONS, BOOKS_OVER_200_REVIEWS_FIELD } from '@/lib/market-score';
 import { AcosEquilibrioSection } from './AcosEquilibrioSection';
@@ -1005,7 +1006,7 @@ export const KeywordDetailPanel = ({
                 </div>
                 <div>
                   <span className="text-muted-foreground">Precio libro:</span>
-                  <span className="ml-2 font-medium">${bookEconomy.precioLibro.toFixed(2)}</span>
+                  <span className="ml-2 font-medium">{getCurrencySymbol(marketplaceId ?? 'us')}{bookEconomy.precioLibro.toFixed(2)}</span>
                 </div>
               </div>
             </div>
@@ -1020,6 +1021,7 @@ export const KeywordDetailPanel = ({
               isExpanded={isExpanded}
               campaigns={campaigns}
               onAddCampaign={addCampaign}
+              currencySymbol={getCurrencySymbol(marketplaceId ?? 'us')}
             />
           </TabsContent>
         </Tabs>

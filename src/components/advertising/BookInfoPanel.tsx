@@ -1,7 +1,7 @@
 import { Info, DollarSign, Star, TrendingUp, Users, Target } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { type BookInfo, type BookEconomy, type Keyword } from '@/types/advertising';
+import { type BookInfo, type BookEconomy, type Keyword, getCurrencySymbol } from '@/types/advertising';
 import {
   Collapsible,
   CollapsibleContent,
@@ -22,6 +22,7 @@ interface BookInfoPanelProps {
   bookEconomy?: BookEconomy;
   onBookEconomyChange?: (economy: BookEconomy) => void;
   keywords?: Keyword[];
+  marketplaceId?: string;
 }
 
 export const BookInfoPanel = ({ 
@@ -29,9 +30,11 @@ export const BookInfoPanel = ({
   onChange,
   bookEconomy,
   onBookEconomyChange,
-  keywords = []
+  keywords = [],
+  marketplaceId = 'us'
 }: BookInfoPanelProps) => {
   const [isOpen, setIsOpen] = useState(true);
+  const cs = getCurrencySymbol(marketplaceId);
 
   // Get main keyword by ID
   const mainKeyword = useMemo(() => {
@@ -152,7 +155,7 @@ export const BookInfoPanel = ({
                   </div>
                   <div className="p-2 bg-background/50 rounded border border-border/50">
                     <div className="text-xs text-muted-foreground">CPC</div>
-                    <div className="font-mono font-medium">{mainKeywordMetrics.cpc !== undefined ? `$${mainKeywordMetrics.cpc.toFixed(2)}` : '—'}</div>
+                    <div className="font-mono font-medium">{mainKeywordMetrics.cpc !== undefined ? `${cs}${mainKeywordMetrics.cpc.toFixed(2)}` : '—'}</div>
                   </div>
                 </div>
                 
@@ -164,11 +167,11 @@ export const BookInfoPanel = ({
                   </div>
                   <div className="p-2 bg-background/50 rounded border border-border/50">
                     <div className="text-xs text-muted-foreground">Gasto</div>
-                    <div className="font-mono font-medium text-muted-foreground">{formatearMoneda(mainKeywordMetrics.gasto)}</div>
+                    <div className="font-mono font-medium text-muted-foreground">{formatearMoneda(mainKeywordMetrics.gasto, cs)}</div>
                   </div>
                   <div className="p-2 bg-background/50 rounded border border-border/50">
                     <div className="text-xs text-muted-foreground">Ventas</div>
-                    <div className="font-mono font-medium text-muted-foreground">{formatearMoneda(mainKeywordMetrics.ventas)}</div>
+                    <div className="font-mono font-medium text-muted-foreground">{formatearMoneda(mainKeywordMetrics.ventas, cs)}</div>
                   </div>
                   <div className="p-2 bg-background/50 rounded border border-border/50">
                     <div className="text-xs text-muted-foreground">ACOS Actual</div>
