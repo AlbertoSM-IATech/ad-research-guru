@@ -34,7 +34,7 @@ import { AcosSparkline } from './AcosSparkline';
 import { AcosAlertsTray } from './AcosAlertsTray';
 import { AdvancedImportModal } from './AdvancedImportModal';
 import { AmazonAdsImportModal } from './AmazonAdsImportModal';
-import { type Keyword, type CampaignType, type CompetitionLevel, type RelevanceLevel, type IntentType, type KeywordState, type BookInfo, type BookEconomy, type HistoryEntry, type AdsData, RELEVANCE_LEVELS, INTENT_TYPES, KEYWORD_STATES, calculateRelevance, classifyIntent } from '@/types/advertising';
+import { type Keyword, type CampaignType, type CompetitionLevel, type RelevanceLevel, type IntentType, type KeywordState, type BookInfo, type BookEconomy, type HistoryEntry, type AdsData, RELEVANCE_LEVELS, INTENT_TYPES, KEYWORD_STATES, calculateRelevance, classifyIntent, getCurrencySymbol } from '@/types/advertising';
 import { calculateMarketScore, getDefaultMarketData, KEYWORD_STATUS_OPTIONS, type KeywordStatus } from '@/lib/market-score';
 import { createKeywordDefaults } from '@/lib/keyword-helpers';
 import { getAutoStatusFromScore } from '@/lib/keyword-builder';
@@ -128,7 +128,7 @@ export const KeywordsSection = ({
   const {
     toast
   } = useToast();
-
+  const currencySymbol = getCurrencySymbol(marketplaceId);
   // Use persistence hook for UI state
   const {
     state: persistedState,
@@ -849,7 +849,7 @@ export const KeywordsSection = ({
         </div>
 
         {/* ADS Dashboard - only in ads view */}
-        {functionalView === 'ads' && hasAdsAccess && <AdsDashboard keywords={keywords} bookEconomy={bookEconomy} />}
+        {functionalView === 'ads' && hasAdsAccess && <AdsDashboard keywords={keywords} bookEconomy={bookEconomy} currencySymbol={currencySymbol} />}
         
         {/* ACOS Alerts Tray - only in ads view, shows keywords with ACOS > PE */}
         {functionalView === 'ads' && hasAdsAccess && (
@@ -1205,7 +1205,7 @@ export const KeywordsSection = ({
                     </TableCell>;
                   case 'cpc':
                     return <TableCell key={colKey} className="tabular-nums text-xs" onClick={e => e.stopPropagation()}>
-                      <InlineEditableCell value={ads?.cpcActual ?? 0} type="number" min={0} onSave={value => handleInlineAdsUpdate('cpcActual', value)} formatter={v => `$${Number(v || 0).toFixed(2)}`} className="text-xs" />
+                      <InlineEditableCell value={ads?.cpcActual ?? 0} type="number" min={0} onSave={value => handleInlineAdsUpdate('cpcActual', value)} formatter={v => `${currencySymbol}${Number(v || 0).toFixed(2)}`} className="text-xs" />
                     </TableCell>;
                   case 'pedidos':
                     return <TableCell key={colKey} className="tabular-nums text-xs" onClick={e => e.stopPropagation()}>
@@ -1213,11 +1213,11 @@ export const KeywordsSection = ({
                     </TableCell>;
                   case 'gasto':
                     return <TableCell key={colKey} className="tabular-nums text-xs text-muted-foreground">
-                      {formatearMoneda(gastoCalculado)}
+                      {formatearMoneda(gastoCalculado, currencySymbol)}
                     </TableCell>;
                   case 'ventas':
                     return <TableCell key={colKey} className="tabular-nums text-xs text-muted-foreground">
-                      {formatearMoneda(ventasCalculadas)}
+                      {formatearMoneda(ventasCalculadas, currencySymbol)}
                     </TableCell>;
                   case 'acos':
                     return <TableCell key={colKey} className={cn("tabular-nums text-xs", isHighlighted && highlightCellClass)}>
@@ -1263,7 +1263,7 @@ export const KeywordsSection = ({
                                 const beneficio = gastoCalculado !== null && ventasCalculadas !== null ? ventasCalculadas - gastoCalculado : null;
                                 if (beneficio === null) return '—';
                                 return <span className={beneficio >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}>
-                                  {formatearMoneda(beneficio)}
+                                  {formatearMoneda(beneficio, currencySymbol)}
                                 </span>;
                               })()}
                             </span>
@@ -1422,7 +1422,7 @@ export const KeywordsSection = ({
     }} bookEconomy={bookEconomy} />
       
       {/* ADS History Panel */}
-      <AdsHistoryPanel keyword={adsHistoryKeyword?.keyword ?? ''} adsData={adsHistoryKeyword?.adsData} bookEconomy={bookEconomy} isOpen={!!adsHistoryKeyword} onClose={() => setAdsHistoryKeyword(null)} onAdsDataChange={(newAdsData: AdsData) => {
+      <AdsHistoryPanel keyword={adsHistoryKeyword?.keyword ?? ''} adsData={adsHistoryKeyword?.adsData} bookEconomy={bookEconomy} isOpen={!!adsHistoryKeyword} onClose={() => setAdsHistoryKeyword(null)} currencySymbol={currencySymbol} onAdsDataChange={(newAdsData: AdsData) => {
       if (adsHistoryKeyword) {
         onUpdate(adsHistoryKeyword.id, {
           adsData: newAdsData

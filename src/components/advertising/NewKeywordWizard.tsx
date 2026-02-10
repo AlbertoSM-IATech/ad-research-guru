@@ -917,11 +917,11 @@ export function NewKeywordWizard({
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Precio:</span>
-                    <span>${step2.price.toFixed(2)}</span>
+                    <span>{selectedMarketplace?.currencySymbol ?? '$'}{step2.price.toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Regalías:</span>
-                    <span>${step2.royalties.toFixed(2)}</span>
+                    <span>{selectedMarketplace?.currencySymbol ?? '$'}{step2.royalties.toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Demanda:</span>

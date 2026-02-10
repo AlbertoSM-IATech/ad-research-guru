@@ -20,7 +20,7 @@ import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 
 import type { Keyword, BookEconomy, AdsData, AdsHistoryEntry } from '@/types/advertising';
-import { normalizeText } from '@/types/advertising';
+import { normalizeText, getCurrencySymbol } from '@/types/advertising';
 import { parseFile, parseDelimitedText, type ParsedTable } from '@/lib/import/parsers';
 import { parseNumberFlexible, parseIntegerFlexible } from '@/lib/import/number';
 import {
@@ -125,6 +125,7 @@ export const AmazonAdsImportModal = ({
   marketplaceId,
 }: AmazonAdsImportModalProps) => {
   const { toast } = useToast();
+  const currencySymbol = getCurrencySymbol(marketplaceId);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Wizard state
@@ -712,9 +713,9 @@ export const AmazonAdsImportModal = ({
                             <td className="p-2 text-right tabular-nums">{term.impressions.toLocaleString()}</td>
                             <td className="p-2 text-right tabular-nums">{term.clicks.toLocaleString()}</td>
                             <td className="p-2 text-right tabular-nums">{term.orders}</td>
-                            <td className="p-2 text-right tabular-nums">${term.spend.toFixed(2)}</td>
-                            <td className="p-2 text-right tabular-nums">${cpc.toFixed(2)}</td>
-                            <td className="p-2 text-right tabular-nums">${term.sales.toFixed(2)}</td>
+                            <td className="p-2 text-right tabular-nums">{currencySymbol}{term.spend.toFixed(2)}</td>
+                            <td className="p-2 text-right tabular-nums">{currencySymbol}{cpc.toFixed(2)}</td>
+                            <td className="p-2 text-right tabular-nums">{currencySymbol}{term.sales.toFixed(2)}</td>
                           </tr>
                         );
                       })}

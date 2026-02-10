@@ -25,6 +25,7 @@ interface AdsHistoryPanelProps {
   isOpen: boolean;
   onClose: () => void;
   onAdsDataChange: (adsData: AdsData) => void;
+  currencySymbol?: string;
 }
 
 export const AdsHistoryPanel = ({
@@ -34,6 +35,7 @@ export const AdsHistoryPanel = ({
   isOpen,
   onClose,
   onAdsDataChange,
+  currencySymbol = '$',
 }: AdsHistoryPanelProps) => {
   const history = adsData?.history ?? [];
 
@@ -152,7 +154,7 @@ export const AdsHistoryPanel = ({
               <div className="p-3 rounded-lg border border-border bg-background">
                 <p className="text-xs text-muted-foreground">Δ Beneficio</p>
                 <p className={cn("text-lg font-bold", trends.beneficioDelta >= 0 ? "text-green-600" : "text-red-600")}>
-                  {trends.beneficioDelta >= 0 ? '+' : ''}{formatearMoneda(trends.beneficioDelta)}
+                  {trends.beneficioDelta >= 0 ? '+' : ''}{formatearMoneda(trends.beneficioDelta, currencySymbol)}
                 </p>
               </div>
             </div>
@@ -249,10 +251,10 @@ export const AdsHistoryPanel = ({
                           {format(new Date(entry.timestamp), 'dd/MM/yy HH:mm', { locale: es })}
                         </TableCell>
                         <TableCell className="text-right tabular-nums">{entry.clicks}</TableCell>
-                        <TableCell className="text-right tabular-nums">${entry.cpcActual.toFixed(2)}</TableCell>
+                        <TableCell className="text-right tabular-nums">{currencySymbol}{entry.cpcActual.toFixed(2)}</TableCell>
                         <TableCell className="text-right tabular-nums">{entry.pedidos}</TableCell>
-                        <TableCell className="text-right tabular-nums">{formatearMoneda(entry.gasto)}</TableCell>
-                        <TableCell className="text-right tabular-nums">{formatearMoneda(entry.ventas)}</TableCell>
+                        <TableCell className="text-right tabular-nums">{formatearMoneda(entry.gasto, currencySymbol)}</TableCell>
+                        <TableCell className="text-right tabular-nums">{formatearMoneda(entry.ventas, currencySymbol)}</TableCell>
                         <TableCell className="text-right tabular-nums">
                           <span className={cn(
                             entry.acosActual !== null 
@@ -272,7 +274,7 @@ export const AdsHistoryPanel = ({
                                 : 'text-red-600'
                               : 'text-muted-foreground'
                           )}>
-                            {formatearMoneda(entry.beneficio)}
+                            {formatearMoneda(entry.beneficio, currencySymbol)}
                           </span>
                         </TableCell>
                         <TableCell>
