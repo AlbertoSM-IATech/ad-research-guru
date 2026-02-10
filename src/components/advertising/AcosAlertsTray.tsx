@@ -7,16 +7,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { cn } from '@/lib/utils';
 import { calcularGastoAcumulado, calcularVentasAcumuladas, calcularAcosActualPorcentaje, formatearPorcentaje, formatearMoneda } from '@/lib/acosEquilibrio';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-
 interface AcosAlertsTrayProps {
   keywords: Keyword[];
   bookEconomy?: BookEconomy;
   campaigns: string[];
   onKeywordClick?: (keyword: Keyword) => void;
 }
-
 type SortOption = 'priority' | 'acos-desc' | 'loss-desc' | 'keyword';
-
 interface KeywordWithMetrics extends Keyword {
   acosActual: number | null;
   acosEquilibrio: number | null;
@@ -25,9 +22,8 @@ interface KeywordWithMetrics extends Keyword {
   loss: number | null;
   priority: number;
 }
-
-export const AcosAlertsTray = ({ 
-  keywords, 
+export const AcosAlertsTray = ({
+  keywords,
   bookEconomy,
   campaigns,
   onKeywordClick
@@ -37,39 +33,33 @@ export const AcosAlertsTray = ({
   const [sortBy, setSortBy] = useState<SortOption>('priority');
 
   // Calculate ACOS equilibrio
-  const acosEquilibrio = bookEconomy && bookEconomy.precioLibro > 0
-    ? (bookEconomy.regaliasPorVenta / bookEconomy.precioLibro) * 100
-    : null;
+  const acosEquilibrio = bookEconomy && bookEconomy.precioLibro > 0 ? bookEconomy.regaliasPorVenta / bookEconomy.precioLibro * 100 : null;
 
   // Get keywords with ACOS > equilibrio
   const alertKeywords = useMemo((): KeywordWithMetrics[] => {
     if (acosEquilibrio === null) return [];
+    return keywords.map(kw => {
+      const ads = kw.adsData;
+      const gasto = calcularGastoAcumulado(ads?.clicks, ads?.cpcActual);
+      const ventas = calcularVentasAcumuladas(ads?.pedidos, bookEconomy?.precioLibro);
+      const acosActual = calcularAcosActualPorcentaje(gasto ?? undefined, ventas ?? undefined);
 
-    return keywords
-      .map(kw => {
-        const ads = kw.adsData;
-        const gasto = calcularGastoAcumulado(ads?.clicks, ads?.cpcActual);
-        const ventas = calcularVentasAcumuladas(ads?.pedidos, bookEconomy?.precioLibro);
-        const acosActual = calcularAcosActualPorcentaje(gasto ?? undefined, ventas ?? undefined);
-        
-        // Calculate loss (negative benefit)
-        const loss = gasto !== null && ventas !== null ? gasto - ventas : null;
-        
-        // Priority: higher ACOS difference = higher priority
-        const acosDiff = acosActual !== null ? acosActual - acosEquilibrio : 0;
-        const priority = Math.max(0, acosDiff) * (loss !== null && loss > 0 ? loss : 1);
+      // Calculate loss (negative benefit)
+      const loss = gasto !== null && ventas !== null ? gasto - ventas : null;
 
-        return {
-          ...kw,
-          acosActual,
-          acosEquilibrio,
-          gasto,
-          ventas,
-          loss: loss !== null && loss > 0 ? loss : null,
-          priority
-        };
-      })
-      .filter(kw => kw.acosActual !== null && kw.acosActual > acosEquilibrio);
+      // Priority: higher ACOS difference = higher priority
+      const acosDiff = acosActual !== null ? acosActual - acosEquilibrio : 0;
+      const priority = Math.max(0, acosDiff) * (loss !== null && loss > 0 ? loss : 1);
+      return {
+        ...kw,
+        acosActual,
+        acosEquilibrio,
+        gasto,
+        ventas,
+        loss: loss !== null && loss > 0 ? loss : null,
+        priority
+      };
+    }).filter(kw => kw.acosActual !== null && kw.acosActual > acosEquilibrio);
   }, [keywords, bookEconomy, acosEquilibrio]);
 
   // Filter by campaign
@@ -100,31 +90,21 @@ export const AcosAlertsTray = ({
     const uniqueCampaigns = new Set(alertKeywords.map(kw => kw.adsData?.campaignName).filter(Boolean));
     return Array.from(uniqueCampaigns) as string[];
   }, [alertKeywords]);
-
   if (acosEquilibrio === null) return null;
   if (alertKeywords.length === 0) return null;
-
   const totalLoss = alertKeywords.reduce((sum, kw) => sum + (kw.loss ?? 0), 0);
-
-  return (
-    <Collapsible open={isOpen} onOpenChange={setIsOpen}>
+  return <Collapsible open={isOpen} onOpenChange={setIsOpen}>
       <CollapsibleTrigger asChild>
-        <div className={cn(
-          "flex items-center justify-between px-4 py-2 rounded-lg border cursor-pointer transition-colors",
-          "bg-red-500/10 border-red-500/30 hover:bg-red-500/15",
-          isOpen && "rounded-b-none"
-        )}>
+        <div className={cn("flex items-center justify-between py-2 rounded-lg border cursor-pointer transition-colors bg-red-500/10 border-red-500/30 hover:bg-red-500/15 mx-0 px-[90px] gap-[73px]", isOpen && "rounded-b-none")}>
           <div className="flex items-center gap-3">
             <AlertTriangle className="w-4 h-4 text-red-500" />
             <span className="font-medium text-sm">
               {alertKeywords.length} keyword{alertKeywords.length !== 1 ? 's' : ''} con ACOS sobre equilibrio
             </span>
-            {totalLoss > 0 && (
-              <Badge variant="destructive" className="text-xs">
+            {totalLoss > 0 && <Badge variant="destructive" className="text-xs">
                 <TrendingDown className="w-3 h-3 mr-1" />
                 -{formatearMoneda(totalLoss)}
-              </Badge>
-            )}
+              </Badge>}
           </div>
           <div className="flex items-center gap-2">
             <Badge variant="outline" className="text-xs bg-background">
@@ -147,15 +127,13 @@ export const AcosAlertsTray = ({
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Todas las campañas</SelectItem>
-                  {alertCampaigns.map(c => (
-                    <SelectItem key={c} value={c}>{c}</SelectItem>
-                  ))}
+                  {alertCampaigns.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
             <div className="flex items-center gap-2">
               <ArrowUpDown className="w-3.5 h-3.5 text-muted-foreground" />
-              <Select value={sortBy} onValueChange={(v) => setSortBy(v as SortOption)}>
+              <Select value={sortBy} onValueChange={v => setSortBy(v as SortOption)}>
                 <SelectTrigger className="h-7 text-xs w-[130px]">
                   <SelectValue placeholder="Ordenar" />
                 </SelectTrigger>
@@ -167,37 +145,23 @@ export const AcosAlertsTray = ({
                 </SelectContent>
               </Select>
             </div>
-            {campaignFilter !== 'all' && (
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                className="h-7 text-xs"
-                onClick={() => setCampaignFilter('all')}
-              >
+            {campaignFilter !== 'all' && <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => setCampaignFilter('all')}>
                 <X className="w-3 h-3 mr-1" />
                 Limpiar filtro
-              </Button>
-            )}
+              </Button>}
           </div>
 
           {/* Keywords List */}
           <div className="space-y-1 max-h-[200px] overflow-y-auto">
-            {sortedKeywords.map(kw => (
-              <div 
-                key={kw.id}
-                className="flex items-center justify-between px-3 py-2 rounded-md hover:bg-muted/50 cursor-pointer transition-colors group"
-                onClick={() => onKeywordClick?.(kw)}
-              >
+            {sortedKeywords.map(kw => <div key={kw.id} className="flex items-center justify-between px-3 py-2 rounded-md hover:bg-muted/50 cursor-pointer transition-colors group" onClick={() => onKeywordClick?.(kw)}>
                 <div className="flex items-center gap-2 min-w-0">
                   <AlertTriangle className="w-3.5 h-3.5 text-red-500 shrink-0" />
                   <span className="text-sm truncate max-w-[200px]" title={kw.keyword}>
                     {kw.keyword}
                   </span>
-                  {kw.adsData?.campaignName && (
-                    <Badge variant="outline" className="text-[10px] px-1.5 py-0 shrink-0">
+                  {kw.adsData?.campaignName && <Badge variant="outline" className="text-[10px] px-1.5 py-0 shrink-0">
                       {kw.adsData.campaignName}
-                    </Badge>
-                  )}
+                    </Badge>}
                 </div>
                 <div className="flex items-center gap-3 text-xs">
                   <span className="text-red-600 dark:text-red-400 font-mono">
@@ -206,23 +170,17 @@ export const AcosAlertsTray = ({
                   <span className="text-muted-foreground">
                     vs {formatearPorcentaje(kw.acosEquilibrio)}
                   </span>
-                  {kw.loss !== null && kw.loss > 0 && (
-                    <span className="text-red-600 dark:text-red-400 font-mono font-medium">
+                  {kw.loss !== null && kw.loss > 0 && <span className="text-red-600 dark:text-red-400 font-mono font-medium">
                       -{formatearMoneda(kw.loss)}
-                    </span>
-                  )}
+                    </span>}
                 </div>
-              </div>
-            ))}
+              </div>)}
           </div>
 
-          {sortedKeywords.length === 0 && (
-            <div className="text-center py-4 text-sm text-muted-foreground">
+          {sortedKeywords.length === 0 && <div className="text-center py-4 text-sm text-muted-foreground">
               No hay keywords en esta campaña con ACOS sobre equilibrio
-            </div>
-          )}
+            </div>}
         </div>
       </CollapsibleContent>
-    </Collapsible>
-  );
+    </Collapsible>;
 };
