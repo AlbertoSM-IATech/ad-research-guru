@@ -565,8 +565,7 @@ export const AmazonAdsImportModal = ({
                   </div>
                 )}
 
-                <ScrollArea className="max-h-[400px]">
-                  <div className="grid gap-2">
+                <div className="grid gap-2">
                     {parsedTable.headers.map(header => (
                       <div key={header} className="flex items-center gap-3 p-2 bg-muted/30 rounded-lg">
                         <div className="flex-1 min-w-0">
@@ -595,8 +594,7 @@ export const AmazonAdsImportModal = ({
                         </Select>
                       </div>
                     ))}
-                  </div>
-                </ScrollArea>
+                </div>
               </div>
 
               {/* Advanced Options */}
