@@ -467,9 +467,16 @@ export const KeywordsSection = ({
     });
   }, [keywords, onSearchTermChange, persistAdsFilters]);
 
-  // Filter and sort keywords - show ALL keywords in both views (no purpose filter)
+  // Filter and sort keywords - filter by purpose based on functional view
   const filteredKeywords = useMemo(() => {
-    let result = keywords;
+    // Step 1: Filter by purpose
+    let result = keywords.filter(k => {
+      if (functionalView === 'editorial') {
+        return k.purpose === 'editorial' || k.purpose === 'both';
+      } else {
+        return k.purpose === 'ads' || k.purpose === 'both';
+      }
+    });
 
     // Apply search and advanced filters
     result = applyKeywordFilters(result, {
@@ -972,6 +979,53 @@ export const KeywordsSection = ({
       {/* Bulk actions (Editorial) */}
       {functionalView === 'editorial' && <BulkEditorialStatusToolbar selectedCount={selectedIds.size} onChangeStatus={handleBulkChangeKeywordStatus} onQuickValidate={() => handleBulkChangeKeywordStatus('valid')} />}
 
+      {/* Bulk "Enviar a..." actions */}
+      {selectedIds.size > 0 && (
+        <div className="flex items-center gap-2 p-3 bg-muted/50 rounded-lg border border-border">
+          <Badge variant="secondary" className="font-medium">
+            {selectedIds.size} seleccionadas
+          </Badge>
+          <div className="h-4 w-px bg-border mx-1" />
+          {functionalView === 'editorial' ? (
+            <>
+              <Button variant="outline" size="sm" className="gap-2" onClick={() => {
+                onUpdateBulk(Array.from(selectedIds), { purpose: 'both' });
+                onSelectedIdsChange(new Set());
+                toast({ title: `${selectedIds.size} keywords enviadas también a Ads`, description: 'Ahora aparecen en ambas vistas.' });
+              }}>
+                <Megaphone className="w-4 h-4" />
+                Enviar también a Ads
+              </Button>
+              <Button variant="ghost" size="sm" className="gap-2 text-muted-foreground" onClick={() => {
+                onUpdateBulk(Array.from(selectedIds), { purpose: 'ads' });
+                onSelectedIdsChange(new Set());
+                toast({ title: `${selectedIds.size} keywords movidas a Ads`, description: 'Ya no aparecen en Estudio de Keywords.' });
+              }}>
+                Mover a Ads (quitar de aquí)
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button variant="outline" size="sm" className="gap-2" onClick={() => {
+                onUpdateBulk(Array.from(selectedIds), { purpose: 'both' });
+                onSelectedIdsChange(new Set());
+                toast({ title: `${selectedIds.size} keywords enviadas también a Estudio`, description: 'Ahora aparecen en ambas vistas.' });
+              }}>
+                <BookOpen className="w-4 h-4" />
+                Enviar también a Estudio
+              </Button>
+              <Button variant="ghost" size="sm" className="gap-2 text-muted-foreground" onClick={() => {
+                onUpdateBulk(Array.from(selectedIds), { purpose: 'editorial' });
+                onSelectedIdsChange(new Set());
+                toast({ title: `${selectedIds.size} keywords movidas a Estudio`, description: 'Ya no aparecen en Gestión de Ads.' });
+              }}>
+                Mover a Estudio (quitar de aquí)
+              </Button>
+            </>
+          )}
+        </div>
+      )}
+
       {/* Content - Table with DnD column reordering */}
       <DndContext sensors={dndSensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
         <div className="rounded-lg border border-border overflow-hidden">
@@ -1297,10 +1351,20 @@ export const KeywordsSection = ({
                                 <TooltipContent>Guardar Ads</TooltipContent>
                               </Tooltip>}
 
-                            <div className={cn(isMainKeyword && "text-amber-600 dark:text-amber-400")}>
+                            <div className={cn(isMainKeyword && "text-amber-600 dark:text-amber-400", "flex items-center gap-1")}>
                               <InlineEditableCell value={keyword.keyword} onSave={value => handleUpdateWithHistory(keyword.id, {
                         keyword: String(value)
                       })} placeholder="Keyword..." className={cn("font-medium", isMainKeyword && "text-amber-600 dark:text-amber-400")} />
+                              {keyword.purpose === 'both' && (
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Badge variant="outline" className="text-[9px] px-1 py-0 h-4 border-primary/30 text-primary shrink-0">
+                                      Ambas
+                                    </Badge>
+                                  </TooltipTrigger>
+                                  <TooltipContent>Esta keyword aparece en Estudio y en Ads</TooltipContent>
+                                </Tooltip>
+                              )}
                             </div>
                           </div>
                         </TableCell>
@@ -1347,7 +1411,7 @@ export const KeywordsSection = ({
       <KeywordDetailPanel keyword={selectedKeyword} isOpen={!!selectedKeywordId} onClose={() => setSelectedKeywordId(null)} onSave={handleKeywordDetailSave} marketplaceId={marketplaceId} bookEconomy={bookEconomy} defaultTab={functionalView === 'ads' ? 'ads' : 'nicho'} allKeywords={keywords} />
       
       {/* New Keyword Wizard */}
-      <NewKeywordWizard open={isWizardOpen} onOpenChange={setIsWizardOpen} onComplete={handleWizardComplete} marketplaceId={marketplaceId} bookInfo={bookInfo} bookEconomy={bookEconomy} existingKeywords={keywords} initialKeyword={wizardInitialKeyword} onOpenExistingKeyword={handleOpenExistingKeyword} campaigns={campaigns} onAddCampaign={addCampaign} />
+      <NewKeywordWizard open={isWizardOpen} onOpenChange={setIsWizardOpen} onComplete={handleWizardComplete} marketplaceId={marketplaceId} bookInfo={bookInfo} bookEconomy={bookEconomy} existingKeywords={keywords} initialKeyword={wizardInitialKeyword} onOpenExistingKeyword={handleOpenExistingKeyword} campaigns={campaigns} onAddCampaign={addCampaign} defaultPurpose={functionalView === 'ads' ? 'ads' : 'editorial'} />
       
       {/* Keyword Comparison Panel */}
       <KeywordComparisonPanel items={keywords.filter(k => selectedIds.has(k.id)).slice(0, 2)} type="keyword" isOpen={isComparisonOpen} onClose={() => setIsComparisonOpen(false)} onRemove={id => {

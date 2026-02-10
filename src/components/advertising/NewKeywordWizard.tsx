@@ -145,6 +145,7 @@ interface NewKeywordWizardProps {
   onOpenExistingKeyword?: (keyword: Keyword) => void;
   campaigns?: string[];
   onAddCampaign?: (name: string) => void;
+  defaultPurpose?: KeywordPurpose;
 }
 
 type WizardStep = 1 | 2 | 3 | 4;
@@ -171,11 +172,11 @@ function FieldTooltip({ content }: { content: string }) {
 }
 
 // Default states factory
-function getInitialStep1(keyword: string, marketplaceId: string): WizardStep1Data {
+function getInitialStep1(keyword: string, marketplaceId: string, purpose: KeywordPurpose = 'editorial'): WizardStep1Data {
   return {
     keyword,
     marketplaceId,
-    purpose: 'editorial',
+    purpose,
     intent: undefined,
   };
 }
@@ -192,12 +193,13 @@ export function NewKeywordWizard({
   onOpenExistingKeyword,
   campaigns = [],
   onAddCampaign,
+  defaultPurpose = 'editorial',
 }: NewKeywordWizardProps) {
   // Use passed bookEconomy or fall back to defaults
   const effectiveBookEconomy = bookEconomy ?? DEFAULT_BOOK_ECONOMY;
   // ============ WIZARD STATE ============
   const [currentStep, setCurrentStep] = useState<WizardStep>(1);
-  const [step1, setStep1] = useState<WizardStep1Data>(getInitialStep1(initialKeyword, marketplaceId));
+  const [step1, setStep1] = useState<WizardStep1Data>(getInitialStep1(initialKeyword, marketplaceId, defaultPurpose));
   const [step2, setStep2] = useState<WizardStep2Data>(getDefaultStep2Data());
   const [step3, setStep3] = useState<WizardStep3Data>(getDefaultStep3Data());
   const [editorialChecks, setEditorialChecks] = useState<Record<string, boolean>>({});
@@ -218,7 +220,7 @@ export function NewKeywordWizard({
   // ============ RESET FUNCTION ============
   const resetWizard = useCallback(() => {
     setCurrentStep(1);
-    setStep1(getInitialStep1('', marketplaceId));
+    setStep1(getInitialStep1('', marketplaceId, defaultPurpose));
     setStep2(getDefaultStep2Data());
     setStep3(getDefaultStep3Data());
     setEditorialChecks({});
@@ -237,7 +239,7 @@ export function NewKeywordWizard({
   useEffect(() => {
     if (open) {
       setCurrentStep(1);
-      setStep1(getInitialStep1(initialKeyword, marketplaceId));
+      setStep1(getInitialStep1(initialKeyword, marketplaceId, defaultPurpose));
       setStep2(getDefaultStep2Data());
       setStep3(getDefaultStep3Data());
       setEditorialChecks({});

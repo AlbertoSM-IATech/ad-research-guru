@@ -273,20 +273,23 @@ export const AdvancedImportModal = ({
         }
       }
 
-      // New keyword
+      // New keyword - assign purpose 'editorial' (this modal is only used from Editorial view)
       const competitionLevel = row.mappedData.competitors 
         ? deriveCompetitionLevel(row.mappedData.competitors)
         : 'medium';
 
-      toImport.push(createKeywordDefaults({
-        keyword: row.mappedData.keyword!,
-        marketplaceId,
-        searchVolume: row.mappedData.searchVolume ?? 0,
-        competitors: row.mappedData.competitors ?? 0,
-        competitionLevel,
-        notes: row.mappedData.notes || '',
-        state: 'pending',
-      }));
+      toImport.push({
+        ...createKeywordDefaults({
+          keyword: row.mappedData.keyword!,
+          marketplaceId,
+          searchVolume: row.mappedData.searchVolume ?? 0,
+          competitors: row.mappedData.competitors ?? 0,
+          competitionLevel,
+          notes: row.mappedData.notes || '',
+          state: 'pending',
+        }),
+        purpose: 'editorial',
+      });
       results.added++;
     });
 
