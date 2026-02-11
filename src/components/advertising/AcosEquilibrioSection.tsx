@@ -620,10 +620,27 @@ const AdsHistorySection = ({
             </Button>
           </CollapsibleTrigger>
           
-          <Button onClick={handleAddSnapshot} size="sm" variant="outline" className="gap-2 h-7 text-xs bg-primary">
-            <Plus className="w-3 h-3" />
-            Guardar snapshot
-          </Button>
+          <div className="flex items-center gap-1">
+            <Button onClick={handleAddSnapshot} size="sm" variant="outline" className="gap-2 h-7 text-xs bg-primary">
+              <Plus className="w-3 h-3" />
+              Guardar snapshot
+            </Button>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button variant="ghost" size="icon" className="h-7 w-7">
+                    <Info className="w-3.5 h-3.5 text-muted-foreground" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="left" className="max-w-xs text-xs space-y-1">
+                  <p className="font-medium">¿Qué es un snapshot?</p>
+                  <p>Captura el estado actual de las métricas (clicks, pedidos, gasto, ACOS, beneficio) en un punto en el tiempo.</p>
+                  <p>Úsalo para registrar el rendimiento antes de hacer cambios en pujas o presupuestos y poder comparar la evolución después.</p>
+                  <p className="text-muted-foreground">Si ya existe un snapshot del mismo día, se actualiza en lugar de crear uno nuevo.</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
         </div>
 
         <CollapsibleContent className="space-y-4">

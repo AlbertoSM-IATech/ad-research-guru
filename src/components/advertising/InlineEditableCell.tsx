@@ -12,6 +12,7 @@ interface InlineEditableCellProps {
   placeholder?: string;
   min?: number;
   max?: number;
+  step?: number;
   formatter?: (value: string | number) => string;
 }
 
@@ -23,6 +24,7 @@ export const InlineEditableCell = ({
   placeholder,
   min,
   max,
+  step,
   formatter,
 }: InlineEditableCellProps) => {
   const [isEditing, setIsEditing] = useState(false);
@@ -43,7 +45,7 @@ export const InlineEditableCell = ({
   const handleSave = () => {
     let finalValue: string | number = editValue;
     if (type === 'number') {
-      finalValue = parseInt(editValue) || 0;
+      finalValue = step && step < 1 ? parseFloat(editValue) || 0 : parseInt(editValue) || 0;
       if (min !== undefined && finalValue < min) finalValue = min;
       if (max !== undefined && finalValue > max) finalValue = max;
     }
@@ -112,6 +114,7 @@ export const InlineEditableCell = ({
         placeholder={placeholder}
         min={min}
         max={max}
+        step={step}
       />
     </div>
   );
