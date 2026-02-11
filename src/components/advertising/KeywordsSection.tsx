@@ -827,7 +827,7 @@ export const KeywordsSection = ({
   };
   return <div data-tour="keywords-section" className="space-y-6 animate-fade-in">
       {/* Functional View Toggle */}
-      <div className="gap-4 items-center justify-start flex flex-row">
+      <div className="gap-4 items-center justify-start flex flex-col">
         <div className="items-start justify-between flex flex-col px-0 mx-0 my-0 py-0 gap-[13px]">
           
           {/* View Toggle: Editorial / Ads */}
@@ -858,7 +858,7 @@ export const KeywordsSection = ({
         
         {/* ADS Dashboard - only in ads view, collapsible - full width */}
         {functionalView === 'ads' && hasAdsAccess && <details className="group w-full" open>
-            <summary className="gap-2 cursor-pointer select-none text-sm font-semibold text-foreground hover:text-foreground/80 transition-colors py-2 px-3 items-center justify-start flex flex-row rounded-lg border border-border w-full bg-[#f98334]/20">
+            <summary className="gap-2 cursor-pointer select-none text-sm font-semibold transition-colors py-2 px-3 items-center justify-start flex flex-row rounded-lg border w-full bg-[#f98334]/[0.06] border-primary text-primary">
               <ChevronDown className="w-4 h-4 transition-transform group-open:rotate-0 -rotate-90" />
               Dashboard de rendimiento
             </summary>
