@@ -140,17 +140,22 @@ export const BookInfoPanelCompact = ({
 
       <CollapsibleContent>
         <div className="border border-t-0 border-primary/20 rounded-b-lg bg-background/50 p-4 space-y-4">
-          {/* Expanded details - two columns */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Left column: Main Keyword Details */}
+            {/* Left column: Keyword Principal + Book Info */}
             <div className="space-y-3">
-              <h4 className="text-sm font-medium flex items-center gap-2">
-                <Star className="w-4 h-4 text-amber-500" />
-                Keyword Principal
-              </h4>
+              <div className="flex items-center gap-3 flex-wrap">
+                <h4 className="text-sm font-medium flex items-center gap-2 shrink-0">
+                  <Star className="w-4 h-4 text-amber-500" />
+                  Keyword Principal
+                </h4>
+                <div className="flex items-center gap-2 min-w-0 flex-1">
+                  <Input value={bookInfo.title || ''} onChange={e => onChange({ ...bookInfo, title: e.target.value })} placeholder="Título del libro..." className="h-7 text-xs flex-1 min-w-[100px]" />
+                  <Input value={bookInfo.subtitle || ''} onChange={e => onChange({ ...bookInfo, subtitle: e.target.value })} placeholder="Subtítulo..." className="h-7 text-xs flex-1 min-w-[100px]" />
+                </div>
+              </div>
               
               {mainKeyword && mainKeywordMetrics ? <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/20 space-y-2">
-                  <p className="font-medium">{mainKeyword.keyword}</p>
+                  <p className="font-medium text-sm">{mainKeyword.keyword}</p>
                   <div className="grid grid-cols-3 gap-2 text-sm">
                     <div>
                       <span className="text-xs text-muted-foreground block">Volumen</span>
@@ -167,64 +172,46 @@ export const BookInfoPanelCompact = ({
                       </Badge>
                     </div>
                   </div>
-                </div> : <div className="p-4 rounded-lg bg-muted/50 border border-border text-center">
+                </div> : <div className="p-3 rounded-lg bg-muted/50 border border-border text-center">
                   <p className="text-sm text-muted-foreground">
                     Haz clic en la ★ de una keyword para establecerla como principal
                   </p>
                 </div>}
-
-              {/* Book Info fields */}
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1">
-                  <label className="text-xs text-muted-foreground">Título del libro</label>
-                  <Input value={bookInfo.title || ''} onChange={e => onChange({
-                  ...bookInfo,
-                  title: e.target.value
-                })} placeholder="Mi libro..." className="h-8 text-sm" />
-                </div>
-                <div className="space-y-1">
-                  <label className="text-xs text-muted-foreground">Subtítulo</label>
-                  <Input value={bookInfo.subtitle || ''} onChange={e => onChange({
-                  ...bookInfo,
-                  subtitle: e.target.value
-                })} placeholder="Subtítulo..." className="h-8 text-sm" />
-                </div>
-              </div>
             </div>
 
-            {/* Right column: Book Economy */}
+            {/* Right column: Book Economy - inputs left, ACOS right */}
             <div className="space-y-3">
               <h4 className="text-sm font-medium flex items-center gap-2">
                 <DollarSign className="w-4 h-4 text-primary" />
                 Economía del Libro
               </h4>
               
-              {bookEconomy && onBookEconomyChange && <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1">
-                    <label className="text-xs text-muted-foreground">Precio (PVP)</label>
-                    <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">{cs}</span>
-                      <Input type="number" min={0} step={0.01} value={bookEconomy.precioLibro || ''} onChange={e => handlePrecioChange(e.target.value)} placeholder="0.00" className="pl-7 h-8 text-sm" />
-                    </div>
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-xs text-muted-foreground">Regalías por venta</label>
-                    <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">{cs}</span>
-                      <Input type="number" min={0} step={0.01} value={bookEconomy.regaliasPorVenta || ''} onChange={e => handleRegaliasChange(e.target.value)} placeholder="0.00" className="pl-7 h-8 text-sm" />
-                    </div>
-                  </div>
-                  <div className="col-span-2 p-3 rounded-lg bg-primary/10 border border-primary/20">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <span className="text-xs text-muted-foreground block mb-1">ACOS Punto de Equilibrio</span>
-                        <span className="text-xl font-bold text-primary">
-                          {acosEquilibrio !== null ? `${acosEquilibrio.toFixed(1)}%` : '—'}
-                        </span>
+              {bookEconomy && onBookEconomyChange && <div className="flex items-stretch gap-3">
+                  <div className="flex flex-col gap-2 flex-1">
+                    <div className="space-y-1">
+                      <label className="text-xs text-muted-foreground">Precio (PVP)</label>
+                      <div className="relative">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">{cs}</span>
+                        <Input type="number" min={0} step={0.01} value={bookEconomy.precioLibro || ''} onChange={e => handlePrecioChange(e.target.value)} placeholder="0.00" className="pl-7 h-8 text-sm" />
                       </div>
-                      <div className="text-xs text-muted-foreground text-right">
-                        <p>ACOS &lt; PE = Beneficio</p>
-                        <p>ACOS &gt; PE = Pérdida</p>
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs text-muted-foreground">Regalías por venta</label>
+                      <div className="relative">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">{cs}</span>
+                        <Input type="number" min={0} step={0.01} value={bookEconomy.regaliasPorVenta || ''} onChange={e => handleRegaliasChange(e.target.value)} placeholder="0.00" className="pl-7 h-8 text-sm" />
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-center p-4 rounded-lg bg-primary/10 border border-primary/20 min-w-[140px]">
+                    <div className="text-center">
+                      <span className="text-xs text-muted-foreground block mb-1">ACOS PE</span>
+                      <span className="text-2xl font-bold text-primary block">
+                        {acosEquilibrio !== null ? `${acosEquilibrio.toFixed(1)}%` : '—'}
+                      </span>
+                      <div className="text-[10px] text-muted-foreground mt-1 leading-tight">
+                        <p>&lt; PE = Beneficio</p>
+                        <p>&gt; PE = Pérdida</p>
                       </div>
                     </div>
                   </div>
