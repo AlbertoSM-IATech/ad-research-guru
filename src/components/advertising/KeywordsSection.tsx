@@ -827,7 +827,7 @@ export const KeywordsSection = ({
   };
   return <div data-tour="keywords-section" className="space-y-6 animate-fade-in">
       {/* Functional View Toggle */}
-      <div className="flex-col gap-4 flex items-center justify-start">
+      <div className="gap-4 items-center justify-start flex flex-row">
         <div className="items-start justify-between flex flex-col px-0 mx-0 my-0 py-0 gap-[13px]">
           
           {/* View Toggle: Editorial / Ads */}
