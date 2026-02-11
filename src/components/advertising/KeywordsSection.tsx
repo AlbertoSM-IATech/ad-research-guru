@@ -858,7 +858,7 @@ export const KeywordsSection = ({
         
         {/* ADS Dashboard - only in ads view, collapsible - full width */}
         {functionalView === 'ads' && hasAdsAccess && <details className="group w-full" open>
-            <summary className="gap-2 cursor-pointer select-none text-sm font-semibold text-foreground hover:text-foreground/80 transition-colors py-2 px-3 items-center justify-start flex flex-row bg-muted/50 rounded-lg border border-border w-full">
+            <summary className="gap-2 cursor-pointer select-none text-sm font-semibold text-foreground hover:text-foreground/80 transition-colors py-2 px-3 items-center justify-start flex flex-row rounded-lg border border-border w-full bg-[#f98334]/20">
               <ChevronDown className="w-4 h-4 transition-transform group-open:rotate-0 -rotate-90" />
               Dashboard de rendimiento
             </summary>
@@ -1481,9 +1481,9 @@ export const KeywordsSection = ({
           </div>
           <div className="flex-1 overflow-auto p-4">
             <AcosAlertsTray keywords={keywords} bookEconomy={bookEconomy} campaigns={campaigns} onKeywordClick={kw => {
-              setIsAlertsDialogOpen(false);
-              revealKeywordAndOpenPanel(kw.id);
-            }} />
+            setIsAlertsDialogOpen(false);
+            revealKeywordAndOpenPanel(kw.id);
+          }} />
           </div>
         </div>
       </div>}
