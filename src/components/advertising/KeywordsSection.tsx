@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, useCallback } from 'react';
-import { Plus, Search, Trash2, ArrowUpDown, Eye, BookOpen, Megaphone, Info, Star, AlertTriangle, RotateCcw, GitCompare, ChevronUp, ChevronDown, Save, Crown, Upload } from 'lucide-react';
+import { Plus, Search, Trash2, ArrowUpDown, Eye, BookOpen, Megaphone, Info, Star, AlertTriangle, RotateCcw, GitCompare, ChevronUp, ChevronDown, Save, Crown, Upload, X } from 'lucide-react';
 import { DndContext, closestCenter, type DragEndEvent, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
 import { SortableContext, horizontalListSortingStrategy } from '@dnd-kit/sortable';
 import { Button } from '@/components/ui/button';
@@ -152,6 +152,7 @@ export const KeywordsSection = ({
   const [historyKeyword, setHistoryKeyword] = useState<Keyword | null>(null);
   const [isWizardOpen, setIsWizardOpen] = useState(false);
   const [isAdsWizardOpen, setIsAdsWizardOpen] = useState(false);
+  const [isAlertsDialogOpen, setIsAlertsDialogOpen] = useState(false);
   const [wizardInitialKeyword, setWizardInitialKeyword] = useState('');
   // Single source of truth: store only the ID, derive the keyword from keywords array
   const [selectedKeywordId, setSelectedKeywordId] = useState<string | null>(null);
@@ -855,15 +856,9 @@ export const KeywordsSection = ({
           </div>
         </div>
         
-        {/* Contextual message */}
-        <div className={cn("flex items-center gap-2 px-4 py-2 rounded-lg text-sm", functionalView === 'editorial' ? "bg-blue-500/10 text-blue-700 dark:text-blue-300 border border-blue-500/20" : "bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-500/20")}>
-          <Info className="w-4 h-4 flex-shrink-0" />
-          {functionalView === 'editorial' ? "Esta vista está pensada para decisiones editoriales, no para inversión publicitaria." : "Esta vista está pensada para decisiones de inversión en Ads."}
-        </div>
-
-        {/* ADS Dashboard - only in ads view, collapsible */}
-        {functionalView === 'ads' && hasAdsAccess && <details className="group" open>
-            <summary className="gap-2 cursor-pointer select-none text-sm font-medium text-muted-foreground hover:text-foreground transition-colors py-1 items-center justify-start flex flex-row">
+        {/* ADS Dashboard - only in ads view, collapsible - full width */}
+        {functionalView === 'ads' && hasAdsAccess && <details className="group w-full" open>
+            <summary className="gap-2 cursor-pointer select-none text-sm font-semibold text-foreground hover:text-foreground/80 transition-colors py-2 px-3 items-center justify-start flex flex-row bg-muted/50 rounded-lg border border-border w-full">
               <ChevronDown className="w-4 h-4 transition-transform group-open:rotate-0 -rotate-90" />
               Dashboard de rendimiento
             </summary>
@@ -871,9 +866,6 @@ export const KeywordsSection = ({
               <AdsDashboard keywords={keywords} bookEconomy={bookEconomy} currencySymbol={currencySymbol} />
             </div>
           </details>}
-        
-        {/* ACOS Alerts Tray - only in ads view, shows keywords with ACOS > PE */}
-        {functionalView === 'ads' && hasAdsAccess && <AcosAlertsTray keywords={keywords} bookEconomy={bookEconomy} campaigns={campaigns} onKeywordClick={kw => revealKeywordAndOpenPanel(kw.id)} />}
       </div>
 
       {/* Advanced Filters - positioned above table with toolbar */}
@@ -925,13 +917,19 @@ export const KeywordsSection = ({
 
       {/* Toolbar + Results count + Needs Attention indicator */}
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3">
           <div className="text-sm text-muted-foreground">
             {filteredKeywords.length} de {keywords.length} keywords
             {selectedIds.size > 0 && ` • ${selectedIds.size} seleccionadas`}
           </div>
           
-          {/* Needs Attention counter and toggle - only in ads view */}
+          {/* Contextual view warning - inline */}
+          <div className={cn("flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs", functionalView === 'editorial' ? "bg-blue-500/10 text-blue-600 dark:text-blue-400" : "bg-amber-500/10 text-amber-600 dark:text-amber-400")}>
+            <Info className="w-3 h-3 flex-shrink-0" />
+            {functionalView === 'editorial' ? "Vista editorial" : "Vista de inversión Ads"}
+          </div>
+          
+          {/* Needs Attention counter - opens dialog */}
           {functionalView === 'ads' && (() => {
           const acosEquilibrioVal = bookEconomy.precioLibro > 0 && bookEconomy.regaliasPorVenta > 0 ? bookEconomy.regaliasPorVenta / bookEconomy.precioLibro * 100 : null;
           const needsAttentionCount = acosEquilibrioVal !== null ? keywords.filter(k => {
@@ -942,10 +940,7 @@ export const KeywordsSection = ({
             return acosActual !== null && acosActual > acosEquilibrioVal;
           }).length : 0;
           if (needsAttentionCount === 0) return null;
-          return <Button variant={adsFilters.needsAttention ? "default" : "outline"} size="sm" onClick={() => handleAdsFiltersChange({
-            ...adsFilters,
-            needsAttention: !adsFilters.needsAttention
-          })} className={cn("gap-2 text-xs", adsFilters.needsAttention ? "bg-red-500 hover:bg-red-600 text-white" : "border-red-500/50 text-red-600 hover:bg-red-500/10")}>
+          return <Button variant="outline" size="sm" onClick={() => setIsAlertsDialogOpen(true)} className={cn("gap-2 text-xs border-red-500/50 text-red-600 hover:bg-red-500/10")}>
                 <AlertTriangle className="w-3.5 h-3.5" />
                 Necesitan atención: {needsAttentionCount}
               </Button>;
@@ -1243,7 +1238,7 @@ export const KeywordsSection = ({
                     </TableCell>;
                     case 'cpc':
                       return <TableCell key={colKey} className="tabular-nums text-xs" onClick={e => e.stopPropagation()}>
-                      <InlineEditableCell value={ads?.cpcActual ?? 0} type="number" min={0} onSave={value => handleInlineAdsUpdate('cpcActual', value)} formatter={v => `${currencySymbol}${Number(v || 0).toFixed(2)}`} className="text-xs" />
+                      <InlineEditableCell value={ads?.cpcActual ?? 0} type="number" min={0} step={0.01} onSave={value => handleInlineAdsUpdate('cpcActual', value)} formatter={v => `${currencySymbol}${Number(v || 0).toFixed(2)}`} className="text-xs" />
                     </TableCell>;
                     case 'pedidos':
                       return <TableCell key={colKey} className="tabular-nums text-xs" onClick={e => e.stopPropagation()}>
@@ -1470,5 +1465,27 @@ export const KeywordsSection = ({
       
       {/* Plan Upgrade Modal */}
       <PlanUpgradeModal open={showPlanUpgradeModal} onOpenChange={setShowPlanUpgradeModal} />
+      
+      {/* ACOS Alerts Dialog */}
+      {isAlertsDialogOpen && <div className="fixed inset-0 z-50 flex items-center justify-center">
+        <div className="fixed inset-0 bg-black/50" onClick={() => setIsAlertsDialogOpen(false)} />
+        <div className="relative z-50 bg-background border border-border rounded-xl shadow-2xl w-[90vw] max-w-[900px] max-h-[80vh] flex flex-col">
+          <div className="flex items-center justify-between p-4 border-b">
+            <div className="flex items-center gap-2">
+              <AlertTriangle className="w-5 h-5 text-red-500" />
+              <h2 className="text-lg font-semibold">Keywords que necesitan atención</h2>
+            </div>
+            <Button variant="ghost" size="icon" onClick={() => setIsAlertsDialogOpen(false)}>
+              <X className="w-4 h-4" />
+            </Button>
+          </div>
+          <div className="flex-1 overflow-auto p-4">
+            <AcosAlertsTray keywords={keywords} bookEconomy={bookEconomy} campaigns={campaigns} onKeywordClick={kw => {
+              setIsAlertsDialogOpen(false);
+              revealKeywordAndOpenPanel(kw.id);
+            }} />
+          </div>
+        </div>
+      </div>}
     </div>;
 };

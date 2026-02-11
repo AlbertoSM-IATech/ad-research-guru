@@ -28,7 +28,7 @@ export const AcosAlertsTray = ({
   campaigns,
   onKeywordClick
 }: AcosAlertsTrayProps) => {
-  const [isOpen, setIsOpen] = useState(false);
+  const [isOpen, setIsOpen] = useState(true);
   const [campaignFilter, setCampaignFilter] = useState<string>('all');
   const [sortBy, setSortBy] = useState<SortOption>('priority');
 
@@ -91,96 +91,85 @@ export const AcosAlertsTray = ({
     return Array.from(uniqueCampaigns) as string[];
   }, [alertKeywords]);
   if (acosEquilibrio === null) return null;
-  if (alertKeywords.length === 0) return null;
+  if (alertKeywords.length === 0) return <div className="text-center py-8 text-muted-foreground text-sm">No hay keywords con ACOS sobre equilibrio.</div>;
   const totalLoss = alertKeywords.reduce((sum, kw) => sum + (kw.loss ?? 0), 0);
-  return <Collapsible open={isOpen} onOpenChange={setIsOpen}>
-      <CollapsibleTrigger asChild>
-        <div className={cn("flex items-center justify-between py-2 rounded-lg border cursor-pointer transition-colors bg-red-500/10 border-red-500/30 hover:bg-red-500/15 mx-0 px-[90px] gap-[73px]", isOpen && "rounded-b-none")}>
-          <div className="flex items-center gap-3">
-            <AlertTriangle className="w-4 h-4 text-red-500" />
-            <span className="font-medium text-sm">
-              {alertKeywords.length} keyword{alertKeywords.length !== 1 ? 's' : ''} con ACOS sobre equilibrio
-            </span>
-            {totalLoss > 0 && <Badge variant="destructive" className="text-xs">
-                <TrendingDown className="w-3 h-3 mr-1" />
-                -{formatearMoneda(totalLoss)}
-              </Badge>}
-          </div>
-          <div className="flex items-center gap-2">
-            <Badge variant="outline" className="text-xs bg-background">
-              PE: {acosEquilibrio.toFixed(1)}%
-            </Badge>
-            {isOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-          </div>
+  return <div className="space-y-4">
+      {/* Summary */}
+      <div className="flex items-center gap-3 flex-wrap">
+        <Badge variant="destructive" className="text-sm px-3 py-1">
+          {alertKeywords.length} keyword{alertKeywords.length !== 1 ? 's' : ''} sobre equilibrio
+        </Badge>
+        {totalLoss > 0 && <Badge variant="destructive" className="text-xs">
+            <TrendingDown className="w-3 h-3 mr-1" />
+            -{formatearMoneda(totalLoss)}
+          </Badge>}
+        <Badge variant="outline" className="text-xs bg-background">
+          PE: {acosEquilibrio.toFixed(1)}%
+        </Badge>
+      </div>
+
+      {/* Filters */}
+      <div className="flex items-center gap-3 flex-wrap">
+        <div className="flex items-center gap-2">
+          <Filter className="w-3.5 h-3.5 text-muted-foreground" />
+          <Select value={campaignFilter} onValueChange={setCampaignFilter}>
+            <SelectTrigger className="h-8 text-xs w-[160px]">
+              <SelectValue placeholder="Campaña" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todas las campañas</SelectItem>
+              {alertCampaigns.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+            </SelectContent>
+          </Select>
         </div>
-      </CollapsibleTrigger>
-
-      <CollapsibleContent>
-        <div className="border border-t-0 border-red-500/30 rounded-b-lg bg-background/50 p-3 space-y-3">
-          {/* Filters */}
-          <div className="flex items-center gap-3 flex-wrap">
-            <div className="flex items-center gap-2">
-              <Filter className="w-3.5 h-3.5 text-muted-foreground" />
-              <Select value={campaignFilter} onValueChange={setCampaignFilter}>
-                <SelectTrigger className="h-7 text-xs w-[140px]">
-                  <SelectValue placeholder="Campaña" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todas las campañas</SelectItem>
-                  {alertCampaigns.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="flex items-center gap-2">
-              <ArrowUpDown className="w-3.5 h-3.5 text-muted-foreground" />
-              <Select value={sortBy} onValueChange={v => setSortBy(v as SortOption)}>
-                <SelectTrigger className="h-7 text-xs w-[130px]">
-                  <SelectValue placeholder="Ordenar" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="priority">Prioridad</SelectItem>
-                  <SelectItem value="acos-desc">ACOS (mayor)</SelectItem>
-                  <SelectItem value="loss-desc">Pérdida (mayor)</SelectItem>
-                  <SelectItem value="keyword">Alfabético</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            {campaignFilter !== 'all' && <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => setCampaignFilter('all')}>
-                <X className="w-3 h-3 mr-1" />
-                Limpiar filtro
-              </Button>}
-          </div>
-
-          {/* Keywords List */}
-          <div className="space-y-1 max-h-[200px] overflow-y-auto">
-            {sortedKeywords.map(kw => <div key={kw.id} className="flex items-center justify-between px-3 py-2 rounded-md hover:bg-muted/50 cursor-pointer transition-colors group" onClick={() => onKeywordClick?.(kw)}>
-                <div className="flex items-center gap-2 min-w-0">
-                  <AlertTriangle className="w-3.5 h-3.5 text-red-500 shrink-0" />
-                  <span className="text-sm truncate max-w-[200px]" title={kw.keyword}>
-                    {kw.keyword}
-                  </span>
-                  {kw.adsData?.campaignName && <Badge variant="outline" className="text-[10px] px-1.5 py-0 shrink-0">
-                      {kw.adsData.campaignName}
-                    </Badge>}
-                </div>
-                <div className="flex items-center gap-3 text-xs">
-                  <span className="text-red-600 dark:text-red-400 font-mono">
-                    ACOS: {formatearPorcentaje(kw.acosActual)}
-                  </span>
-                  <span className="text-muted-foreground">
-                    vs {formatearPorcentaje(kw.acosEquilibrio)}
-                  </span>
-                  {kw.loss !== null && kw.loss > 0 && <span className="text-red-600 dark:text-red-400 font-mono font-medium">
-                      -{formatearMoneda(kw.loss)}
-                    </span>}
-                </div>
-              </div>)}
-          </div>
-
-          {sortedKeywords.length === 0 && <div className="text-center py-4 text-sm text-muted-foreground">
-              No hay keywords en esta campaña con ACOS sobre equilibrio
-            </div>}
+        <div className="flex items-center gap-2">
+          <ArrowUpDown className="w-3.5 h-3.5 text-muted-foreground" />
+          <Select value={sortBy} onValueChange={v => setSortBy(v as SortOption)}>
+            <SelectTrigger className="h-8 text-xs w-[140px]">
+              <SelectValue placeholder="Ordenar" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="priority">Prioridad</SelectItem>
+              <SelectItem value="acos-desc">ACOS (mayor)</SelectItem>
+              <SelectItem value="loss-desc">Pérdida (mayor)</SelectItem>
+              <SelectItem value="keyword">Alfabético</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
-      </CollapsibleContent>
-    </Collapsible>;
+        {campaignFilter !== 'all' && <Button variant="ghost" size="sm" className="h-8 text-xs" onClick={() => setCampaignFilter('all')}>
+            <X className="w-3 h-3 mr-1" />
+            Limpiar filtro
+          </Button>}
+      </div>
+
+      {/* Keywords List - full height within dialog */}
+      <div className="space-y-1 overflow-y-auto overflow-x-auto" style={{ maxHeight: 'calc(80vh - 220px)' }}>
+        {sortedKeywords.map(kw => <div key={kw.id} className="flex items-center justify-between px-3 py-2.5 rounded-md hover:bg-muted/50 cursor-pointer transition-colors group border-b border-border/50 last:border-0" onClick={() => onKeywordClick?.(kw)}>
+            <div className="flex items-center gap-2 min-w-0">
+              <AlertTriangle className="w-3.5 h-3.5 text-red-500 shrink-0" />
+              <span className="text-sm truncate max-w-[280px]" title={kw.keyword}>
+                {kw.keyword}
+              </span>
+              {kw.adsData?.campaignName && <Badge variant="outline" className="text-[10px] px-1.5 py-0 shrink-0">
+                  {kw.adsData.campaignName}
+                </Badge>}
+            </div>
+            <div className="flex items-center gap-4 text-xs shrink-0">
+              <span className="text-red-600 dark:text-red-400 font-mono">
+                ACOS: {formatearPorcentaje(kw.acosActual)}
+              </span>
+              <span className="text-muted-foreground">
+                vs {formatearPorcentaje(kw.acosEquilibrio)}
+              </span>
+              {kw.loss !== null && kw.loss > 0 && <span className="text-red-600 dark:text-red-400 font-mono font-medium">
+                  -{formatearMoneda(kw.loss)}
+                </span>}
+            </div>
+          </div>)}
+      </div>
+
+      {sortedKeywords.length === 0 && <div className="text-center py-4 text-sm text-muted-foreground">
+          No hay keywords en esta campaña con ACOS sobre equilibrio
+        </div>}
+    </div>;
 };

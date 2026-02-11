@@ -53,10 +53,11 @@ export function NewAdsKeywordWizard({
   // Step 2 fields
   const [impresiones, setImpresiones] = useState(0);
   const [clicks, setClicks] = useState(0);
-  const [cpc, setCpc] = useState(0);
+  const [cpcStr, setCpcStr] = useState('');
   const [pedidos, setPedidos] = useState(0);
-  const [gasto, setGasto] = useState(0);
-  const [ventas, setVentas] = useState(0);
+
+  // Derived CPC value
+  const cpc = cpcStr === '' ? 0 : parseFloat(cpcStr) || 0;
 
   // Duplicate detection
   const duplicate = useMemo(
@@ -64,11 +65,11 @@ export function NewAdsKeywordWizard({
     [keyword, marketplaceId, existingKeywords]
   );
 
-  // Calculated metrics
+  // Auto-calculated fields
+  const gastoCalc = clicks > 0 && cpc > 0 ? clicks * cpc : null;
   const ctr = impresiones > 0 ? (clicks / impresiones) * 100 : null;
-  const acosActual = calcularAcosActualPorcentaje(gasto, ventas);
+  const acosActual = calcularAcosActualPorcentaje(gastoCalc ?? undefined, undefined);
   const conversion = calcularConversionPorcentaje(pedidos, clicks);
-  const beneficio = ventas > 0 || gasto > 0 ? ventas - gasto : null;
 
   const resetForm = () => {
     setStep(1);
@@ -77,10 +78,8 @@ export function NewAdsKeywordWizard({
     setFase('lanzamiento');
     setImpresiones(0);
     setClicks(0);
-    setCpc(0);
+    setCpcStr('');
     setPedidos(0);
-    setGasto(0);
-    setVentas(0);
   };
 
   const handleOpenChange = (isOpen: boolean) => {
@@ -101,13 +100,15 @@ export function NewAdsKeywordWizard({
   const handleSave = () => {
     const normalizedKeyword = keyword.trim().replace(/\s+/g, ' ');
 
+    const gastoFinal = clicks * cpc;
+
     const adsData: AdsData = {
       impresiones: impresiones || 0,
       clicks: clicks || 0,
       cpcActual: cpc || 0,
       pedidos: pedidos || 0,
-      gasto: gasto || 0,
-      ventas: ventas || 0,
+      gasto: gastoFinal || 0,
+      ventas: 0,
       ctr: ctr ?? 0,
       faseActual: fase,
       campaignName: campaignName || undefined,
@@ -140,13 +141,13 @@ export function NewAdsKeywordWizard({
     }
   };
 
-  const numInput = (value: number, onChange: (v: number) => void, decimal = false) => (
+  const numInput = (value: number, onChange: (v: number) => void) => (
     <Input
       type="number"
       min={0}
-      step={decimal ? 0.01 : 1}
+      step={1}
       value={value || ''}
-      onChange={(e) => onChange(decimal ? parseFloat(e.target.value) || 0 : parseInt(e.target.value) || 0)}
+      onChange={(e) => onChange(parseInt(e.target.value) || 0)}
       className="h-9"
     />
   );
@@ -242,45 +243,46 @@ export function NewAdsKeywordWizard({
               </div>
               <div className="space-y-1">
                 <Label className="text-xs">CPC ({currencySymbol})</Label>
-                {numInput(cpc, setCpc, true)}
+                <Input
+                  type="text"
+                  inputMode="decimal"
+                  value={cpcStr}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    // Allow empty, digits, dot, comma
+                    if (val === '' || /^[0-9]*[.,]?[0-9]*$/.test(val)) {
+                      setCpcStr(val.replace(',', '.'));
+                    }
+                  }}
+                  placeholder="0.00"
+                  className="h-9"
+                />
               </div>
               <div className="space-y-1">
                 <Label className="text-xs">Pedidos</Label>
                 {numInput(pedidos, setPedidos)}
               </div>
-              <div className="space-y-1">
-                <Label className="text-xs">Gasto ({currencySymbol})</Label>
-                {numInput(gasto, setGasto, true)}
-              </div>
-              <div className="space-y-1">
-                <Label className="text-xs">Ventas ({currencySymbol})</Label>
-                {numInput(ventas, setVentas, true)}
-              </div>
             </div>
 
-            {/* Summary */}
+            {/* Summary - includes auto-calculated Gasto */}
             <div className="rounded-md border bg-muted/30 p-3 space-y-1.5">
               <p className="text-xs font-medium text-muted-foreground">Resumen calculado</p>
               <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">CTR</span>
-                  <span>{ctr !== null ? formatearPorcentaje(ctr) : '—'}</span>
+                  <span className="text-muted-foreground">Gasto</span>
+                  <span>{gastoCalc !== null ? formatearMoneda(gastoCalc, currencySymbol) : '—'}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">ACOS</span>
-                  <span className={acosActual !== null && acosActual > 100 ? 'text-destructive' : ''}>
-                    {formatearPorcentaje(acosActual)}
-                  </span>
+                  <span className="text-muted-foreground">CTR</span>
+                  <span>{ctr !== null ? formatearPorcentaje(ctr) : '—'}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Conv.</span>
                   <span>{formatearPorcentaje(conversion)}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Beneficio</span>
-                  <span className={beneficio !== null && beneficio < 0 ? 'text-destructive' : beneficio !== null && beneficio > 0 ? 'text-green-600' : ''}>
-                    {beneficio !== null ? formatearMoneda(beneficio, currencySymbol) : '—'}
-                  </span>
+                  <span className="text-muted-foreground">ACOS</span>
+                  <span>{formatearPorcentaje(acosActual)}</span>
                 </div>
               </div>
             </div>
