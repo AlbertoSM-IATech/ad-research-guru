@@ -616,79 +616,38 @@ export const AdvertisingResearch = ({
       <KeyboardShortcutsManager onSave={handleSave} onSearch={handleFocusSearch} />
 
       <div className="w-full px-3 sm:px-4 lg:px-6 py-6">
-        {/* === HEADER === Minimalista y profesional */}
-        <header className="mb-6">
-          <div className="flex items-center justify-between flex-wrap gap-[3px]">
-            {/* Title + Sync indicator */}
-            <div className="flex-row px-0 py-0 flex items-start justify-start gap-[40px]">
-              <div className="flex items-center gap-3">
-                <h1 className="font-heading text-2xl font-bold text-foreground">Análisis de Keywords y Gestión de ADS</h1>
-              </div>
-              <p className="text-xs text-muted-foreground max-w-2xl">
-                <span className="text-amber-600 dark:text-amber-400 font-medium">⚠️ Aviso:</span> Este panel es un
-                gestor complementario que ayuda a la visión y toma de decisiones (elección de nicho, KWs rentables,
-                campañas de ADS), pero <span className="underline">no sustituye</span> herramientas de análisis de
-                nicho, keywords o competencia. No arroja datos reales de Amazon.
-              </p>
-            </div>
-            <div className="flex items-center gap-3">
-              {/* Sync status indicators - Desktop */}
-              <div className="hidden md:flex items-center gap-2">
-                {/* Pending changes indicator + Save Now button */}
-                <span className={`inline-flex items-center gap-1.5 text-xs transition-all duration-300 ${pendingChangesCount > 0 ? "text-amber-500 dark:text-amber-400" : "text-muted-foreground"} ${isSyncing ? "animate-pulse" : ""}`}>
-                  <span className={`w-1.5 h-1.5 rounded-full transition-all duration-300 ${pendingChangesCount > 0 ? "bg-amber-500 dark:bg-amber-400" : "bg-green-500"} ${isSyncing ? "animate-pulse scale-125" : ""}`} />
-                  {pendingChangesCount > 0 ? `Cambios pendientes: ${pendingChangesCount}` : "Todo sincronizado"}
-                </span>
-
-                {/* Save Now button - only show when there are pending changes */}
-                {pendingChangesCount > 0 && <Button variant="ghost" size="sm" className="h-6 px-2 text-xs gap-1 text-amber-600 dark:text-amber-400 hover:text-amber-700 dark:hover:text-amber-300" onClick={handleSaveNow}>
-                    <Save className="w-3 h-3" />
-                    Guardar
-                  </Button>}
-
-                {/* Last sync time with history tooltip */}
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <span className={`inline-flex items-center gap-1.5 text-xs text-muted-foreground transition-all duration-300 cursor-help ${isSyncing ? "text-primary" : ""}`}>
-                        Última sincronización: {formatLastSync(lastSyncAt)}
-                      </span>
-                    </TooltipTrigger>
-                    <TooltipContent side="bottom" className="max-w-xs">
-                      <div className="space-y-1">
-                        <p className="font-medium text-xs">Historial de sincronización</p>
-                        {syncHistory.length === 0 ? <p className="text-xs text-muted-foreground">Sin sincronizaciones recientes</p> : <ul className="text-xs space-y-0.5">
-                            {syncHistory.map((date, i) => <li key={i} className="text-muted-foreground">
-                                {date.toLocaleTimeString("es-ES", {
-                            hour: "2-digit",
-                            minute: "2-digit",
-                            second: "2-digit"
-                          })}
-                                {i === 0 && <span className="ml-1 text-green-500">(última)</span>}
-                              </li>)}
-                          </ul>}
-                      </div>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              </div>
+        <header className="mb-4">
+          {/* Row 1: Title + Actions */}
+          <div className="flex items-center justify-between gap-2 flex-wrap">
+            <div className="flex items-center gap-2">
+              <h1 className="font-heading text-xl font-bold text-foreground">Keywords & ADS</h1>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span className="text-muted-foreground cursor-help text-xs">ⓘ</span>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom" className="max-w-sm">
+                    <p className="text-xs">
+                      <span className="font-medium">Aviso:</span> Este panel es un gestor complementario que ayuda a la visión y toma de decisiones (elección de nicho, KWs rentables, campañas de ADS), pero no sustituye herramientas de análisis de nicho, keywords o competencia. No arroja datos reales de Amazon.
+                    </p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             </div>
 
-            {/* Controls */}
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
               {/* Marketplace Selector */}
               <div data-tour="marketplace">
                 <MarketplaceSelector value={selectedMarketplace} onChange={setSelectedMarketplace} />
               </div>
 
               {/* Header action buttons */}
-              <div className="flex items-center gap-1">
+              <div className="flex items-center gap-0.5">
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <Button variant="ghost" size="icon" className="h-9 w-9" onClick={() => setShowTour(true)}>
-                        <HelpCircle className="h-5 w-5" />
-                        <span className="sr-only">Tour guiado</span>
+                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setShowTour(true)}>
+                        <HelpCircle className="h-4 w-4" />
                       </Button>
                     </TooltipTrigger>
                     <TooltipContent side="bottom">
@@ -700,9 +659,8 @@ export const AdvertisingResearch = ({
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <Button variant="ghost" size="icon" className="h-9 w-9" onClick={() => setShowMarketConfigModal(true)}>
-                        <Settings className="h-5 w-5" />
-                        <span className="sr-only">Criterios por mercado</span>
+                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setShowMarketConfigModal(true)}>
+                        <Settings className="h-4 w-4" />
                       </Button>
                     </TooltipTrigger>
                     <TooltipContent side="bottom">
@@ -714,9 +672,8 @@ export const AdvertisingResearch = ({
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <Button variant="ghost" size="icon" className="h-9 w-9" onClick={() => setShowBackupModal(true)}>
-                        <HardDrive className="h-5 w-5" />
-                        <span className="sr-only">Backup</span>
+                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setShowBackupModal(true)}>
+                        <HardDrive className="h-4 w-4" />
                       </Button>
                     </TooltipTrigger>
                     <TooltipContent side="bottom">
@@ -727,14 +684,13 @@ export const AdvertisingResearch = ({
 
                 <ThemeToggle />
 
-                <div className="w-px h-6 bg-border mx-1" />
+                <div className="w-px h-5 bg-border mx-0.5" />
 
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <Button variant="ghost" size="icon" className="h-9 w-9 text-destructive hover:text-destructive" onClick={() => setShowResetDialog(true)}>
-                        <Trash2 className="h-5 w-5" />
-                        <span className="sr-only">Restablecer datos</span>
+                      <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => setShowResetDialog(true)}>
+                        <Trash2 className="h-4 w-4" />
                       </Button>
                     </TooltipTrigger>
                     <TooltipContent side="bottom">
@@ -746,49 +702,8 @@ export const AdvertisingResearch = ({
             </div>
           </div>
 
-          {/* Sync status indicators - Mobile */}
-          <div className="md:hidden mt-2 flex flex-wrap items-center gap-x-3 gap-y-1">
-            {/* Pending changes indicator */}
-            <span className={`inline-flex items-center gap-1.5 text-xs transition-all duration-300 ${pendingChangesCount > 0 ? "text-amber-500 dark:text-amber-400" : "text-muted-foreground"} ${isSyncing ? "animate-pulse" : ""}`}>
-              <span className={`w-1.5 h-1.5 rounded-full transition-all duration-300 ${pendingChangesCount > 0 ? "bg-amber-500 dark:bg-amber-400" : "bg-green-500"} ${isSyncing ? "animate-pulse scale-125" : ""}`} />
-              {pendingChangesCount > 0 ? `Pendientes: ${pendingChangesCount}` : "Sincronizado"}
-            </span>
-
-            {/* Save Now button - mobile */}
-            {pendingChangesCount > 0 && <Button variant="ghost" size="sm" className="h-5 px-1.5 text-[10px] gap-0.5 text-amber-600 dark:text-amber-400" onClick={handleSaveNow}>
-                <Save className="w-3 h-3" />
-                Guardar
-              </Button>}
-
-            {/* Last sync time with history tooltip */}
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <span className={`inline-flex items-center gap-1.5 text-xs text-muted-foreground transition-all duration-300 cursor-help ${isSyncing ? "text-primary" : ""}`}>
-                    Sync: {formatLastSync(lastSyncAt)}
-                  </span>
-                </TooltipTrigger>
-                <TooltipContent side="bottom" className="max-w-xs">
-                  <div className="space-y-1">
-                    <p className="font-medium text-xs">Historial</p>
-                    {syncHistory.length === 0 ? <p className="text-xs text-muted-foreground">Sin sincronizaciones</p> : <ul className="text-xs space-y-0.5">
-                        {syncHistory.map((date, i) => <li key={i} className="text-muted-foreground">
-                            {date.toLocaleTimeString("es-ES", {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                        second: "2-digit"
-                      })}
-                            {i === 0 && <span className="ml-1 text-green-500">(última)</span>}
-                          </li>)}
-                      </ul>}
-                  </div>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          </div>
-
           {/* Mobile search */}
-          <div className="md:hidden mt-4" data-tour="global-search-mobile">
+          <div className="md:hidden mt-3" data-tour="global-search-mobile">
             <GlobalSearch searchTerm={globalSearchTerm} onSearchChange={setGlobalSearchTerm} filter={globalFilter} onFilterChange={setGlobalFilter} sort={globalSort} onSortChange={setGlobalSort} resultsCount={{
             keywords: filteredKeywords.length,
             asins: filteredASINs.length,
@@ -803,53 +718,81 @@ export const AdvertisingResearch = ({
           <BookInfoPanelCompact bookInfo={bookInfo} onChange={setBookInfo} bookEconomy={bookEconomy} onBookEconomyChange={setBookEconomy} keywords={currentKeywords} marketplaceId={selectedMarketplace} />
         </section>
 
-        {/* === SECCIÓN 2: PESTAÑAS PRINCIPALES (Datos / Insights) === */}
-        <section className="mb-6">
-          {/* Main View Toggle: Datos / Insights */}
-          <div className="flex items-center gap-2 p-1 bg-muted rounded-lg w-fit mb-4">
-            <Button data-tour="tab-datos" variant={mainView === 'data' ? 'default' : 'ghost'} size="sm" onClick={() => setMainView('data')} className={cn("gap-2 transition-all", mainView === 'data' && "bg-primary text-primary-foreground")}>
-              <Search className="w-4 h-4" />
-              Datos
-            </Button>
-            <Button data-tour="tab-visualizaciones" variant={mainView === 'insights' ? 'default' : 'ghost'} size="sm" onClick={() => setMainView('insights')} className={cn("gap-2 transition-all", mainView === 'insights' && "bg-primary text-primary-foreground")}>
-              <TrendingUp className="w-4 h-4" />
-              Visualizaciones
-            </Button>
+        {/* === SECCIÓN 2: PESTAÑAS PRINCIPALES === */}
+        <section className="mb-4">
+          {/* Sync bar + Main View Toggle on same row */}
+          <div className="flex items-center justify-between flex-wrap gap-2 mb-3">
+            {/* Main View Toggle */}
+            <div className="flex items-center gap-1 p-0.5 bg-muted rounded-md w-fit">
+              <Button data-tour="tab-datos" variant={mainView === 'data' ? 'default' : 'ghost'} size="sm" onClick={() => setMainView('data')} className={cn("gap-1.5 h-7 text-xs px-3 transition-all", mainView === 'data' && "bg-primary text-primary-foreground")}>
+                <Search className="w-3.5 h-3.5" />
+                Datos
+              </Button>
+              <Button data-tour="tab-visualizaciones" variant={mainView === 'insights' ? 'default' : 'ghost'} size="sm" onClick={() => setMainView('insights')} className={cn("gap-1.5 h-7 text-xs px-3 transition-all", mainView === 'insights' && "bg-primary text-primary-foreground")}>
+                <TrendingUp className="w-3.5 h-3.5" />
+                Visualizaciones
+              </Button>
+            </div>
+
+            {/* Sync status */}
+            <div className="flex items-center gap-2">
+              <span className={`inline-flex items-center gap-1.5 text-[11px] transition-all duration-300 ${pendingChangesCount > 0 ? "text-amber-500 dark:text-amber-400" : "text-muted-foreground"} ${isSyncing ? "animate-pulse" : ""}`}>
+                <span className={`w-1.5 h-1.5 rounded-full ${pendingChangesCount > 0 ? "bg-amber-500 dark:bg-amber-400" : "bg-green-500"} ${isSyncing ? "animate-pulse" : ""}`} />
+                {pendingChangesCount > 0 ? `${pendingChangesCount} pendientes` : "Sincronizado"}
+              </span>
+              {pendingChangesCount > 0 && <Button variant="ghost" size="sm" className="h-5 px-1.5 text-[10px] gap-0.5" onClick={handleSaveNow}>
+                <Save className="w-3 h-3" />
+              </Button>}
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span className="text-[11px] text-muted-foreground cursor-help">
+                      {formatLastSync(lastSyncAt)}
+                    </span>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom" className="max-w-xs">
+                    <div className="space-y-1">
+                      <p className="font-medium text-xs">Historial</p>
+                      {syncHistory.length === 0 ? <p className="text-xs text-muted-foreground">Sin sincronizaciones</p> : <ul className="text-xs space-y-0.5">
+                          {syncHistory.map((date, i) => <li key={i} className="text-muted-foreground">
+                              {date.toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
+                              {i === 0 && <span className="ml-1 text-green-500">(última)</span>}
+                            </li>)}
+                        </ul>}
+                    </div>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
           </div>
 
-          {/* Data View: Keywords / ASINs / Categories tabs */}
-          {mainView === 'data' && <Tabs value={activeTab} onValueChange={v => setActiveTab(v as "keywords" | "asins" | "categories")} className="space-y-4">
-              <TabsList className="grid w-full grid-cols-3 lg:w-[450px] bg-muted">
-                <TabsTrigger value="keywords" className="gap-2 data-[state=active]:bg-card">
-                  <Search className="w-4 h-4" />
-                  <span className="hidden sm:inline">Keywords</span>
-                  {currentKeywords.length > 0 && <span className="ml-1 px-1.5 py-0.5 text-xs rounded-full bg-primary/10 text-primary">
-                      {currentKeywords.length}
-                    </span>}
+          {/* Data View: Sub-tabs inline */}
+          {mainView === 'data' && <Tabs value={activeTab} onValueChange={v => setActiveTab(v as "keywords" | "asins" | "categories")} className="space-y-3">
+              <TabsList className="h-8 bg-muted/50 w-fit">
+                <TabsTrigger value="keywords" className="gap-1.5 text-xs h-7 px-3 data-[state=active]:bg-card">
+                  <Search className="w-3.5 h-3.5" />
+                  Keywords
+                  {currentKeywords.length > 0 && <span className="ml-1 px-1 py-0 text-[10px] rounded-full bg-primary/10 text-primary">{currentKeywords.length}</span>}
                 </TabsTrigger>
-                <TabsTrigger value="asins" className="gap-2 data-[state=active]:bg-card">
-                  <Target className="w-4 h-4" />
-                  <span className="hidden sm:inline">ASIN</span>
-                  {currentASINs.length > 0 && <span className="ml-1 px-1.5 py-0.5 text-xs rounded-full bg-primary/10 text-primary">
-                      {currentASINs.length}
-                    </span>}
+                <TabsTrigger value="asins" className="gap-1.5 text-xs h-7 px-3 data-[state=active]:bg-card">
+                  <Target className="w-3.5 h-3.5" />
+                  ASIN
+                  {currentASINs.length > 0 && <span className="ml-1 px-1 py-0 text-[10px] rounded-full bg-primary/10 text-primary">{currentASINs.length}</span>}
                 </TabsTrigger>
-                <TabsTrigger value="categories" className="gap-2 data-[state=active]:bg-card">
-                  <FolderOpen className="w-4 h-4" />
-                  <span className="hidden sm:inline">Categorías</span>
-                  {currentCategories.length > 0 && <span className="ml-1 px-1.5 py-0.5 text-xs rounded-full bg-primary/10 text-primary">
-                      {currentCategories.length}
-                    </span>}
+                <TabsTrigger value="categories" className="gap-1.5 text-xs h-7 px-3 data-[state=active]:bg-card">
+                  <FolderOpen className="w-3.5 h-3.5" />
+                  Categorías
+                  {currentCategories.length > 0 && <span className="ml-1 px-1 py-0 text-[10px] rounded-full bg-primary/10 text-primary">{currentCategories.length}</span>}
                 </TabsTrigger>
               </TabsList>
 
-              <TabsContent value="keywords" className="mt-4 space-y-4">
+              <TabsContent value="keywords" className="mt-3 space-y-4">
                 <KeywordsSection keywords={globalFilter === "all" || globalFilter === "keywords" ? filteredKeywords : []} onAdd={handleAddKeyword} onAddBulk={handleAddBulkKeywords} onUpdate={handleUpdateKeyword} onDelete={handleDeleteKeyword} onDeleteBulk={handleDeleteBulkKeywords} onUpdateBulk={handleUpdateBulkKeywords} marketplaceId={selectedMarketplace} bookInfo={bookInfo} bookEconomy={bookEconomy} onBookInfoChange={setBookInfo} selectedIds={selection.keywords} onSelectedIdsChange={ids => setTabSelection("keywords", ids)} searchTerm={globalSearchTerm} onSearchTermChange={setGlobalSearchTerm} />
               </TabsContent>
-              <TabsContent value="asins" className="mt-4">
+              <TabsContent value="asins" className="mt-3">
                 <ASINSection asins={globalFilter === "all" || globalFilter === "asins" ? filteredASINs : []} keywords={currentKeywords} bookTitle={bookInfo.title} onAdd={handleAddASIN} onAddBulk={handleAddBulkASINs} onUpdate={handleUpdateASIN} onDelete={handleDeleteASIN} onDeleteBulk={handleDeleteBulkASINs} marketplaceId={selectedMarketplace} selectedIds={selection.asins} onSelectedIdsChange={ids => setTabSelection("asins", ids)} />
               </TabsContent>
-              <TabsContent value="categories" className="mt-4">
+              <TabsContent value="categories" className="mt-3">
                 <CategoriesSection categories={globalFilter === "all" || globalFilter === "categories" ? filteredCategories : []} onAdd={handleAddCategory} onAddBulk={handleAddBulkCategories} onUpdate={handleUpdateCategory} onDelete={handleDeleteCategory} onDeleteBulk={handleDeleteBulkCategories} marketplaceId={selectedMarketplace} selectedIds={selection.categories} onSelectedIdsChange={ids => setTabSelection("categories", ids)} />
               </TabsContent>
             </Tabs>}
