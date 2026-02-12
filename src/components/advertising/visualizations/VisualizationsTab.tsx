@@ -14,10 +14,10 @@ import {
   sortableKeyboardCoordinates,
   rectSortingStrategy,
 } from '@dnd-kit/sortable';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
 import {
   Select,
   SelectContent,
@@ -252,102 +252,71 @@ export const VisualizationsTab = ({
   }, [keywords, asins, keywordsByMarket, asinsByMarket, categoriesByMarket]);
 
   return (
-    <div className="space-y-6">
-      {/* Control Panel */}
-      <Card className="bg-card border-border/50">
-        <CardHeader className="pb-3">
-          <div className="flex items-center justify-between flex-wrap gap-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-primary/10">
-                <Settings2 className="w-5 h-5 text-primary" />
-              </div>
-              <div>
-                <CardTitle className="text-base font-heading">Panel de Control</CardTitle>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  {visibleCount} de {charts.length} gráficas visibles
-                </p>
-              </div>
-            </div>
-            <div className="flex items-center gap-3 flex-wrap">
-              {/* Visibility Controls */}
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="sm" className="gap-2">
-                    <Eye className="w-4 h-4" />
-                    Visibilidad
-                    <ChevronDown className="w-3 h-3" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-56 bg-popover border-border">
-                  <DropdownMenuItem onClick={showAll}>
-                    <Eye className="w-4 h-4 mr-2" />
-                    Mostrar todas
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={hideAll}>
-                    <EyeOff className="w-4 h-4 mr-2" />
-                    Ocultar todas
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  {charts.map(chart => (
-                    <DropdownMenuCheckboxItem
-                      key={chart.id}
-                      checked={chart.visible}
-                      onCheckedChange={() => toggleVisibility(chart.id)}
-                    >
-                      {chart.title}
-                    </DropdownMenuCheckboxItem>
-                  ))}
-                </DropdownMenuContent>
-              </DropdownMenu>
-
-              {/* Size Control */}
-              <div className="flex items-center gap-2">
-                <Label className="text-xs text-muted-foreground">Tamaño:</Label>
-                <Select value={globalSize} onValueChange={(v) => setGlobalSize(v as any)}>
-                  <SelectTrigger className="w-28 h-8 text-xs">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent className="bg-popover border-border">
-                    <SelectItem value="compact">Compacto</SelectItem>
-                    <SelectItem value="normal">Normal</SelectItem>
-                    <SelectItem value="expanded">Expandido</SelectItem>
-                  </SelectContent>
-                </Select>
-                <Button variant="ghost" size="sm" onClick={applyGlobalSize} className="h-8 px-2">
-                  Aplicar
-                </Button>
-              </div>
-
-              <Separator orientation="vertical" className="h-6" />
-
-              {/* Reset */}
-              <Button variant="ghost" size="sm" onClick={resetOrder} className="gap-2">
-                <RotateCcw className="w-4 h-4" />
-                Restablecer
+    <div className="space-y-4">
+      {/* Toolbar */}
+      <div className="flex items-center justify-between flex-wrap gap-3 px-1">
+        <span className="text-xs text-muted-foreground">
+          {visibleCount} de {charts.length} gráficas visibles
+        </span>
+        <div className="flex items-center gap-2 flex-wrap">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm" className="gap-2 h-8 text-xs">
+                <Eye className="w-3.5 h-3.5" />
+                Visibilidad
+                <ChevronDown className="w-3 h-3" />
               </Button>
-            </div>
-          </div>
-        </CardHeader>
-      </Card>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56 bg-popover border-border">
+              <DropdownMenuItem onClick={showAll}>
+                <Eye className="w-4 h-4 mr-2" />
+                Mostrar todas
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={hideAll}>
+                <EyeOff className="w-4 h-4 mr-2" />
+                Ocultar todas
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              {charts.map(chart => (
+                <DropdownMenuCheckboxItem
+                  key={chart.id}
+                  checked={chart.visible}
+                  onCheckedChange={() => toggleVisibility(chart.id)}
+                >
+                  {chart.title}
+                </DropdownMenuCheckboxItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
 
-      {/* Info Box */}
-      <div className="bg-muted/30 border border-border/50 rounded-lg p-4 flex items-start gap-3">
-        <div className="p-1.5 rounded bg-accent/10">
-          <InfoTooltip content="Arrastra las tarjetas para reorganizar el dashboard. Tu configuración se guarda automáticamente." />
-        </div>
-        <div className="text-sm">
-          <p className="text-muted-foreground">
-            <span className="font-medium text-foreground">Arrastra y suelta</span> las tarjetas para personalizar el orden. 
-            Usa el menú <span className="font-medium">⋮</span> de cada gráfica para ocultar o cambiar su tamaño.
-            Los cambios se guardan automáticamente.
-          </p>
+          <div className="flex items-center gap-1.5">
+            <Label className="text-xs text-muted-foreground">Tamaño:</Label>
+            <Select value={globalSize} onValueChange={(v) => setGlobalSize(v as any)}>
+              <SelectTrigger className="w-24 h-8 text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent className="bg-popover border-border">
+                <SelectItem value="compact">Compacto</SelectItem>
+                <SelectItem value="normal">Normal</SelectItem>
+                <SelectItem value="expanded">Expandido</SelectItem>
+              </SelectContent>
+            </Select>
+            <Button variant="ghost" size="sm" onClick={applyGlobalSize} className="h-8 px-2 text-xs">
+              Aplicar
+            </Button>
+          </div>
+
+          <Button variant="ghost" size="sm" onClick={resetOrder} className="gap-1.5 h-8 text-xs">
+            <RotateCcw className="w-3.5 h-3.5" />
+            Restablecer
+          </Button>
         </div>
       </div>
 
       {/* Charts Grid */}
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
         <SortableContext items={charts.map(c => c.id)} strategy={rectSortingStrategy}>
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
             {charts.map(chart => (
               <ChartCard
                 key={chart.id}
@@ -370,9 +339,9 @@ export const VisualizationsTab = ({
 
       {visibleCount === 0 && (
         <Card className="bg-muted/20 border-dashed">
-          <CardContent className="py-12 text-center">
-            <EyeOff className="w-12 h-12 mx-auto text-muted-foreground/50 mb-4" />
-            <p className="text-muted-foreground">No hay gráficas visibles</p>
+          <CardContent className="py-8 text-center">
+            <EyeOff className="w-8 h-8 mx-auto text-muted-foreground/50 mb-3" />
+            <p className="text-sm text-muted-foreground">No hay gráficas visibles</p>
             <Button variant="outline" size="sm" onClick={showAll} className="mt-4">
               Mostrar todas
             </Button>
