@@ -67,13 +67,13 @@ export const ChartCard = ({
         size === 'expanded' && 'col-span-full'
       )}
     >
-      <CardHeader className="pb-2">
+      <CardHeader className="pb-1">
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-3">
             <button
               {...attributes}
               {...listeners}
-              className="cursor-grab active:cursor-grabbing p-1 rounded hover:bg-muted/50 opacity-0 group-hover:opacity-100 transition-opacity"
+              className="cursor-grab active:cursor-grabbing p-1 rounded hover:bg-muted/50 opacity-40 group-hover:opacity-100 transition-opacity"
             >
               <GripVertical className="w-4 h-4 text-muted-foreground" />
             </button>

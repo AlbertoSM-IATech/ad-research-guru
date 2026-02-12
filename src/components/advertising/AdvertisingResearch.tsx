@@ -1,5 +1,5 @@
 import { useState, useCallback, useMemo, useEffect, useRef } from "react";
- import { Search, Target, FolderOpen, BarChart3, Save, HelpCircle } from "lucide-react";
+import { Search, Target, FolderOpen, BarChart3, Save, HelpCircle, Settings, HardDrive, Trash2 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
@@ -17,7 +17,16 @@ import { AcosAlertsTray } from "./AcosAlertsTray";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { GuidedTour, useTourStatus, type UIStateRequest } from "./GuidedTour";
 import { KeyboardShortcutsManager } from "./KeyboardShortcutsManager";
-import { HeaderOverflowMenu } from "./HeaderOverflowMenu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { MarketConfigModal } from "./MarketConfigModal";
 import { BackupModal } from "./BackupModal";
 import { loadPersistedState, usePersistence, getLastSyncAt, getAdResearchStorageKey, clearBookStorage, DEFAULT_BOOK_ECONOMY } from "@/hooks/useLocalPersistence";
@@ -93,6 +102,7 @@ export const AdvertisingResearch = ({
   // Modal states
   const [showBackupModal, setShowBackupModal] = useState(false);
   const [showMarketConfigModal, setShowMarketConfigModal] = useState(false);
+  const [showResetDialog, setShowResetDialog] = useState(false);
   const [configVersion, setConfigVersion] = useState(0); // To trigger re-renders on config change
 
   // Book panel state - React controlled, no DOM hacks
@@ -671,37 +681,68 @@ export const AdvertisingResearch = ({
                 <MarketplaceSelector value={selectedMarketplace} onChange={setSelectedMarketplace} />
               </div>
 
-              {/* Theme Toggle - Discreto */}
-              <ThemeToggle />
+              {/* Header action buttons */}
+              <div className="flex items-center gap-1">
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button variant="ghost" size="icon" className="h-9 w-9" onClick={() => setShowTour(true)}>
+                        <HelpCircle className="h-5 w-5" />
+                        <span className="sr-only">Tour guiado</span>
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom">
+                      <p className="text-xs">{hasCompletedTour ? "Repetir tour" : "Tour guiado"}</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
 
-              {/* Overflow Menu */}
-               {/* Tour Button - Visible */}
-               <TooltipProvider>
-                 <Tooltip>
-                   <TooltipTrigger asChild>
-                     <Button 
-                       variant="outline" 
-                       size="sm" 
-                       onClick={() => setShowTour(true)}
-                       className="gap-1.5 h-9"
-                     >
-                       <HelpCircle className="w-4 h-4" />
-                       <span className="hidden sm:inline">Tour</span>
-                     </Button>
-                   </TooltipTrigger>
-                   <TooltipContent side="bottom">
-                     <div className="text-center">
-                       <p className="font-medium text-xs">Recorrido rápido</p>
-                       <p className="text-xs text-muted-foreground">
-                         {hasCompletedTour ? "Repetir tour" : "Te enseño lo esencial en 30 segundos"}
-                       </p>
-                     </div>
-                   </TooltipContent>
-                 </Tooltip>
-               </TooltipProvider>
- 
-               {/* Overflow Menu */}
-               <HeaderOverflowMenu onStartTour={() => setShowTour(true)} onResetData={handleResetData} onOpenMarketConfig={() => setShowMarketConfigModal(true)} onOpenBackup={() => setShowBackupModal(true)} />
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button variant="ghost" size="icon" className="h-9 w-9" onClick={() => setShowMarketConfigModal(true)}>
+                        <Settings className="h-5 w-5" />
+                        <span className="sr-only">Criterios por mercado</span>
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom">
+                      <p className="text-xs">Criterios por mercado</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button variant="ghost" size="icon" className="h-9 w-9" onClick={() => setShowBackupModal(true)}>
+                        <HardDrive className="h-5 w-5" />
+                        <span className="sr-only">Backup</span>
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom">
+                      <p className="text-xs">Backup</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+
+                <ThemeToggle />
+
+                <div className="w-px h-6 bg-border mx-1" />
+
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button variant="ghost" size="icon" className="h-9 w-9 text-destructive hover:text-destructive" onClick={() => setShowResetDialog(true)}>
+                        <Trash2 className="h-5 w-5" />
+                        <span className="sr-only">Restablecer datos</span>
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom">
+                      <p className="text-xs">Restablecer datos</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
             </div>
           </div>
 
@@ -857,5 +898,26 @@ export const AdvertisingResearch = ({
 
       {/* Market Config Modal */}
       <MarketConfigModal isOpen={showMarketConfigModal} onClose={() => setShowMarketConfigModal(false)} currentMarketplace={selectedMarketplace} onConfigChange={() => setConfigVersion(v => v + 1)} />
+
+      {/* Reset Confirmation Dialog */}
+      <AlertDialog open={showResetDialog} onOpenChange={setShowResetDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Restablecer datos</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esto borrará todos los datos guardados localmente (keywords, ASINs, categorías, campañas y contexto del libro). Esta acción no se puede deshacer.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={() => { setShowResetDialog(false); handleResetData(); }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Restablecer
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>;
 };
