@@ -240,7 +240,7 @@ export const KeywordsSection = ({
   }, [isHydrated, persistedState]);
 
   // Derive selected keyword from keywords array (single source of truth - no sync patches!)
-  const selectedKeyword = useMemo(() => keywords.find(k => k.id === selectedKeywordId) ?? null, [keywords, selectedKeywordId]);
+  const selectedKeyword = useMemo(() => keywords.find((k) => k.id === selectedKeywordId) ?? null, [keywords, selectedKeywordId]);
 
   // Memoize callback to avoid infinite loops
   const stableOnSelectedIdsChange = useCallback(onSelectedIdsChange, [onSelectedIdsChange]);
@@ -309,7 +309,7 @@ export const KeywordsSection = ({
     if (selectedIds.size === filteredKeywords.length) {
       onSelectedIdsChange(new Set());
     } else {
-      onSelectedIdsChange(new Set(filteredKeywords.map(k => k.id)));
+      onSelectedIdsChange(new Set(filteredKeywords.map((k) => k.id)));
     }
   };
   const toggleSelect = (id: string) => {
@@ -331,7 +331,7 @@ export const KeywordsSection = ({
     });
   };
   const handleBulkImport = (newKeywords: Array<Omit<Keyword, 'id' | 'createdAt' | 'updatedAt'>>) => {
-    const classifiedKeywords = newKeywords.map(k => ({
+    const classifiedKeywords = newKeywords.map((k) => ({
       ...k,
       relevance: k.relevance || calculateRelevance(k.keyword, bookInfo),
       intent: k.intent || classifyIntent(k.keyword),
@@ -383,14 +383,14 @@ export const KeywordsSection = ({
 
   // Handle update with history tracking + auto status update
   const handleUpdateWithHistory = (id: string, updates: Partial<Keyword>) => {
-    const keyword = keywords.find(k => k.id === id);
+    const keyword = keywords.find((k) => k.id === id);
     if (!keyword) return;
 
     // Track history for specific fields
     type TrackableField = 'searchVolume' | 'state' | 'relevance';
     const historyEntries: HistoryEntry[] = [];
     const trackedFields: TrackableField[] = ['searchVolume', 'state', 'relevance'];
-    trackedFields.forEach(field => {
+    trackedFields.forEach((field) => {
       if (updates[field] !== undefined && updates[field] !== keyword[field]) {
         historyEntries.push({
           id: `${Date.now()}-${field}`,
@@ -407,7 +407,7 @@ export const KeywordsSection = ({
       ...updates
     };
     const marketDataFields = ['searchVolume', 'competitors', 'price', 'royalties'];
-    const isMarketDataUpdate = marketDataFields.some(f => updates[f as keyof typeof updates] !== undefined);
+    const isMarketDataUpdate = marketDataFields.some((f) => updates[f as keyof typeof updates] !== undefined);
     const isMarketStructureUpdate = updates.marketStructure !== undefined;
     if ((isMarketDataUpdate || isMarketStructureUpdate) && !keyword.statusManuallySet) {
       const newSearchVolume = updates.searchVolume ?? keyword.searchVolume;
@@ -474,7 +474,7 @@ export const KeywordsSection = ({
 
     // Wait for filter update then navigate to keyword page
     requestAnimationFrame(() => {
-      const idx = keywords.findIndex(k => k.id === keywordId);
+      const idx = keywords.findIndex((k) => k.id === keywordId);
       if (idx >= 0) {
         setCurrentPage(Math.floor(idx / ITEMS_PER_PAGE) + 1);
       }
@@ -485,7 +485,7 @@ export const KeywordsSection = ({
   // Filter and sort keywords - filter by purpose based on functional view
   const filteredKeywords = useMemo(() => {
     // Step 1: Filter by purpose
-    let result = keywords.filter(k => {
+    let result = keywords.filter((k) => {
       if (functionalView === 'editorial') {
         return k.purpose === 'editorial' || k.purpose === 'both';
       } else {
@@ -509,7 +509,7 @@ export const KeywordsSection = ({
 
     // Apply ADS-specific filters when in ads view
     if (functionalView === 'ads') {
-      result = result.filter(k => {
+      result = result.filter((k) => {
         const ads = k.adsData;
         const gastoCalculado = calcularGastoAcumulado(ads?.clicks, ads?.cpcActual);
         const ventasCalculadas = calcularVentasAcumuladas(ads?.pedidos, bookEconomy.precioLibro);
@@ -572,7 +572,7 @@ export const KeywordsSection = ({
 
     // Pin main keyword to top if it exists and is in the filtered results
     if (bookInfo.mainKeywordId) {
-      const mainKeywordIndex = sorted.findIndex(k => k.id === bookInfo.mainKeywordId);
+      const mainKeywordIndex = sorted.findIndex((k) => k.id === bookInfo.mainKeywordId);
       if (mainKeywordIndex > 0) {
         const [mainKeyword] = sorted.splice(mainKeywordIndex, 1);
         sorted = [mainKeyword, ...sorted];
@@ -586,11 +586,11 @@ export const KeywordsSection = ({
     if (!pendingKeywordId) return;
 
     // Find keyword in the updated keywords array
-    const keyword = keywords.find(k => k.id === pendingKeywordId);
+    const keyword = keywords.find((k) => k.id === pendingKeywordId);
     if (!keyword) return; // Keyword not yet in the list
 
     // Find index in filtered list
-    const indexInFiltered = filteredKeywords.findIndex(k => k.id === pendingKeywordId);
+    const indexInFiltered = filteredKeywords.findIndex((k) => k.id === pendingKeywordId);
 
     // Clear pending state
     setPendingKeywordId(null);
@@ -643,8 +643,8 @@ export const KeywordsSection = ({
 
   // Purge invalid selection IDs when filtered list changes
   useEffect(() => {
-    const validIds = new Set(filteredKeywords.map(k => k.id));
-    const nextSelected = new Set([...selectedIds].filter(id => validIds.has(id)));
+    const validIds = new Set(filteredKeywords.map((k) => k.id));
+    const nextSelected = new Set([...selectedIds].filter((id) => validIds.has(id)));
     if (nextSelected.size !== selectedIds.size) {
       stableOnSelectedIdsChange(nextSelected);
     }
@@ -662,7 +662,7 @@ export const KeywordsSection = ({
 
   // Get status badge styling
   const getStatusBadge = (status: KeywordStatus) => {
-    const option = KEYWORD_STATUS_OPTIONS.find(s => s.value === status);
+    const option = KEYWORD_STATUS_OPTIONS.find((s) => s.value === status);
     return option || KEYWORD_STATUS_OPTIONS[0];
   };
 
@@ -827,15 +827,15 @@ export const KeywordsSection = ({
   };
   return <div data-tour="keywords-section" className="space-y-6 animate-fade-in">
       {/* Functional View Toggle */}
-      <div className="gap-4 items-center justify-start flex flex-col">
+      <div className="gap-4 flex-col flex items-start justify-start">
         <div className="items-start justify-between flex flex-col px-0 mx-0 my-0 py-0 gap-[13px]">
           
           {/* View Toggle: Editorial / Ads */}
-          <div className="flex items-center gap-2 p-1 bg-muted rounded-lg">
+          <div className="p-1 bg-muted rounded-lg items-start justify-start flex flex-row px-[5px] my-0 py-0 gap-[4px]">
             <Button data-tour="btn-estudio-kw" variant={functionalView === 'editorial' ? 'default' : 'ghost'} size="sm" onClick={() => {
             setFunctionalView('editorial');
             updateFunctionalView('editorial');
-          }} className={cn("gap-2 transition-all", functionalView === 'editorial' && "bg-primary text-primary-foreground")}>
+          }} className={cn("gap-2 transition-all text-xs", functionalView === 'editorial' && "bg-primary text-primary-foreground")}>
               <BookOpen className="w-4 h-4" />
               Estudio de Keywords
             </Button>
@@ -846,7 +846,7 @@ export const KeywordsSection = ({
             }
             setFunctionalView('ads');
             updateFunctionalView('ads');
-          }} className={cn("gap-2 transition-all", functionalView === 'ads' && "bg-primary text-primary-foreground")}>
+          }} className={cn("gap-2 transition-all text-xs", functionalView === 'ads' && "bg-primary text-primary-foreground")}>
               <Megaphone className="w-4 h-4" />
               Gestión de Ads
               <Badge variant="secondary" className="ml-1 bg-blue-500 text-white text-[10px] px-1.5 py-0 h-4">
@@ -858,7 +858,7 @@ export const KeywordsSection = ({
         
         {/* ADS Dashboard - only in ads view, collapsible - full width */}
         {functionalView === 'ads' && hasAdsAccess && <details className="group w-full" open>
-            <summary className="gap-2 cursor-pointer select-none text-sm font-semibold transition-colors py-2 px-3 items-center justify-start flex flex-row rounded-lg border w-full bg-[#f98334]/[0.06] border-primary text-primary">
+            <summary className="gap-2 cursor-pointer select-none text-sm font-semibold transition-colors flex-row rounded-lg w-full border-primary text-[#f98334] flex items-start justify-center bg-secondary border-0 px-0 py-[7px]">
               <ChevronDown className="w-4 h-4 transition-transform group-open:rotate-0 -rotate-90" />
               Dashboard de rendimiento
             </summary>
@@ -873,7 +873,7 @@ export const KeywordsSection = ({
         {functionalView === 'editorial' ? <AdvancedFilters filters={filters} onFiltersChange={handleAdvancedFiltersChange} renderTriggerOnly isExpanded={advancedFiltersExpanded} onToggleExpanded={() => setAdvancedFiltersExpanded(!advancedFiltersExpanded)} /> : <AdvancedFiltersAds filters={adsFilters} onFiltersChange={handleAdsFiltersChange} renderTriggerOnly isExpanded={advancedFiltersExpanded} onToggleExpanded={() => setAdvancedFiltersExpanded(!advancedFiltersExpanded)} />}
         
         {/* Filter Presets */}
-        <FilterPresetsDropdown type={functionalView} currentFilters={functionalView === 'editorial' ? filters : adsFilters} presets={presets} onSavePreset={savePreset} onLoadPreset={loadedFilters => {
+        <FilterPresetsDropdown type={functionalView} currentFilters={functionalView === 'editorial' ? filters : adsFilters} presets={presets} onSavePreset={savePreset} onLoadPreset={(loadedFilters) => {
         if (functionalView === 'editorial') {
           handleAdvancedFiltersChange(loadedFilters as AdvancedFiltersState);
         } else {
@@ -889,7 +889,7 @@ export const KeywordsSection = ({
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3 items-center">
         {/* Column 1: Quick Add */}
         <div className="flex gap-2">
-          <Input placeholder="Escribe una keyword..." value={quickAddKeyword} onChange={e => setQuickAddKeyword(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleQuickAdd()} className="flex-1" />
+          <Input placeholder="Escribe una keyword..." value={quickAddKeyword} onChange={(e) => setQuickAddKeyword(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleQuickAdd()} className="flex-1" />
           <Button onClick={quickAddKeyword.trim() ? handleQuickAdd : handleOpenNewKeywordWizard} size="sm" className="gap-1 bg-primary hover:bg-primary/90 whitespace-nowrap">
             <Plus className="w-4 h-4" />
             {quickAddKeyword.trim() ? 'Añadir' : 'Nueva'}
@@ -899,7 +899,7 @@ export const KeywordsSection = ({
         {/* Column 2: Search */}
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input placeholder="Buscar keywords..." value={searchTerm} onChange={e => {
+          <Input placeholder="Buscar keywords..." value={searchTerm} onChange={(e) => {
           onSearchTermChange(e.target.value);
           setCurrentPage(1);
         }} className="pl-10 pr-8" />
@@ -932,7 +932,7 @@ export const KeywordsSection = ({
           {/* Needs Attention counter - opens dialog */}
           {functionalView === 'ads' && (() => {
           const acosEquilibrioVal = bookEconomy.precioLibro > 0 && bookEconomy.regaliasPorVenta > 0 ? bookEconomy.regaliasPorVenta / bookEconomy.precioLibro * 100 : null;
-          const needsAttentionCount = acosEquilibrioVal !== null ? keywords.filter(k => {
+          const needsAttentionCount = acosEquilibrioVal !== null ? keywords.filter((k) => {
             const ads = k.adsData;
             const gastoCalculado = calcularGastoAcumulado(ads?.clicks, ads?.cpcActual);
             const ventasCalculadas = calcularVentasAcumuladas(ads?.pedidos, bookEconomy.precioLibro);
@@ -1081,7 +1081,7 @@ export const KeywordsSection = ({
 
                   {/* Reorderable columns rendered in user-defined order */}
                   <SortableContext items={columnOrder} strategy={horizontalListSortingStrategy}>
-                    {columnOrder.map(colKey => {
+                    {columnOrder.map((colKey) => {
                     if (functionalView === 'editorial') {
                       return renderEditorialHeader(colKey);
                     } else {
@@ -1096,7 +1096,7 @@ export const KeywordsSection = ({
                     <TableCell colSpan={3 + columnOrder.length} className="text-center py-8 text-muted-foreground">
                       {keywords.length === 0 ? 'No hay keywords. Añade tu primera keyword o importa en lote.' : 'No se encontraron keywords con los filtros aplicados.'}
                     </TableCell>
-                  </TableRow> : paginatedKeywords.map(keyword => {
+                  </TableRow> : paginatedKeywords.map((keyword) => {
                 const score = getKeywordMarketScore(keyword);
                 const incomplete = isMarketDataIncomplete(keyword);
                 const ads = keyword.adsData;
@@ -1165,18 +1165,18 @@ export const KeywordsSection = ({
                 const renderEditorialCellContent = (colKey: string) => {
                   switch (colKey) {
                     case 'volume':
-                      return <TableCell key={colKey} className="tabular-nums text-sm" onClick={e => e.stopPropagation()}>
-                      <InlineEditableCell value={keyword.searchVolume || 0} type="number" min={0} onSave={value => handleUpdateWithHistory(keyword.id, {
+                      return <TableCell key={colKey} className="tabular-nums text-sm" onClick={(e) => e.stopPropagation()}>
+                      <InlineEditableCell value={keyword.searchVolume || 0} type="number" min={0} onSave={(value) => handleUpdateWithHistory(keyword.id, {
                           searchVolume: Number(value)
-                        })} formatter={v => Number(v || 0).toLocaleString()} className="text-sm" />
+                        })} formatter={(v) => Number(v || 0).toLocaleString()} className="text-sm" />
                     </TableCell>;
                     case 'competitors':
-                      return <TableCell key={colKey} className="tabular-nums text-sm" onClick={e => e.stopPropagation()}>
+                      return <TableCell key={colKey} className="tabular-nums text-sm" onClick={(e) => e.stopPropagation()}>
                       <div className="flex items-center gap-2">
                         <span className={cn("w-2 h-2 rounded-full flex-shrink-0", (keyword.competitors || 0) < 3000 ? "bg-green-500" : "bg-red-500")} />
-                        <InlineEditableCell value={keyword.competitors || 0} type="number" min={0} onSave={value => handleUpdateWithHistory(keyword.id, {
+                        <InlineEditableCell value={keyword.competitors || 0} type="number" min={0} onSave={(value) => handleUpdateWithHistory(keyword.id, {
                             competitors: Number(value)
-                          })} formatter={v => Number(v || 0).toLocaleString()} className="text-sm" />
+                          })} formatter={(v) => Number(v || 0).toLocaleString()} className="text-sm" />
                       </div>
                     </TableCell>;
                     case 'marketScore':
@@ -1184,12 +1184,12 @@ export const KeywordsSection = ({
                       <MarketScoreCell marketData={keyword.marketData} score={score} isIncomplete={incomplete} onValidate={() => setSelectedKeywordId(keyword.id)} />
                     </TableCell>;
                     case 'status':
-                      return <TableCell key={colKey} onClick={e => e.stopPropagation()}>
-                      <InlineSelectBadge value={keyword.status || 'pending'} options={KEYWORD_STATUS_OPTIONS.map(s => ({
+                      return <TableCell key={colKey} onClick={(e) => e.stopPropagation()}>
+                      <InlineSelectBadge value={keyword.status || 'pending'} options={KEYWORD_STATUS_OPTIONS.map((s) => ({
                           value: s.value,
                           label: s.label,
                           color: s.color
-                        }))} onChange={value => handleUpdateWithHistory(keyword.id, {
+                        }))} onChange={(value) => handleUpdateWithHistory(keyword.id, {
                           status: value as KeywordStatus,
                           statusManuallySet: true
                         })} />
@@ -1223,12 +1223,12 @@ export const KeywordsSection = ({
                       {acosEquilibrio !== null ? `${acosEquilibrio.toFixed(1)}%` : '—'}
                     </TableCell>;
                     case 'clicks':
-                      return <TableCell key={colKey} className="tabular-nums text-xs" onClick={e => e.stopPropagation()}>
-                      <InlineEditableCell value={ads?.clicks ?? 0} type="number" min={0} onSave={value => handleInlineAdsUpdate('clicks', value)} className="text-xs" />
+                      return <TableCell key={colKey} className="tabular-nums text-xs" onClick={(e) => e.stopPropagation()}>
+                      <InlineEditableCell value={ads?.clicks ?? 0} type="number" min={0} onSave={(value) => handleInlineAdsUpdate('clicks', value)} className="text-xs" />
                     </TableCell>;
                     case 'impresiones':
-                      return <TableCell key={colKey} className="tabular-nums text-xs" onClick={e => e.stopPropagation()}>
-                      <InlineEditableCell value={ads?.impresiones ?? 0} type="number" min={0} onSave={value => handleInlineAdsUpdate('impresiones', value)} formatter={v => Number(v || 0).toLocaleString()} className="text-xs" />
+                      return <TableCell key={colKey} className="tabular-nums text-xs" onClick={(e) => e.stopPropagation()}>
+                      <InlineEditableCell value={ads?.impresiones ?? 0} type="number" min={0} onSave={(value) => handleInlineAdsUpdate('impresiones', value)} formatter={(v) => Number(v || 0).toLocaleString()} className="text-xs" />
                     </TableCell>;
                     case 'ctr':
                       return <TableCell key={colKey} className="tabular-nums text-xs">
@@ -1237,12 +1237,12 @@ export const KeywordsSection = ({
                       </span>
                     </TableCell>;
                     case 'cpc':
-                      return <TableCell key={colKey} className="tabular-nums text-xs" onClick={e => e.stopPropagation()}>
-                      <InlineEditableCell value={ads?.cpcActual ?? 0} type="number" min={0} step={0.01} onSave={value => handleInlineAdsUpdate('cpcActual', value)} formatter={v => `${currencySymbol}${Number(v || 0).toFixed(2)}`} className="text-xs" />
+                      return <TableCell key={colKey} className="tabular-nums text-xs" onClick={(e) => e.stopPropagation()}>
+                      <InlineEditableCell value={ads?.cpcActual ?? 0} type="number" min={0} step={0.01} onSave={(value) => handleInlineAdsUpdate('cpcActual', value)} formatter={(v) => `${currencySymbol}${Number(v || 0).toFixed(2)}`} className="text-xs" />
                     </TableCell>;
                     case 'pedidos':
-                      return <TableCell key={colKey} className="tabular-nums text-xs" onClick={e => e.stopPropagation()}>
-                      <InlineEditableCell value={ads?.pedidos ?? 0} type="number" min={0} onSave={value => handleInlineAdsUpdate('pedidos', value)} className="text-xs" />
+                      return <TableCell key={colKey} className="tabular-nums text-xs" onClick={(e) => e.stopPropagation()}>
+                      <InlineEditableCell value={ads?.pedidos ?? 0} type="number" min={0} onSave={(value) => handleInlineAdsUpdate('pedidos', value)} className="text-xs" />
                     </TableCell>;
                     case 'gasto':
                       return <TableCell key={colKey} className="tabular-nums text-xs text-muted-foreground">
@@ -1317,10 +1317,10 @@ export const KeywordsSection = ({
                 };
                 return <TableRow key={keyword.id} className={cn('transition-colors', functionalView === 'editorial' ? getRowScoreClass(score) : hasDataInconsistency ? 'bg-amber-500/10 hover:bg-amber-500/15' : 'hover:bg-muted/30')}>
                         {/* Fixed cells: checkbox, star, keyword */}
-                        <TableCell onClick={e => e.stopPropagation()}>
+                        <TableCell onClick={(e) => e.stopPropagation()}>
                           <Checkbox checked={selectedIds.has(keyword.id)} onCheckedChange={() => toggleSelect(keyword.id)} />
                         </TableCell>
-                        <TableCell onClick={e => e.stopPropagation()}>
+                        <TableCell onClick={(e) => e.stopPropagation()}>
                           <Button variant="ghost" size="sm" onClick={handleSetMainKeyword} className={cn("h-7 w-7 p-0", isMainKeyword ? "bg-amber-500/20 text-amber-600 hover:bg-amber-500/30" : "text-muted-foreground hover:text-amber-600 hover:bg-amber-500/10")}>
                             <Star className={cn("w-4 h-4", isMainKeyword && "fill-current")} />
                           </Button>
@@ -1384,7 +1384,7 @@ export const KeywordsSection = ({
                               </Tooltip>}
 
                             <div className={cn(isMainKeyword && "text-amber-600 dark:text-amber-400", "flex items-center gap-1")}>
-                              <InlineEditableCell value={keyword.keyword} onSave={value => handleUpdateWithHistory(keyword.id, {
+                              <InlineEditableCell value={keyword.keyword} onSave={(value) => handleUpdateWithHistory(keyword.id, {
                           keyword: String(value)
                         })} placeholder="Keyword..." className={cn("font-medium", isMainKeyword && "text-amber-600 dark:text-amber-400")} />
                               {keyword.purpose === 'both' && <Tooltip>
@@ -1400,7 +1400,7 @@ export const KeywordsSection = ({
                         </TableCell>
 
                         {/* Ordered cells rendered in user-defined column order */}
-                        {columnOrder.map(colKey => {
+                        {columnOrder.map((colKey) => {
                     if (functionalView === 'editorial') {
                       return renderEditorialCellContent(colKey);
                     } else {
@@ -1419,10 +1419,10 @@ export const KeywordsSection = ({
       {totalPages > 1 && <div className="flex items-center justify-between">
           <p className="text-sm text-muted-foreground">Página {currentPage} de {totalPages}</p>
           <div className="flex gap-2">
-            <Button variant="outline" size="sm" onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1}>
+            <Button variant="outline" size="sm" onClick={() => setCurrentPage((p) => Math.max(1, p - 1))} disabled={currentPage === 1}>
               Anterior
             </Button>
-            <Button variant="outline" size="sm" onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages}>
+            <Button variant="outline" size="sm" onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages}>
               Siguiente
             </Button>
           </div>
@@ -1438,7 +1438,7 @@ export const KeywordsSection = ({
       <KeywordHistoryModal keyword={historyKeyword} isOpen={!!historyKeyword} onClose={() => setHistoryKeyword(null)} />
 
       {/* Keyword Detail Panel */}
-      <KeywordDetailPanel keyword={selectedKeyword} isOpen={!!selectedKeywordId} onClose={() => setSelectedKeywordId(null)} onSave={handleKeywordDetailSave} marketplaceId={marketplaceId} bookEconomy={bookEconomy} defaultTab={functionalView === 'ads' ? 'ads' : 'nicho'} allKeywords={keywords} visibleKeywordIds={filteredKeywords.map(k => k.id)} onNavigate={id => setSelectedKeywordId(id)} />
+      <KeywordDetailPanel keyword={selectedKeyword} isOpen={!!selectedKeywordId} onClose={() => setSelectedKeywordId(null)} onSave={handleKeywordDetailSave} marketplaceId={marketplaceId} bookEconomy={bookEconomy} defaultTab={functionalView === 'ads' ? 'ads' : 'nicho'} allKeywords={keywords} visibleKeywordIds={filteredKeywords.map((k) => k.id)} onNavigate={(id) => setSelectedKeywordId(id)} />
       
       {/* New Keyword Wizard */}
       <NewKeywordWizard open={isWizardOpen} onOpenChange={setIsWizardOpen} onComplete={handleWizardComplete} marketplaceId={marketplaceId} bookInfo={bookInfo} bookEconomy={bookEconomy} existingKeywords={keywords} initialKeyword={wizardInitialKeyword} onOpenExistingKeyword={handleOpenExistingKeyword} campaigns={campaigns} onAddCampaign={addCampaign} defaultPurpose={functionalView === 'ads' ? 'ads' : 'editorial'} />
@@ -1447,7 +1447,7 @@ export const KeywordsSection = ({
       <NewAdsKeywordWizard open={isAdsWizardOpen} onOpenChange={setIsAdsWizardOpen} onComplete={handleWizardComplete} marketplaceId={marketplaceId} existingKeywords={keywords} initialKeyword={wizardInitialKeyword} campaigns={campaigns} onAddCampaign={addCampaign} onOpenExistingKeyword={handleOpenExistingKeyword} />
       
       {/* Keyword Comparison Panel */}
-      <KeywordComparisonPanel items={keywords.filter(k => selectedIds.has(k.id)).slice(0, 2)} type="keyword" isOpen={isComparisonOpen} onClose={() => setIsComparisonOpen(false)} onRemove={id => {
+      <KeywordComparisonPanel items={keywords.filter((k) => selectedIds.has(k.id)).slice(0, 2)} type="keyword" isOpen={isComparisonOpen} onClose={() => setIsComparisonOpen(false)} onRemove={(id) => {
       const newSet = new Set(selectedIds);
       newSet.delete(id);
       onSelectedIdsChange(newSet);
@@ -1480,7 +1480,7 @@ export const KeywordsSection = ({
             </Button>
           </div>
           <div className="flex-1 overflow-auto p-4">
-            <AcosAlertsTray keywords={keywords} bookEconomy={bookEconomy} campaigns={campaigns} onKeywordClick={kw => {
+            <AcosAlertsTray keywords={keywords} bookEconomy={bookEconomy} campaigns={campaigns} onKeywordClick={(kw) => {
             setIsAlertsDialogOpen(false);
             revealKeywordAndOpenPanel(kw.id);
           }} />

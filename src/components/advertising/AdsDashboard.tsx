@@ -87,15 +87,15 @@ export function AdsDashboard({
     let abovePeKeywords = 0;
 
     const acosEquilibrio = calcularAcosEquilibrioPorcentaje(bookEconomy.precioLibro, bookEconomy.regaliasPorVenta);
-    keywords.forEach(k => {
+    keywords.forEach((k) => {
       if (k.adsData) {
         const ads = k.adsData;
         const clicks = typeof ads.clicks === 'number' && Number.isFinite(ads.clicks) ? ads.clicks : 0;
         const pedidos = typeof ads.pedidos === 'number' && Number.isFinite(ads.pedidos) ? ads.pedidos : 0;
         const cpc = typeof ads.cpcActual === 'number' && Number.isFinite(ads.cpcActual) ? ads.cpcActual : 0;
-        
-        const hasRealAdsActivity = pedidos > 0 || (clicks > 0 && cpc > 0);
-        
+
+        const hasRealAdsActivity = pedidos > 0 || clicks > 0 && cpc > 0;
+
         if (hasRealAdsActivity) {
           keywordsWithAdsData++;
           totalClicks += clicks;
@@ -126,12 +126,12 @@ export function AdsDashboard({
     // Average conversion only from keywords that actually have conversions
     let conversionSum = 0;
     if (keywordsWithConversion > 0) {
-      keywords.forEach(k => {
+      keywords.forEach((k) => {
         if (k.adsData) {
           const clicks = typeof k.adsData.clicks === 'number' && Number.isFinite(k.adsData.clicks) ? k.adsData.clicks : 0;
           const pedidos = typeof k.adsData.pedidos === 'number' && Number.isFinite(k.adsData.pedidos) ? k.adsData.pedidos : 0;
           if (clicks > 0 && pedidos > 0) {
-            conversionSum += (pedidos / clicks) * 100;
+            conversionSum += pedidos / clicks * 100;
           }
         }
       });
@@ -166,8 +166,9 @@ export function AdsDashboard({
   return <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div>
-          <h3 className="text-lg font-semibold">Dashboard de Rendimiento</h3>
+        <div className="">
+          <h3 className="text- font-semibold py-0 mx-0 my-0">
+        </h3>
           <p className="text-sm text-muted-foreground">
             Resumen de métricas de Ads para {keywords.length} keywords
           </p>
@@ -232,9 +233,8 @@ export function AdsDashboard({
               </span>
             </div>
             <div className="flex gap-1 h-4 rounded-full overflow-hidden">
-              <div className="bg-green-500 transition-all" style={{
-            width: `${metrics.belowPeKeywords / metrics.keywordsWithAdsData * 100}%`
-          }} />
+              <div className="bg-green-500 transition-all" style={{ width: `${metrics.belowPeKeywords / metrics.keywordsWithAdsData * 100}%`
+            }} />
               <div className="bg-amber-400 transition-all" style={{
             width: `${metrics.recoverableKeywords / metrics.keywordsWithAdsData * 100}%`
           }} />
