@@ -586,29 +586,51 @@ export const AdvertisingResearch = ({
     setPendingChangesCount(0);
   }, [selectedMarketplace, activeTab, bookInfo, bookEconomy, keywordsByMarket, asinsByMarket, categoriesByMarket, campaignPlansByMarket, showInsights]);
 
-  // Education sections (accessible from overflow menu)
+  // Education sections — based on official Amazon KDP & Ads documentation
   const educationSections = [{
-    id: "concepts",
-    title: "Conceptos Clave",
+    id: "kdp-concepts",
+    title: "Conceptos KDP (Metadata y Keywords)",
     icon: "learn" as const,
-    content: <ul className="space-y-1 list-disc list-inside">
-          <li>
-            <strong>Keyword:</strong> Palabra o frase que los usuarios buscan en Amazon
-          </li>
-          <li>
-            <strong>Volumen de búsqueda:</strong> Número estimado de búsquedas mensuales
-          </li>
-          <li>
-            <strong>Competidores:</strong> Nivel de saturación (Alta/Media/Baja)
-          </li>
+    content: <ul className="space-y-1.5 list-disc list-inside">
+          <li><strong>Keywords:</strong> KDP permite hasta <strong>7 frases clave</strong> por libro. Usa frases específicas (2-4 palabras). Evita claims subjetivos ("bestselling"), info temporal ("new") y URLs.</li>
+          <li><strong>Categorías:</strong> Puedes asignar hasta <strong>3 categorías</strong> por libro. Elige las más relevantes, no las menos competidas.</li>
+          <li><strong>Título + Subtítulo:</strong> Máximo 200 caracteres combinados. Usa solo el título tal como aparece en la portada. No incluyas promos, rank claims, HTML ni URLs.</li>
+          <li><strong>Contenido IA:</strong> Si usas IA para crear contenido, debes declararlo en KDP. No hacerlo puede resultar en la retirada del libro.</li>
+          <li><strong>Regalías eBooks:</strong> 35% (sin restricciones) o 70% (rango de precios específico por marketplace, descuenta delivery cost). Print: ~60% según marketplace.</li>
         </ul>
   }, {
-    id: "tips",
-    title: "Buenas Prácticas",
+    id: "ads-practices",
+    title: "Buenas Prácticas de Amazon Ads",
     icon: "tip" as const,
-    content: <ul className="space-y-1 list-disc list-inside">
-          <li>Combina keywords de alto volumen con algunas de baja competencia</li>
-          <li>Prioriza keywords con alta relevancia para tu libro</li>
+    content: <ul className="space-y-1.5 list-disc list-inside">
+          <li><strong>ACOS:</strong> Advertising Cost of Sales = Gasto / Ventas. Cuanto menor, más rentable. Compara siempre con tu Punto de Equilibrio (PE).</li>
+          <li><strong>Targeting:</strong> Una vez la campaña está live, <strong>no puedes cambiar el tipo de targeting</strong> (auto/manual). Crea campañas separadas si necesitas ambos.</li>
+          <li><strong>Match Types:</strong> Broad (amplio), Phrase (frase), Exact (exacto). Empieza con Broad para descubrir, refina con Exact para optimizar.</li>
+          <li><strong>Límites por keyword:</strong> Máximo 10 palabras y 80 caracteres por keyword de Ads.</li>
+          <li><strong>Dynamic Bidding:</strong> Amazon puede subir o bajar tu bid según la probabilidad de conversión. Monitoriza el impacto en tus costes.</li>
+          <li><strong>Revisión:</strong> Revisa bids cada 2 semanas. Sube top performers, reduce o pausa no convertidores.</li>
+        </ul>
+  }, {
+    id: "common-errors",
+    title: "Errores Comunes a Evitar",
+    icon: "reminder" as const,
+    content: <ul className="space-y-1.5 list-disc list-inside">
+          <li><strong>Keyword stuffing en título:</strong> Amazon penaliza títulos con keywords forzadas. El título debe ser natural y legible.</li>
+          <li><strong>No declarar IA:</strong> KDP exige declarar contenido generado por IA. Incumplirlo puede significar la retirada del libro.</li>
+          <li><strong>Categorías irrelevantes:</strong> Elegir categorías solo por baja competencia perjudica la descubribilidad a largo plazo.</li>
+          <li><strong>Optimizar con poca data:</strong> No tomes decisiones de Ads con menos de 2 semanas de datos. Los reportes de Amazon pueden tardar hasta 14 días en ser definitivos.</li>
+          <li><strong>Ignorar negativos:</strong> No añadir keywords negativas genera gasto irrelevante. Mina el Search Term Report quincenalmente.</li>
+        </ul>
+  }, {
+    id: "checklist",
+    title: "Checklist Rápido de Optimización",
+    icon: "tip" as const,
+    content: <ul className="space-y-1.5 list-disc list-inside">
+          <li>✅ Revisa rendimiento de campañas cada <strong>2 semanas</strong> mínimo.</li>
+          <li>✅ Mina el <strong>Search Term Report</strong> quincenalmente para descubrir nuevas keywords y añadir negativos.</li>
+          <li>✅ Compara tu ACOS actual con el <strong>Punto de Equilibrio</strong> antes de escalar presupuesto.</li>
+          <li>✅ Verifica que título y subtítulo cumplen las <strong>guidelines de KDP</strong> (sin promos, URLs ni HTML).</li>
+          <li>✅ Si usas IA, asegúrate de haberlo <strong>declarado en KDP</strong>.</li>
         </ul>
   }];
   return <div className="min-h-screen bg-background">

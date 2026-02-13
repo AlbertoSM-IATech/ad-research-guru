@@ -34,6 +34,9 @@ export const ImportHelpTooltip = ({ type }: ImportHelpTooltipProps) => {
             <p className="text-xs text-muted-foreground mt-2">
               💡 Las columnas no reconocidas se ignorarán. Puedes editar los valores en la vista previa antes de importar.
             </p>
+            <p className="text-xs text-amber-600 dark:text-amber-400 mt-1 font-medium">
+              📌 KDP permite máx. 7 keywords por libro. Para Ads, límite de 10 palabras y 80 caracteres por keyword.
+            </p>
           </div>
         );
       case 'asins':
@@ -53,6 +56,9 @@ export const ImportHelpTooltip = ({ type }: ImportHelpTooltipProps) => {
             </code>
             <p className="text-xs text-muted-foreground mt-2">
               💡 Los ASINs inválidos se marcarán en rojo y no se importarán.
+            </p>
+            <p className="text-xs text-amber-600 dark:text-amber-400 mt-1 font-medium">
+              📌 Los ASINs se usan para product targeting en campañas manuales de Amazon Ads.
             </p>
           </div>
         );

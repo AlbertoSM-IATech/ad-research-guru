@@ -149,8 +149,22 @@ export const BookInfoPanelCompact = ({
                   Keyword Principal
                 </h4>
                 <div className="flex items-center gap-2 min-w-0 flex-1">
-                  <Input value={bookInfo.title || ''} onChange={e => onChange({ ...bookInfo, title: e.target.value })} placeholder="Título del libro..." className="h-7 text-xs flex-1 min-w-[100px]" />
-                  <Input value={bookInfo.subtitle || ''} onChange={e => onChange({ ...bookInfo, subtitle: e.target.value })} placeholder="Subtítulo..." className="h-7 text-xs flex-1 min-w-[100px]" />
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Input value={bookInfo.title || ''} onChange={e => onChange({ ...bookInfo, title: e.target.value })} placeholder="Título del libro..." className="h-7 text-xs flex-1 min-w-[100px]" />
+                      </TooltipTrigger>
+                      <TooltipContent side="bottom" className="max-w-xs text-xs">Usa solo el título tal como aparece en la portada. Evita promos, rank claims, URLs y HTML. Título+subtítulo máx. 200 caracteres.</TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Input value={bookInfo.subtitle || ''} onChange={e => onChange({ ...bookInfo, subtitle: e.target.value })} placeholder="Subtítulo..." className="h-7 text-xs flex-1 min-w-[100px]" />
+                      </TooltipTrigger>
+                      <TooltipContent side="bottom" className="max-w-xs text-xs">Complementa el título sin repetir keywords. Título+subtítulo máx. 200 caracteres total.</TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                 </div>
               </div>
               
@@ -189,14 +203,28 @@ export const BookInfoPanelCompact = ({
               {bookEconomy && onBookEconomyChange && <div className="flex items-stretch gap-3">
                   <div className="flex flex-col gap-2 flex-1">
                     <div className="space-y-1">
-                      <label className="text-xs text-muted-foreground">Precio (PVP)</label>
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <label className="text-xs text-muted-foreground cursor-help">Precio (PVP) ⓘ</label>
+                          </TooltipTrigger>
+                          <TooltipContent side="top" className="max-w-xs text-xs">Precio medio de la competencia. eBooks con royalty del 70% requieren un rango de precios específico por marketplace.</TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
                       <div className="relative">
                         <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">{cs}</span>
                         <Input type="number" min={0} step={0.01} value={bookEconomy.precioLibro || ''} onChange={e => handlePrecioChange(e.target.value)} placeholder="0.00" className="pl-7 h-8 text-sm" />
                       </div>
                     </div>
                     <div className="space-y-1">
-                      <label className="text-xs text-muted-foreground">Regalías por venta</label>
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <label className="text-xs text-muted-foreground cursor-help">Regalías por venta ⓘ</label>
+                          </TooltipTrigger>
+                          <TooltipContent side="top" className="max-w-xs text-xs">Regalías promedio del nicho. eBooks: 35% o 70% (territorios elegibles, descuenta delivery cost). Print: ~60% según marketplace.</TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
                       <div className="relative">
                         <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">{cs}</span>
                         <Input type="number" min={0} step={0.01} value={bookEconomy.regaliasPorVenta || ''} onChange={e => handleRegaliasChange(e.target.value)} placeholder="0.00" className="pl-7 h-8 text-sm" />
