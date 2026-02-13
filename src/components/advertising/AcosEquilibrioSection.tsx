@@ -276,7 +276,7 @@ export const AcosEquilibrioSection = ({
                   <TooltipTrigger asChild>
                     <Info className="w-3 h-3 text-muted-foreground cursor-help" />
                   </TooltipTrigger>
-                  <TooltipContent>Nombre de la campaña de Amazon Ads donde se usa esta keyword.</TooltipContent>
+                  <TooltipContent className="max-w-xs">Una vez live, no puedes cambiar el tipo de targeting (auto/manual). Crea campañas separadas si necesitas ambos.</TooltipContent>
                 </Tooltip>
               </TooltipProvider>
             </Label>
@@ -295,7 +295,7 @@ export const AcosEquilibrioSection = ({
                   <TooltipTrigger asChild>
                     <Info className="w-3 h-3 text-muted-foreground cursor-help" />
                   </TooltipTrigger>
-                  <TooltipContent>Clicks acumulados (dato manual) para calcular la conversión.</TooltipContent>
+                  <TooltipContent className="max-w-xs">Clicks acumulados de tu consola de Amazon Ads. Los reportes pueden tardar hasta 14 días en ser definitivos.</TooltipContent>
                 </Tooltip>
               </TooltipProvider>
             </Label>
@@ -311,7 +311,7 @@ export const AcosEquilibrioSection = ({
                   <TooltipTrigger asChild>
                     <Info className="w-3 h-3 text-muted-foreground cursor-help" />
                   </TooltipTrigger>
-                  <TooltipContent>CPC actual manual (Amazon Ads); se usa para simular el coste del siguiente click.</TooltipContent>
+                  <TooltipContent className="max-w-xs">Coste por clic actual. Revisa bids cada 2 semanas: sube top performers, baja no convertidores.</TooltipContent>
                 </Tooltip>
               </TooltipProvider>
             </Label>
@@ -330,7 +330,7 @@ export const AcosEquilibrioSection = ({
                   <TooltipTrigger asChild>
                     <Info className="w-3 h-3 text-muted-foreground cursor-help" />
                   </TooltipTrigger>
-                  <TooltipContent>Pedidos atribuibles acumulados (dato manual).</TooltipContent>
+                  <TooltipContent className="max-w-xs">Pedidos atribuibles acumulados. Los datos de Amazon Ads pueden tardar hasta 14 días en reflejar datos finales.</TooltipContent>
                 </Tooltip>
               </TooltipProvider>
             </Label>
@@ -447,7 +447,17 @@ export const AcosEquilibrioSection = ({
 
           {/* ACOS Equilibrio */}
           <div className="p-3 rounded-lg border-2 border-primary/30 bg-primary/5 space-y-1">
-            <Label className="text-[10px] text-muted-foreground uppercase">ACOS Equilibrio (PE)</Label>
+            <Label className="text-[10px] text-muted-foreground uppercase flex items-center gap-1">
+              ACOS Equilibrio (PE)
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Info className="w-2.5 h-2.5 cursor-help" />
+                  </TooltipTrigger>
+                  <TooltipContent className="max-w-xs">ACOS máximo para no perder dinero. PE = (Regalías / PVP) × 100. Si tu ACOS supera este valor, cada venta genera pérdida.</TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </Label>
             <p className="text-xl font-bold text-primary">
               {formatearPorcentaje(acosEquilibrio)}
             </p>
@@ -469,7 +479,17 @@ export const AcosEquilibrioSection = ({
 
           {/* ACOS Siguiente Click - ÉNFASIS */}
           <div className="p-3 rounded-lg border-2 border-amber-500/30 bg-amber-500/5 space-y-1">
-            <Label className="text-[10px] text-muted-foreground uppercase">ACOS Sig. Click ⭐</Label>
+            <Label className="text-[10px] text-muted-foreground uppercase flex items-center gap-1">
+              ACOS Sig. Click ⭐
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Info className="w-2.5 h-2.5 cursor-help" />
+                  </TooltipTrigger>
+                  <TooltipContent className="max-w-xs">Simula cómo quedaría tu ACOS si recibieras un clic más que resulte en venta. Útil para anticipar si estás cerca del punto de equilibrio.</TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </Label>
             <p className={cn("text-xl font-bold", acosSiguiente !== null && acosEquilibrio !== null ? acosSiguiente <= acosEquilibrio ? "text-green-600 dark:text-green-400" : "text-amber-600 dark:text-amber-400" : "text-muted-foreground")}>
               {formatearPorcentaje(acosSiguiente)}
             </p>

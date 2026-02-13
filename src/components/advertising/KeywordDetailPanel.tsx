@@ -570,7 +570,7 @@ export const KeywordDetailPanel = ({
                           <Info className="w-3.5 h-3.5 text-muted-foreground cursor-help" />
                         </TooltipTrigger>
                         <TooltipContent side="top" className="max-w-xs">
-                          Búsquedas mensuales estimadas en Amazon.
+                          Búsquedas mensuales estimadas en Amazon. KDP permite hasta 7 keywords/frases por libro. Prioriza términos específicos sobre genéricos.
                         </TooltipContent>
                       </Tooltip>
                     </TooltipProvider>
@@ -588,7 +588,7 @@ export const KeywordDetailPanel = ({
                           <Info className="w-3.5 h-3.5 text-muted-foreground cursor-help" />
                         </TooltipTrigger>
                         <TooltipContent side="top" className="max-w-xs">
-                          Número de resultados en Amazon.
+                          Número de resultados competidores en Amazon. Menos es mejor para nichos emergentes. Menos de 3.000 resultados es una señal positiva.
                         </TooltipContent>
                       </Tooltip>
                     </TooltipProvider>
@@ -606,7 +606,7 @@ export const KeywordDetailPanel = ({
                           <Info className="w-3.5 h-3.5 text-muted-foreground cursor-help" />
                         </TooltipTrigger>
                         <TooltipContent side="top" className="max-w-xs">
-                          Precio medio de la competencia ($) — comprobación visual o con herramientas especializadas.
+                          Precio medio de la competencia. eBooks con royalty del 70% requieren un rango de precios específico por marketplace.
                         </TooltipContent>
                       </Tooltip>
                     </TooltipProvider>
@@ -624,7 +624,7 @@ export const KeywordDetailPanel = ({
                           <Info className="w-3.5 h-3.5 text-muted-foreground cursor-help" />
                         </TooltipTrigger>
                         <TooltipContent side="top" className="max-w-xs">
-                          Regalías medias del nicho ($) — requiere herramientas externas especializadas como H10 o Bookbeam.
+                          Regalías medias del nicho. eBooks: 35% o 70% (territorios elegibles, descuenta delivery cost). Print: ~60% según marketplace.
                         </TooltipContent>
                       </Tooltip>
                     </TooltipProvider>
@@ -642,9 +642,9 @@ export const KeywordDetailPanel = ({
                       <TooltipTrigger asChild>
                         <Info className="w-3.5 h-3.5 text-muted-foreground cursor-help" />
                       </TooltipTrigger>
-                      <TooltipContent side="top" className="max-w-xs">
-                        Fuente de tráfico de tu competidor principal — investigación visual del usuario.
-                      </TooltipContent>
+                        <TooltipContent side="top" className="max-w-xs">
+                          Identifica la fuente principal de tráfico de tus competidores. Amazon orgánico es ideal; tráfico de marca o RRSS reduce el Market Score porque indica dependencia externa.
+                        </TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
                 </div>

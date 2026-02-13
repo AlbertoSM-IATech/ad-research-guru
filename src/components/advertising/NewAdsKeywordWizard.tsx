@@ -198,18 +198,19 @@ export function NewAdsKeywordWizard({
 
             {/* Campaign */}
             <div className="space-y-2">
-              <Label>Campaña</Label>
+              <Label className="text-sm">Campaña</Label>
               <CampaignSelect
                 value={campaignName}
                 onChange={setCampaignName}
                 campaigns={campaigns}
                 onAddCampaign={onAddCampaign}
               />
+              <p className="text-[11px] text-muted-foreground">Una vez live, no puedes cambiar el tipo de targeting. Crea campañas separadas si necesitas auto y manual.</p>
             </div>
 
             {/* Fase */}
             <div className="space-y-2">
-              <Label>Fase actual</Label>
+              <Label className="text-sm">Fase actual</Label>
               <Select value={fase} onValueChange={(v) => setFase(v as AdsFase)}>
                 <SelectTrigger>
                   <SelectValue />
@@ -222,6 +223,7 @@ export function NewAdsKeywordWizard({
                   ))}
                 </SelectContent>
               </Select>
+              <p className="text-[11px] text-muted-foreground">Lanzamiento: bid agresivo para ganar visibilidad. Dominio: mantener posición. Beneficio: reducir ACOS.</p>
             </div>
           </div>
         )}
@@ -229,7 +231,7 @@ export function NewAdsKeywordWizard({
         {step === 2 && (
           <div className="space-y-4 py-2">
             <p className="text-xs text-muted-foreground">
-              Todos los campos son opcionales. Puedes rellenarlos luego desde la tabla o el panel lateral.
+              Todos los campos son opcionales. Puedes rellenarlos luego desde la tabla o el panel lateral. Los reportes de Amazon Ads pueden tardar hasta 14 días en ser definitivos.
             </p>
 
             <div className="grid grid-cols-2 gap-3">

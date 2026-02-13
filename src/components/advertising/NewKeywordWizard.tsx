@@ -472,8 +472,9 @@ export function NewKeywordWizard({
           {currentStep === 1 && (
             <div className="space-y-6">
               <div className="space-y-2">
-                <Label htmlFor="keyword">
+                <Label htmlFor="keyword" className="flex items-center gap-1">
                   Keyword *
+                  <FieldTooltip content="Usa frases específicas (2-4 palabras). Evita keywords vagas, claims subjetivos ('bestselling') o info temporal ('new'). KDP permite máx. 7 frases por libro." />
                 </Label>
                 <Input
                   id="keyword"
