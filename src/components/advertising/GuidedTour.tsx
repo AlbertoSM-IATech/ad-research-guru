@@ -136,17 +136,19 @@ interface GuidedTourProps {
   onClose: () => void;
   onComplete: () => void;
   onRequestUIState?: (state: UIStateRequest) => void;
+  steps?: TourStep[];
 }
 
-export const GuidedTour = ({ isOpen, onClose, onComplete, onRequestUIState }: GuidedTourProps) => {
+export const GuidedTour = ({ isOpen, onClose, onComplete, onRequestUIState, steps }: GuidedTourProps) => {
+  const tourSteps = steps || TOUR_STEPS;
   const [currentStep, setCurrentStep] = useState(0);
   const [targetRect, setTargetRect] = useState<DOMRect | null>(null);
   const [targetNotFound, setTargetNotFound] = useState(false);
   const [lastValidRect, setLastValidRect] = useState<DOMRect | null>(null);
   const cardRef = useRef<HTMLDivElement>(null);
 
-  const step = TOUR_STEPS[currentStep];
-  const progress = ((currentStep + 1) / TOUR_STEPS.length) * 100;
+  const step = tourSteps[currentStep];
+  const progress = ((currentStep + 1) / tourSteps.length) * 100;
 
   // Sticky highlight: use last valid rect if current target not found
   const displayRect = useMemo(() => {
@@ -240,7 +242,7 @@ export const GuidedTour = ({ isOpen, onClose, onComplete, onRequestUIState }: Gu
   }, [isOpen, currentStep]);
 
   const handleNext = () => {
-    if (currentStep < TOUR_STEPS.length - 1) setCurrentStep(currentStep + 1);
+    if (currentStep < tourSteps.length - 1) setCurrentStep(currentStep + 1);
     else handleComplete();
   };
 
@@ -334,7 +336,7 @@ export const GuidedTour = ({ isOpen, onClose, onComplete, onRequestUIState }: Gu
   };
 
   const showCentered = step.position === 'center' || (step.target && !displayRect);
-  const isLastStep = currentStep === TOUR_STEPS.length - 1;
+  const isLastStep = currentStep === tourSteps.length - 1;
 
   return (
     <div className="fixed inset-0 z-[100] pointer-events-none" role="dialog" aria-modal="false">
@@ -379,7 +381,7 @@ export const GuidedTour = ({ isOpen, onClose, onComplete, onRequestUIState }: Gu
             <div className="flex items-center justify-between mb-2">
               <Badge variant="outline" className="gap-1">
                 <Sparkles className="w-3 h-3" />
-                Paso {currentStep + 1} de {TOUR_STEPS.length}
+                Paso {currentStep + 1} de {tourSteps.length}
               </Badge>
             </div>
             <Progress value={progress} className="h-1" />

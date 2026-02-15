@@ -106,6 +106,8 @@ interface KeywordsSectionProps {
   // Unified search - passed from parent
   searchTerm: string;
   onSearchTermChange: (term: string) => void;
+  // Force a specific view (editorial or ads) - when provided, hides the view toggle
+  forcedView?: 'editorial' | 'ads';
 }
 const ITEMS_PER_PAGE = 20;
 export const KeywordsSection = ({
@@ -123,7 +125,8 @@ export const KeywordsSection = ({
   selectedIds,
   onSelectedIdsChange,
   searchTerm,
-  onSearchTermChange
+  onSearchTermChange,
+  forcedView: forcedViewProp
 }: KeywordsSectionProps) => {
   const {
     toast
@@ -179,8 +182,10 @@ export const KeywordsSection = ({
   const userPlan = getCurrentPlan();
   const hasAdsAccess = hasAccess('ads-management');
 
-  // Functional view state (Editorial vs Ads)
-  const [functionalView, setFunctionalView] = useState<FunctionalView>(persistedState.functionalView || 'editorial');
+  // Functional view state (Editorial vs Ads) - use forcedView if provided
+  const [functionalViewInternal, setFunctionalViewInternal] = useState<FunctionalView>(persistedState.functionalView || 'editorial');
+  const functionalView = forcedViewProp || functionalViewInternal;
+  const setFunctionalView = forcedViewProp ? (() => {}) : setFunctionalViewInternal;
 
   // Column width management for resizable columns
   const {
@@ -235,7 +240,9 @@ export const KeywordsSection = ({
       setAdsFilters(persistedState.adsFilters || defaultAdsFiltersState);
       setSortField(persistedState.sortField);
       setSortOrder(persistedState.sortOrder);
-      setFunctionalView(persistedState.functionalView || 'editorial');
+      if (!forcedViewProp) {
+        setFunctionalViewInternal(persistedState.functionalView || 'editorial');
+      }
     }
   }, [isHydrated, persistedState]);
 
@@ -826,34 +833,36 @@ export const KeywordsSection = ({
     }
   };
   return <div data-tour="keywords-section" className="space-y-6 animate-fade-in">
-      {/* Functional View Toggle */}
+      {/* Functional View Toggle - hidden when forcedView is set */}
       <div className="gap-4 flex-col flex items-start justify-start">
         <div className="items-start justify-between flex flex-col px-0 mx-0 my-0 py-0 gap-[13px]">
           
-          {/* View Toggle: Editorial / Ads */}
-          <div className="p-1 bg-muted rounded-lg items-start justify-start flex flex-row px-[5px] my-0 py-0 gap-[4px]">
-            <Button data-tour="btn-estudio-kw" variant={functionalView === 'editorial' ? 'default' : 'ghost'} size="sm" onClick={() => {
-            setFunctionalView('editorial');
-            updateFunctionalView('editorial');
-          }} className={cn("gap-2 transition-all text-xs", functionalView === 'editorial' && "bg-primary text-primary-foreground")}>
-              <BookOpen className="w-4 h-4" />
-              Estudio de Keywords
-            </Button>
-            <Button data-tour="tab-ads" variant={functionalView === 'ads' ? 'default' : 'ghost'} size="sm" onClick={() => {
-            if (!hasAdsAccess) {
-              setShowPlanUpgradeModal(true);
-              return;
-            }
-            setFunctionalView('ads');
-            updateFunctionalView('ads');
-          }} className={cn("gap-2 transition-all text-xs", functionalView === 'ads' && "bg-primary text-primary-foreground")}>
-              <Megaphone className="w-4 h-4" />
-              Gestión de Ads
-              <Badge variant="secondary" className="ml-1 bg-blue-500 text-white text-[10px] px-1.5 py-0 h-4">
-                Plus
-              </Badge>
-            </Button>
-          </div>
+          {/* View Toggle: Editorial / Ads - only shown when no forcedView */}
+          {!forcedViewProp && (
+            <div className="p-1 bg-muted rounded-lg items-start justify-start flex flex-row px-[5px] my-0 py-0 gap-[4px]">
+              <Button data-tour="btn-estudio-kw" variant={functionalView === 'editorial' ? 'default' : 'ghost'} size="sm" onClick={() => {
+              setFunctionalView('editorial');
+              updateFunctionalView('editorial');
+            }} className={cn("gap-2 transition-all text-xs", functionalView === 'editorial' && "bg-primary text-primary-foreground")}>
+                <BookOpen className="w-4 h-4" />
+                Estudio de Keywords
+              </Button>
+              <Button data-tour="tab-ads" variant={functionalView === 'ads' ? 'default' : 'ghost'} size="sm" onClick={() => {
+              if (!hasAdsAccess) {
+                setShowPlanUpgradeModal(true);
+                return;
+              }
+              setFunctionalView('ads');
+              updateFunctionalView('ads');
+            }} className={cn("gap-2 transition-all text-xs", functionalView === 'ads' && "bg-primary text-primary-foreground")}>
+                <Megaphone className="w-4 h-4" />
+                Gestión de Ads
+                <Badge variant="secondary" className="ml-1 bg-blue-500 text-white text-[10px] px-1.5 py-0 h-4">
+                  Plus
+                </Badge>
+              </Button>
+            </div>
+          )}
         </div>
         
         {/* ADS Dashboard - only in ads view, collapsible - full width */}
