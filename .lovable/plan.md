@@ -1,101 +1,140 @@
 
 
-# Integrar Base de Conocimiento KDP/Amazon Ads en el modulo
+# Separar en 2 Submodulos con Sidebar de Navegacion
 
 ## Resumen
 
-Se trata de enriquecer toda la interfaz del modulo con tooltips, helper texts y consejos basados en la documentacion oficial de Amazon KDP y Amazon Ads que has proporcionado. No se toca ninguna logica existente; solo se anade contenido educativo contextual donde el usuario lo necesita.
+El monolito `AdvertisingResearch` se divide en 2 submodulos independientes accesibles desde un sidebar lateral:
 
-## Cambios propuestos
+1. **Estudio de Nicho** - Keywords (vista editorial) + Visualizaciones
+2. **Gestion de ADS** - Keywords (vista ads) + Dashboard de Ads
 
-### 1. Actualizar las secciones educativas (CollapsibleEducation)
+Ambos comparten: Economia del Libro, Keyword Principal, Marketplace, y datos persistidos. ASIN y Categorias quedan ocultos (preparados para el futuro). Cada submodulo tendra su propio tour guiado.
 
-El contenido actual en `educationSections` es generico y basico. Se reescribira con informacion oficial organizada en 4 secciones:
+## Arquitectura propuesta
 
-- **Conceptos KDP**: Keywords (max 7 frases), categorias (max 3), titulo+subtitulo (max 200 chars), metadata guidelines, no promos/URLs/HTML en titulo
-- **Buenas Practicas Ads**: ACOS/ROAS/TACOS explicados, targeting auto vs manual (lock tras lanzar), match types (broad/phrase/exact), keywords max 10 palabras/80 caracteres, dynamic bidding
-- **Errores Comunes**: keyword stuffing en titulo, no declarar IA, categorias irrelevantes, optimizar con poca data, ignorar latencias de reportes (hasta 14 dias)
-- **Checklist Rapido**: Revisar cada 2 semanas, minar Search Term Report quincenal, anadir negativos para gasto irrelevante
+```text
+App.tsx
+  +-- SidebarProvider
+        +-- AppSidebar (sidebar lateral)
+        |     - "Estudio de Nicho" (link a /estudio)
+        |     - "Gestion de ADS"  (link a /ads)
+        |     - Separador
+        |     - ThemeToggle, Backup, Settings, Reset (acciones globales)
+        +-- main content
+              +-- Routes
+                    /estudio -> NicheStudyModule
+                    /ads     -> AdsManagementModule
+```
 
-### 2. Tooltips contextuales en campos clave
+### Datos compartidos
 
-Anadir/mejorar tooltips con contenido oficial en los siguientes puntos:
+Se creara un contexto React (`AdvertisingDataContext`) que centralizara:
+- `bookInfo`, `bookEconomy` (compartidos)
+- `keywordsByMarket` (compartido, cada vista filtra por `purpose`)
+- `selectedMarketplace`
+- Persistence (el mismo `useLocalPersistence`)
+- Handlers de CRUD de keywords (compartidos)
+- Sync status, pending changes
 
-**En BookInfoPanelCompact (contexto del libro):**
-- **Titulo**: "Usa solo el titulo tal como aparece en la portada. Evita promos, rank claims, URLs y HTML. Titulo+subtitulo max 200 caracteres."
-- **Subtitulo**: "Complementa el titulo sin repetir keywords. Titulo+subtitulo max 200 caracteres total."
-- **PVP**: "Precio medio de la competencia. eBooks 70% requieren rango especifico por marketplace."
-- **Regalias**: "Regalias promedio del nicho. eBooks: 35% o 70% (territorios elegibles, descuenta delivery cost). Print: 50-60% segun marketplace."
+Esto evita duplicar la logica de estado/persistencia y mantiene los datos sincronizados entre submodulos.
 
-**En KeywordDetailPanel (panel lateral - pestana Nicho):**
-- **Volumen de busqueda**: "KDP permite hasta 7 keywords/frases. Prioriza terminos especificos sobre genericos."
-- **Competidores**: "Numero de resultados competidores. Menos es mejor para nichos emergentes."
-- **Fuente de trafico**: "Identifica la fuente principal: Amazon organico es ideal, trafico de marca o RRSS reduce el market score."
-- **Market Score**: "Puntuacion compuesta basada en volumen, competencia, precio y regalias. Calibra los criterios por mercado antes de analizar."
+### Componentes nuevos
 
-**En KeywordDetailPanel (pestana Ads):**
-- **Fase**: "Lanzamiento: visibilidad inicial. Dominio: consolidar posicion. Beneficio: optimizar rentabilidad."
-- **ACOS**: "Advertising Cost of Sales = Gasto / Ventas. Cuanto menor, mas rentable. Compara con tu Punto de Equilibrio."
-- **CPC**: "Coste por clic actual. Revisa bids cada 2 semanas: sube top performers, baja no convertidores."
-- **Impresiones**: "Numero de veces que se muestra tu anuncio. Sin impresiones, revisa relevancia de keywords y bid."
-- **CTR**: "Click-Through Rate = Clics / Impresiones. Un 3-5% es optimo. Bajo CTR sugiere mejorar portada o titulo."
+1. **`src/components/advertising/AdvertisingDataProvider.tsx`** - Context provider con toda la logica de estado, persistencia y CRUD extraida de `AdvertisingResearch.tsx` (lineas 71-587 aprox.)
 
-**En AcosEquilibrioSection (panel ACOS):**
-- **Punto de Equilibrio**: "ACOS maximo para no perder dinero. PE = (Regalias / PVP) x 100."
-- **ACOS Sig. Click**: "Simula como quedaria tu ACOS si recibieras un clic mas sin venta. Util para anticipar riesgo."
-- **Snapshot**: (ya tiene tooltip, se mejorara el texto con referencia a latencias de datos: "Los reportes de Amazon pueden tardar hasta 14 dias en reflejar datos finales.")
+2. **`src/components/advertising/AppSidebar.tsx`** - Sidebar lateral con 2 items de navegacion, iconos, acciones globales (backup, settings, reset, theme)
 
-### 3. Tooltips en wizards de creacion
+3. **`src/components/advertising/NicheStudyModule.tsx`** - Submodulo 1: BookInfoPanelCompact + KeywordsSection (forzado a vista editorial) + toggle Datos/Visualizaciones + StatsPanel + VisualizationsTab + CollapsibleEducation
 
-**NewKeywordWizard (crear keyword):**
-- **Campo keyword**: "Usa frases especificas (2-4 palabras). Evita keywords vagas, claims subjetivos o info temporal ('new', 'bestselling')."
-- **Proposito (editorial/ads)**: "Editorial: para estudio de nicho y descubribilidad. Ads: para gestion de campanas publicitarias."
+4. **`src/components/advertising/AdsManagementModule.tsx`** - Submodulo 2: BookInfoPanelCompact (solo lectura o compartido) + KeywordsSection (forzado a vista ads) + AdsDashboard + AcosAlertsTray
 
-**NewAdsKeywordWizard (crear keyword Ads):**
-- **Campana**: "Una vez live, no puedes cambiar el tipo de targeting. Crea campanas separadas si necesitas auto y manual."
-- **Fase**: "Lanzamiento: bid agresivo para ganar visibilidad. Dominio: mantener posicion. Beneficio: reducir ACOS."
-- **Impresiones/Clics**: "Datos de tu consola de Amazon Ads. Los reportes pueden tardar hasta 14 dias en ser definitivos."
+5. **`src/components/advertising/NicheTour.tsx`** - Tour guiado especifico para Estudio de Nicho (5-6 pasos: bienvenida, marketplace, contexto libro, keywords editorial, importar KW, visualizaciones)
 
-### 4. Helper text en importaciones masivas
+6. **`src/components/advertising/AdsTour.tsx`** - Tour guiado especifico para Gestion de ADS (5-6 pasos: bienvenida, dashboard, keywords ads, importar ads, ACOS/PE, alertas)
 
-**ImportHelpTooltip** - Anadir una nota adicional en cada tipo:
-- **Keywords**: "Recuerda: KDP permite max 7 keywords por libro. Para Ads, limite de 10 palabras y 80 caracteres por keyword."
-- **ASINs**: "Los ASINs se usan para product targeting en campanas manuales."
+### Componentes modificados
 
-### 5. Mejoras en el Tour Guiado
+7. **`src/App.tsx`** - Envolver en `SidebarProvider`, agregar rutas `/estudio` y `/ads`, redirect `/` a `/estudio`
 
-Actualizar 2-3 pasos del `GuidedTour` con tips mas accionables basados en la guia:
-- Paso "marketplace": Tip actualizado a "El marketplace afecta royalties, precios permitidos y categorias. Configura los criterios antes de analizar."
-- Paso "Estudio KW": Tip actualizado a "KDP permite hasta 7 keywords. Evita keyword stuffing, claims subjetivos y URLs."
+8. **`src/pages/Index.tsx`** - Reemplazar con layout de sidebar + outlet de rutas
 
-## Seccion tecnica
+9. **`src/components/advertising/KeywordsSection.tsx`** - Recibir prop `forcedView: 'editorial' | 'ads'` para eliminar el switch editorial/ads interno. Cada submodulo pasa la vista que corresponde.
 
-### Archivos a modificar
+10. **`src/components/advertising/GuidedTour.tsx`** - Refactorizar para aceptar `steps: TourStep[]` como prop en lugar de usar `TOUR_STEPS` hardcoded. Los steps se definen en cada modulo.
 
-1. **`src/components/advertising/AdvertisingResearch.tsx`**
-   - Reescribir `educationSections` con 4 secciones ricas basadas en la guia oficial
+### Componentes que quedan ocultos (sin eliminar)
 
-2. **`src/components/advertising/BookInfoPanelCompact.tsx`**
-   - Anadir tooltips a los campos Titulo, Subtitulo, PVP y Regalias
+- `ASINSection.tsx` - no se renderiza en ninguno de los 2 submodulos
+- `CategoriesSection.tsx` - no se renderiza en ninguno de los 2 submodulos
+- Las tabs ASIN/Categorias desaparecen del UI
 
-3. **`src/components/advertising/KeywordDetailPanel.tsx`**
-   - Anadir/mejorar tooltips en campos de la pestana Nicho (volumen, competidores, trafico) y Ads (fase, ACOS, CPC, impresiones, CTR)
+## Sidebar: Diseno
 
-4. **`src/components/advertising/AcosEquilibrioSection.tsx`**
-   - Mejorar tooltip del snapshot y anadir tooltips al PE y ACOS Sig. Click
+El sidebar sera minimalista:
+- Ancho expandido: ~220px, colapsado: ~56px (solo iconos)
+- 2 items principales con iconos:
+  - BookOpen + "Estudio de Nicho"
+  - Megaphone + "Gestion de ADS" (con badge "Plus" si aplica plan gating)
+- Seccion inferior: MarketplaceSelector, ThemeToggle, Backup, Settings, Reset
+- Toggle de colapso via `SidebarTrigger`
+- Highlight del item activo via NavLink
 
-5. **`src/components/advertising/NewKeywordWizard.tsx`**
-   - Anadir helper text/tooltips al campo keyword y proposito
+## Tours rediseñados
 
-6. **`src/components/advertising/NewAdsKeywordWizard.tsx`**
-   - Anadir helper text/tooltips a campana, fase, impresiones, clics
+### Tour "Estudio de Nicho" (6 pasos)
+1. Bienvenida - "Este modulo te ayuda a investigar nichos y seleccionar keywords editoriales"
+2. Marketplace - "Selecciona el mercado que quieres analizar"
+3. Contexto del Libro - "Define titulo, precio y regalias para calcular metricas"
+4. Keywords - "Aqui gestionas tus keywords de investigacion. KDP permite hasta 7 por libro"
+5. Importar - "Importa datos de Helium 10, BookBeam o Publisher Rocket"
+6. Visualizaciones - "Cambia a la vista de graficos para ver patrones y oportunidades"
 
-7. **`src/components/advertising/ImportHelpTooltip.tsx`**
-   - Anadir nota sobre limites oficiales de KDP/Ads
+### Tour "Gestion de ADS" (6 pasos)
+1. Bienvenida - "Este modulo gestiona tus campanas de Amazon Ads"
+2. Dashboard - "Vista global de rendimiento: Gasto, Ventas, ACOS y alertas"
+3. Keywords Ads - "Gestiona keywords de campanas con metricas de rendimiento"
+4. Importar Ads - "Importa datos directamente desde tu consola de Amazon Ads"
+5. ACOS y PE - "Compara tu ACOS actual con el Punto de Equilibrio para evaluar rentabilidad"
+6. Alertas - "Recibe avisos cuando keywords superan el PE o tienen anomalias"
 
-8. **`src/components/advertising/GuidedTour.tsx`**
-   - Actualizar tips de 2-3 pasos con informacion oficial
+## Seccion tecnica detallada
+
+### Archivos nuevos
+
+1. **`src/components/advertising/AdvertisingDataProvider.tsx`**
+   - Extraer de AdvertisingResearch: useState de bookInfo, bookEconomy, keywordsByMarket, asinsByMarket, categoriesByMarket, campaignPlansByMarket, selectedMarketplace
+   - Extraer hydration, persistence, sync status, pending changes
+   - Extraer todos los handlers CRUD (handleAddKeyword, handleUpdateKeyword, etc.)
+   - Exportar via `useAdvertisingData()` hook
+
+2. **`src/components/advertising/AppSidebar.tsx`**
+   - Usa componentes de `@/components/ui/sidebar`
+   - NavLink para `/estudio` y `/ads`
+   - Acciones globales en el footer del sidebar
+
+3. **`src/components/advertising/NicheStudyModule.tsx`**
+   - Consume `useAdvertisingData()` para obtener datos y handlers
+   - Renderiza BookInfoPanelCompact, toggle Datos/Visualizaciones, KeywordsSection (forcedView='editorial'), StatsPanel, VisualizationsTab, CollapsibleEducation
+   - Tour propio con NicheTour
+
+4. **`src/components/advertising/AdsManagementModule.tsx`**
+   - Consume `useAdvertisingData()` para obtener datos y handlers
+   - Renderiza BookInfoPanelCompact, AdsDashboard, KeywordsSection (forcedView='ads'), AcosAlertsTray
+   - Tour propio con AdsTour
+
+5. **`src/components/advertising/NicheTour.tsx`** y **`src/components/advertising/AdsTour.tsx`**
+   - Definen sus propios TOUR_STEPS
+   - Usan el GuidedTour refactorizado pasando steps como prop
+
+### Archivos modificados
+
+6. **`src/App.tsx`** - Layout con SidebarProvider + rutas
+7. **`src/pages/Index.tsx`** - Redirect a /estudio o layout wrapper
+8. **`src/components/advertising/KeywordsSection.tsx`** - Prop `forcedView` que fuerza editorial o ads sin el switch interno
+9. **`src/components/advertising/GuidedTour.tsx`** - Aceptar `steps` como prop
+10. **`src/components/advertising/AdvertisingResearch.tsx`** - Se puede mantener como legacy o eliminar gradualmente
 
 ### Sin cambios de logica
-Todos los calculos, flujos, persistencia y handlers permanecen exactamente iguales. Solo se anade/mejora contenido textual (tooltips, helper texts, secciones educativas).
+Toda la logica de persistencia, calculos de ACOS, market score, filtros, sorting, imports y exports se mantiene identica. Solo se reorganiza donde vive el estado (context en vez de componente monolitico) y como se renderiza (2 modulos en vez de 1 con tabs).
 
