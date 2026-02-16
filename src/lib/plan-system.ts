@@ -1,5 +1,5 @@
 // Plan system for gating features
-// Starter = basic plan with Estudio de Nicho
+// Starter = basic plan with Estudio de KW
 // Plus = premium plan with Gestión de Ads
 
 export type PlanType = 'starter' | 'plus';
@@ -15,9 +15,9 @@ export const PLANS: Record<PlanType, PlanConfig> = {
   starter: {
     id: 'starter',
     name: 'Starter',
-    description: 'Estudio de Nicho y análisis de mercado',
+    description: 'Estudio de KW y análisis de mercado',
     features: [
-      'Estudio de Nicho',
+      'Estudio de KW',
       'Market Score',
       'Visualizaciones básicas',
       'Exportar CSV',

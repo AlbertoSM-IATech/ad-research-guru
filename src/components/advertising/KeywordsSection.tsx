@@ -1000,66 +1000,47 @@ export const KeywordsSection = ({
       {/* Bulk actions (Editorial) */}
       {functionalView === 'editorial' && <BulkEditorialStatusToolbar selectedCount={selectedIds.size} onChangeStatus={handleBulkChangeKeywordStatus} onQuickValidate={() => handleBulkChangeKeywordStatus('valid')} />}
 
-      {/* Bulk "Enviar a..." actions */}
-      {selectedIds.size > 0 && <div className="flex items-center gap-2 p-3 bg-muted/50 rounded-lg border border-border">
-          <Badge variant="secondary" className="font-medium">
-            {selectedIds.size} seleccionadas
-          </Badge>
-          <div className="h-4 w-px bg-border mx-1" />
+      {/* Bulk "Enviar a..." actions - always visible, disabled when no selection */}
+      <div className="flex items-center gap-2 p-2 bg-muted/30 rounded-lg border border-border">
+          {selectedIds.size > 0 && (
+            <Badge variant="secondary" className="font-medium text-xs">
+              {selectedIds.size} sel.
+            </Badge>
+          )}
           {functionalView === 'editorial' ? <>
-              <Button variant="outline" size="sm" className="gap-2" onClick={() => {
-          onUpdateBulk(Array.from(selectedIds), {
-            purpose: 'both'
-          });
+              <Button variant="outline" size="sm" className="gap-2" disabled={selectedIds.size === 0} onClick={() => {
+          onUpdateBulk(Array.from(selectedIds), { purpose: 'both' });
           onSelectedIdsChange(new Set());
-          toast({
-            title: `${selectedIds.size} keywords enviadas también a Ads`,
-            description: 'Ahora aparecen en ambas vistas.'
-          });
+          toast({ title: `${selectedIds.size} keywords enviadas también a Ads`, description: 'Ahora aparecen en ambas vistas.' });
         }}>
                 <Megaphone className="w-4 h-4" />
                 Enviar también a Ads
               </Button>
-              <Button variant="ghost" size="sm" className="gap-2 text-muted-foreground" onClick={() => {
-          onUpdateBulk(Array.from(selectedIds), {
-            purpose: 'ads'
-          });
+              <Button variant="ghost" size="sm" className="gap-2 text-muted-foreground" disabled={selectedIds.size === 0} onClick={() => {
+          onUpdateBulk(Array.from(selectedIds), { purpose: 'ads' });
           onSelectedIdsChange(new Set());
-          toast({
-            title: `${selectedIds.size} keywords movidas a Ads`,
-            description: 'Ya no aparecen en Estudio de Keywords.'
-          });
+          toast({ title: `${selectedIds.size} keywords movidas a Ads`, description: 'Ya no aparecen en Estudio de KW.' });
         }}>
-                Mover a Ads (quitar de aquí)
+                Mover a Ads
               </Button>
             </> : <>
-              <Button variant="outline" size="sm" className="gap-2" onClick={() => {
-          onUpdateBulk(Array.from(selectedIds), {
-            purpose: 'both'
-          });
+              <Button variant="outline" size="sm" className="gap-2" disabled={selectedIds.size === 0} onClick={() => {
+          onUpdateBulk(Array.from(selectedIds), { purpose: 'both' });
           onSelectedIdsChange(new Set());
-          toast({
-            title: `${selectedIds.size} keywords enviadas también a Estudio`,
-            description: 'Ahora aparecen en ambas vistas.'
-          });
+          toast({ title: `${selectedIds.size} keywords enviadas también a Estudio`, description: 'Ahora aparecen en ambas vistas.' });
         }}>
                 <BookOpen className="w-4 h-4" />
                 Enviar también a Estudio
               </Button>
-              <Button variant="ghost" size="sm" className="gap-2 text-muted-foreground" onClick={() => {
-          onUpdateBulk(Array.from(selectedIds), {
-            purpose: 'editorial'
-          });
+              <Button variant="ghost" size="sm" className="gap-2 text-muted-foreground" disabled={selectedIds.size === 0} onClick={() => {
+          onUpdateBulk(Array.from(selectedIds), { purpose: 'editorial' });
           onSelectedIdsChange(new Set());
-          toast({
-            title: `${selectedIds.size} keywords movidas a Estudio`,
-            description: 'Ya no aparecen en Gestión de Ads.'
-          });
+          toast({ title: `${selectedIds.size} keywords movidas a Estudio`, description: 'Ya no aparecen en Gestión de Ads.' });
         }}>
-                Mover a Estudio (quitar de aquí)
+                Mover a Estudio
               </Button>
             </>}
-        </div>}
+        </div>
 
       {/* Content - Table with DnD column reordering */}
       <DndContext sensors={dndSensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>

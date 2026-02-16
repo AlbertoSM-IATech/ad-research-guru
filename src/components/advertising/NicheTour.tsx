@@ -3,8 +3,8 @@ import { GuidedTour, type TourStep } from "./GuidedTour";
 const NICHE_TOUR_STEPS: TourStep[] = [
   {
     id: 'welcome',
-    title: 'Bienvenido al Estudio de Nicho',
-    description: 'Este módulo te ayuda a investigar nichos y seleccionar keywords editoriales para tus libros en KDP.',
+    title: 'Bienvenido al Estudio de KW',
+    description: 'Este módulo te ayuda a investigar keywords editoriales y analizar nichos para tus libros en KDP.',
     tip: 'Puedes interactuar con la interfaz mientras haces el tour. Ciérralo cuando quieras con ✕.',
     position: 'center',
   },
@@ -27,7 +27,7 @@ const NICHE_TOUR_STEPS: TourStep[] = [
   {
     id: 'keywords',
     title: 'Keywords Editoriales',
-    description: 'Aquí gestionas tus keywords de investigación. Añade, importa o edita keywords para tu estudio de nicho.',
+    description: 'Aquí gestionas tus keywords de investigación. Añade, importa o edita keywords para tu estudio de KW.',
     tip: 'KDP permite hasta 7 keywords por libro. Evita keyword stuffing, claims subjetivos y URLs.',
     target: '[data-tour="keywords-section"]',
     position: 'top',

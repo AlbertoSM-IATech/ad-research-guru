@@ -11,7 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
-import { Info, Save, RotateCcw, Sparkles, BookOpen, Megaphone, Maximize2, Minimize2, CheckCircle2, Clock, Link2, ChevronUp, ChevronDown } from 'lucide-react';
+import { Info, Save, RotateCcw, Sparkles, BookOpen, Megaphone, Maximize2, Minimize2, CheckCircle2, Clock, Link2, ChevronUp, ChevronDown, ArrowRightLeft } from 'lucide-react';
 import type { Keyword, BookEconomy, AdsData } from '@/types/advertising';
 import { getCurrencySymbol } from '@/types/advertising';
 import { getAutoStatusFromScore } from '@/lib/keyword-builder';
@@ -424,7 +424,7 @@ export const KeywordDetailPanel = ({
             />
           </div>
 
-          {/* Purpose selector */}
+          {/* Purpose selector + quick transfer buttons */}
           <div className="space-y-2">
             <div className="flex items-center gap-1">
               <Label>Propósito</Label>
@@ -434,7 +434,7 @@ export const KeywordDetailPanel = ({
                     <Info className="w-3.5 h-3.5 text-muted-foreground cursor-help" />
                   </TooltipTrigger>
                   <TooltipContent side="top" className="max-w-xs">
-                    Controla en qué vista aparece esta keyword: Estudio de Keywords, Gestión de Ads, o ambas.
+                    Controla en qué vista aparece esta keyword: Estudio de KW, Gestión de Ads, o ambas.
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
@@ -461,6 +461,57 @@ export const KeywordDetailPanel = ({
                 ))}
               </SelectContent>
             </Select>
+            {/* Quick transfer buttons - always visible */}
+            <div className="flex gap-1.5">
+              {(keyword.purpose === 'editorial' || keyword.purpose === 'both') ? (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-1.5 flex-1 text-xs"
+                  onClick={() => {
+                    const newPurpose = keyword.purpose === 'both' ? 'ads' : 'both';
+                    onSave(keyword.id, { purpose: newPurpose });
+                  }}
+                >
+                  <Megaphone className="w-3.5 h-3.5" />
+                  {keyword.purpose === 'both' ? 'Quitar de KW' : 'Enviar a Ads'}
+                </Button>
+              ) : (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-1.5 flex-1 text-xs"
+                  onClick={() => onSave(keyword.id, { purpose: 'both' })}
+                >
+                  <Megaphone className="w-3.5 h-3.5" />
+                  Enviar a Ads
+                </Button>
+              )}
+              {(keyword.purpose === 'ads' || keyword.purpose === 'both') ? (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-1.5 flex-1 text-xs"
+                  onClick={() => {
+                    const newPurpose = keyword.purpose === 'both' ? 'editorial' : 'both';
+                    onSave(keyword.id, { purpose: newPurpose });
+                  }}
+                >
+                  <BookOpen className="w-3.5 h-3.5" />
+                  {keyword.purpose === 'both' ? 'Quitar de Ads' : 'Enviar a KW'}
+                </Button>
+              ) : (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-1.5 flex-1 text-xs"
+                  onClick={() => onSave(keyword.id, { purpose: 'both' })}
+                >
+                  <BookOpen className="w-3.5 h-3.5" />
+                  Enviar a KW
+                </Button>
+              )}
+            </div>
           </div>
         </SheetHeader>
 
@@ -469,7 +520,7 @@ export const KeywordDetailPanel = ({
           <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="nicho" className="gap-2">
               <BookOpen className="w-4 h-4" />
-              Estudio de Nicho
+              Estudio de KW
             </TabsTrigger>
             <TabsTrigger value="ads" className="gap-2">
               <Megaphone className="w-4 h-4" />
