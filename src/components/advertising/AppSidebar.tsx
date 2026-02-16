@@ -38,7 +38,7 @@ export function AppSidebar({ onOpenBackup, onOpenMarketConfig, onOpenReset, onOp
 
   const navItems = [
     {
-      title: "Estudio de Nicho",
+      title: "Estudio de KW",
       url: "/estudio",
       icon: BookOpen,
       badge: null,

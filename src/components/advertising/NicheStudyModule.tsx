@@ -71,7 +71,7 @@ export const NicheStudyModule = () => {
         <header className="mb-4">
           <div className="flex items-center justify-between gap-2 flex-wrap">
             <div className="flex items-center gap-2">
-              <h1 className="font-heading text-xl font-bold text-foreground">Estudio de Nicho</h1>
+              <h1 className="font-heading text-xl font-bold text-foreground">Estudio de KW</h1>
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
