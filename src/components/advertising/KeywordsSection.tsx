@@ -894,69 +894,104 @@ export const KeywordsSection = ({
       {/* Advanced Filters Content */}
       {advancedFiltersExpanded && (functionalView === 'editorial' ? <AdvancedFiltersContent filters={filters} onFiltersChange={handleAdvancedFiltersChange} /> : <AdsFiltersContent filters={adsFilters} onFiltersChange={handleAdsFiltersChange} />)}
 
-      {/* Quick Add, Search & Sort */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 items-center">
-        {/* Column 1: Quick Add */}
-        <div className="flex gap-2">
-          <Input placeholder="Escribe una keyword..." value={quickAddKeyword} onChange={(e) => setQuickAddKeyword(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleQuickAdd()} className="flex-1" />
-          <Button onClick={quickAddKeyword.trim() ? handleQuickAdd : handleOpenNewKeywordWizard} size="sm" className="gap-1 bg-primary hover:bg-primary/90 whitespace-nowrap">
+      {/* Quick Add + Search + Stats + Transfer - single row */}
+      <div className="flex items-center gap-2 flex-wrap">
+        {/* Quick Add */}
+        <div className="flex gap-1.5 items-center">
+          <Input placeholder="Escribe una keyword..." value={quickAddKeyword} onChange={(e) => setQuickAddKeyword(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleQuickAdd()} className="w-48 h-9" />
+          <Button onClick={quickAddKeyword.trim() ? handleQuickAdd : handleOpenNewKeywordWizard} size="sm" className="gap-1 bg-primary hover:bg-primary/90 whitespace-nowrap h-9">
             <Plus className="w-4 h-4" />
             {quickAddKeyword.trim() ? 'Añadir' : 'Nueva'}
           </Button>
         </div>
 
-        {/* Column 2: Search */}
+        {/* Search */}
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input placeholder="Buscar keywords..." value={searchTerm} onChange={(e) => {
           onSearchTermChange(e.target.value);
           setCurrentPage(1);
-        }} className="pl-10 pr-8" />
+        }} className="pl-10 pr-8 w-48 h-9" />
           {searchTerm && <button type="button" onClick={() => {
           onSearchTermChange('');
           setCurrentPage(1);
         }} className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded-sm hover:bg-muted text-muted-foreground hover:text-foreground transition-colors">
-              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <line x1="18" y1="6" x2="6" y2="18" />
-                <line x1="6" y1="6" x2="18" y2="18" />
-              </svg>
+              <X className="w-3.5 h-3.5" />
             </button>}
         </div>
-      </div>
 
-      {/* Toolbar + Results count + Needs Attention indicator */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="text-sm text-muted-foreground">
-            {filteredKeywords.length} de {keywords.length} keywords
-            {selectedIds.size > 0 && ` • ${selectedIds.size} seleccionadas`}
-          </div>
-          
-          {/* Contextual view warning - inline */}
-          <div className={cn("flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs", functionalView === 'editorial' ? "bg-blue-500/10 text-blue-600 dark:text-blue-400" : "bg-amber-500/10 text-amber-600 dark:text-amber-400")}>
-            <Info className="w-3 h-3 flex-shrink-0" />
-            {functionalView === 'editorial' ? "Vista editorial" : "Vista de inversión Ads"}
-          </div>
-          
-          {/* Needs Attention counter - opens dialog */}
-          {functionalView === 'ads' && (() => {
-          const acosEquilibrioVal = bookEconomy.precioLibro > 0 && bookEconomy.regaliasPorVenta > 0 ? bookEconomy.regaliasPorVenta / bookEconomy.precioLibro * 100 : null;
-          const needsAttentionCount = acosEquilibrioVal !== null ? keywords.filter((k) => {
-            const ads = k.adsData;
-            const gastoCalculado = calcularGastoAcumulado(ads?.clicks, ads?.cpcActual);
-            const ventasCalculadas = calcularVentasAcumuladas(ads?.pedidos, bookEconomy.precioLibro);
-            const acosActual = calcularAcosActualPorcentaje(gastoCalculado ?? undefined, ventasCalculadas ?? undefined);
-            return acosActual !== null && acosActual > acosEquilibrioVal;
-          }).length : 0;
-          if (needsAttentionCount === 0) return null;
-          return <Button variant="outline" size="sm" onClick={() => setIsAlertsDialogOpen(true)} className={cn("gap-2 text-xs border-red-500/50 text-red-600 hover:bg-red-500/10")}>
-                <AlertTriangle className="w-3.5 h-3.5" />
-                Necesitan atención: {needsAttentionCount}
-              </Button>;
-        })()}
+        <div className="h-5 w-px bg-border hidden sm:block" />
+
+        {/* Results count */}
+        <div className="text-sm text-muted-foreground whitespace-nowrap">
+          {filteredKeywords.length} de {keywords.length} keywords
         </div>
+          
+        {/* Contextual view warning - inline */}
+        <div className={cn("flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs whitespace-nowrap", functionalView === 'editorial' ? "bg-blue-500/10 text-blue-600 dark:text-blue-400" : "bg-amber-500/10 text-amber-600 dark:text-amber-400")}>
+          <Info className="w-3 h-3 flex-shrink-0" />
+          {functionalView === 'editorial' ? "Vista editorial" : "Vista de inversión Ads"}
+        </div>
+          
+        {/* Needs Attention counter */}
+        {functionalView === 'ads' && (() => {
+        const acosEquilibrioVal = bookEconomy.precioLibro > 0 && bookEconomy.regaliasPorVenta > 0 ? bookEconomy.regaliasPorVenta / bookEconomy.precioLibro * 100 : null;
+        const needsAttentionCount = acosEquilibrioVal !== null ? keywords.filter((k) => {
+          const ads = k.adsData;
+          const gastoCalculado = calcularGastoAcumulado(ads?.clicks, ads?.cpcActual);
+          const ventasCalculadas = calcularVentasAcumuladas(ads?.pedidos, bookEconomy.precioLibro);
+          const acosActual = calcularAcosActualPorcentaje(gastoCalculado ?? undefined, ventasCalculadas ?? undefined);
+          return acosActual !== null && acosActual > acosEquilibrioVal;
+        }).length : 0;
+        if (needsAttentionCount === 0) return null;
+        return <Button variant="outline" size="sm" onClick={() => setIsAlertsDialogOpen(true)} className={cn("gap-1.5 text-xs border-red-500/50 text-red-600 hover:bg-red-500/10 h-8")}>
+              <AlertTriangle className="w-3.5 h-3.5" />
+              Necesitan atención: {needsAttentionCount}
+            </Button>;
+      })()}
+
+        <div className="h-5 w-px bg-border hidden sm:block" />
+
+        {/* Transfer buttons */}
+        {functionalView === 'editorial' ? <>
+            <Button variant="outline" size="sm" className="gap-1.5 h-8 text-xs" disabled={selectedIds.size === 0} onClick={() => {
+        onUpdateBulk(Array.from(selectedIds), { purpose: 'both' });
+        onSelectedIdsChange(new Set());
+        toast({ title: `${selectedIds.size} keywords enviadas también a Ads`, description: 'Ahora aparecen en ambas vistas.' });
+      }}>
+              <Megaphone className="w-3.5 h-3.5" />
+              Enviar también a Ads
+            </Button>
+            <Button variant="ghost" size="sm" className="gap-1.5 h-8 text-xs text-muted-foreground" disabled={selectedIds.size === 0} onClick={() => {
+        onUpdateBulk(Array.from(selectedIds), { purpose: 'ads' });
+        onSelectedIdsChange(new Set());
+        toast({ title: `${selectedIds.size} keywords movidas a Ads`, description: 'Ya no aparecen en Estudio de KW.' });
+      }}>
+              Mover a Ads
+            </Button>
+          </> : <>
+            <Button variant="outline" size="sm" className="gap-1.5 h-8 text-xs" disabled={selectedIds.size === 0} onClick={() => {
+        onUpdateBulk(Array.from(selectedIds), { purpose: 'both' });
+        onSelectedIdsChange(new Set());
+        toast({ title: `${selectedIds.size} keywords enviadas también a Estudio`, description: 'Ahora aparecen en ambas vistas.' });
+      }}>
+              <BookOpen className="w-3.5 h-3.5" />
+              Enviar también a Estudio
+            </Button>
+            <Button variant="ghost" size="sm" className="gap-1.5 h-8 text-xs text-muted-foreground" disabled={selectedIds.size === 0} onClick={() => {
+        onUpdateBulk(Array.from(selectedIds), { purpose: 'editorial' });
+        onSelectedIdsChange(new Set());
+        toast({ title: `${selectedIds.size} keywords movidas a Estudio`, description: 'Ya no aparecen en Gestión de Ads.' });
+      }}>
+              Mover a Estudio
+            </Button>
+          </>}
+
+        {/* Spacer */}
+        <div className="flex-1" />
+
+        {/* Right-side tools */}
         <div className="flex items-center gap-2">
-          {/* Reset Column Widths & Order */}
           <Tooltip>
             <TooltipTrigger asChild>
               <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => {
@@ -972,7 +1007,6 @@ export const KeywordsSection = ({
           <BulkCopyTools keywords={filteredKeywords} selectedIds={selectedIds} />
           <KeywordExportCSV keywords={filteredKeywords} bookEconomy={bookEconomy} selectedIds={selectedIds} />
           
-          {/* Import button per view */}
           {functionalView === 'editorial' && <Button data-tour="external-import" size="sm" onClick={() => setShowExternalImportModal(true)} className="gap-2 bg-primary hover:bg-primary/90">
               <Upload className="w-4 h-4" />
               Importar datos
@@ -999,48 +1033,6 @@ export const KeywordsSection = ({
 
       {/* Bulk actions (Editorial) */}
       {functionalView === 'editorial' && <BulkEditorialStatusToolbar selectedCount={selectedIds.size} onChangeStatus={handleBulkChangeKeywordStatus} onQuickValidate={() => handleBulkChangeKeywordStatus('valid')} />}
-
-      {/* Bulk "Enviar a..." actions - always visible, disabled when no selection */}
-      <div className="flex items-center gap-2 p-2 bg-muted/30 rounded-lg border border-border">
-          {selectedIds.size > 0 && (
-            <Badge variant="secondary" className="font-medium text-xs">
-              {selectedIds.size} sel.
-            </Badge>
-          )}
-          {functionalView === 'editorial' ? <>
-              <Button variant="outline" size="sm" className="gap-2" disabled={selectedIds.size === 0} onClick={() => {
-          onUpdateBulk(Array.from(selectedIds), { purpose: 'both' });
-          onSelectedIdsChange(new Set());
-          toast({ title: `${selectedIds.size} keywords enviadas también a Ads`, description: 'Ahora aparecen en ambas vistas.' });
-        }}>
-                <Megaphone className="w-4 h-4" />
-                Enviar también a Ads
-              </Button>
-              <Button variant="ghost" size="sm" className="gap-2 text-muted-foreground" disabled={selectedIds.size === 0} onClick={() => {
-          onUpdateBulk(Array.from(selectedIds), { purpose: 'ads' });
-          onSelectedIdsChange(new Set());
-          toast({ title: `${selectedIds.size} keywords movidas a Ads`, description: 'Ya no aparecen en Estudio de KW.' });
-        }}>
-                Mover a Ads
-              </Button>
-            </> : <>
-              <Button variant="outline" size="sm" className="gap-2" disabled={selectedIds.size === 0} onClick={() => {
-          onUpdateBulk(Array.from(selectedIds), { purpose: 'both' });
-          onSelectedIdsChange(new Set());
-          toast({ title: `${selectedIds.size} keywords enviadas también a Estudio`, description: 'Ahora aparecen en ambas vistas.' });
-        }}>
-                <BookOpen className="w-4 h-4" />
-                Enviar también a Estudio
-              </Button>
-              <Button variant="ghost" size="sm" className="gap-2 text-muted-foreground" disabled={selectedIds.size === 0} onClick={() => {
-          onUpdateBulk(Array.from(selectedIds), { purpose: 'editorial' });
-          onSelectedIdsChange(new Set());
-          toast({ title: `${selectedIds.size} keywords movidas a Estudio`, description: 'Ya no aparecen en Gestión de Ads.' });
-        }}>
-                Mover a Estudio
-              </Button>
-            </>}
-        </div>
 
       {/* Content - Table with DnD column reordering */}
       <DndContext sensors={dndSensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
