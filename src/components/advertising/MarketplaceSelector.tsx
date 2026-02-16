@@ -25,7 +25,7 @@ export const MarketplaceSelector = ({ value, onChange }: MarketplaceSelectorProp
       </div>
 
       <Select value={value} onValueChange={onChange}>
-        <SelectTrigger className="w-[200px] h-9 bg-primary text-primary-foreground border-primary hover:bg-primary/90 transition-colors">
+        <SelectTrigger className="w-full h-9 bg-primary text-primary-foreground border-primary hover:bg-primary/90 transition-colors">
           <SelectValue>
             {selectedMarketplace && (
               <span className="flex items-center gap-2">
