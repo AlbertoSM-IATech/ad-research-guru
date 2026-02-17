@@ -901,13 +901,13 @@ export const KeywordsSection = ({
             <Upload className="w-4 h-4" />
             Importar datos
           </Button>}
-        {functionalView === 'ads' && <Button data-tour="btn-import-ads" size="sm" onClick={() => setShowAmazonAdsImport(true)} className="gap-2 bg-primary hover:bg-primary/90">
+        {functionalView === 'ads' && <Button data-tour="btn-import-ads" size="sm" onClick={() => setShowAmazonAdsImport(true)} className="gap-2 bg-primary hover:bg-primary/90 text-sm font-sans font-medium">
             <Upload className="w-4 h-4" />
             Importar Amazon ADS
           </Button>}
 
         {/* 2. + Nueva (button only) */}
-        <Button onClick={handleOpenNewKeywordWizard} size="sm" variant="outline" className="gap-1 whitespace-nowrap h-8">
+        <Button onClick={handleOpenNewKeywordWizard} size="sm" variant="outline" className="gap-1 whitespace-nowrap h-8 bg-primary">
           <Plus className="w-4 h-4" />
           Nueva
         </Button>

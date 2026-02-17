@@ -17,8 +17,8 @@ import {
   SidebarMenuItem,
   SidebarFooter,
   SidebarSeparator,
-  useSidebar,
-} from "@/components/ui/sidebar";
+  useSidebar } from
+"@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
@@ -37,23 +37,23 @@ export function AppSidebar({ onOpenBackup, onOpenMarketConfig, onOpenReset, onOp
   const userPlan = getCurrentPlan();
 
   const navItems = [
-    {
-      title: "Estudio de KW",
-      url: "/estudio",
-      icon: BookOpen,
-      badge: null,
-    },
-    {
-      title: "Gestión de ADS",
-      url: "/ads",
-      icon: Megaphone,
-      badge: userPlan === 'starter' ? (
-        <Badge variant="secondary" className="ml-auto bg-blue-500 text-white text-[9px] px-1 py-0 h-4">
+  {
+    title: "Estudio de KW",
+    url: "/estudio",
+    icon: BookOpen,
+    badge: null
+  },
+  {
+    title: "Gestión de ADS",
+    url: "/ads",
+    icon: Megaphone,
+    badge: userPlan === 'starter' ?
+    <Badge variant="secondary" className="ml-auto bg-blue-500 text-white text-[9px] px-1 py-0 h-4">
           Plus
-        </Badge>
-      ) : null,
-    },
-  ];
+        </Badge> :
+    null
+  }];
+
 
   return (
     <Sidebar collapsible="icon" className="border-r border-border/50">
@@ -64,25 +64,25 @@ export function AppSidebar({ onOpenBackup, onOpenMarketConfig, onOpenReset, onOp
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {navItems.map((item) => (
-                <SidebarMenuItem key={item.title}>
+              {navItems.map((item) =>
+              <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild tooltip={item.title}>
                     <NavLink
-                      to={item.url}
-                      className="flex items-center gap-2 px-2 py-1.5 rounded-md text-sm transition-colors hover:bg-muted/50"
-                      activeClassName="bg-primary/10 text-primary font-medium"
-                    >
+                    to={item.url}
+                    className="flex items-center gap-2 px-2 py-1.5 rounded-md text-sm transition-colors hover:bg-muted/50"
+                    activeClassName="bg-primary/10 text-primary font-medium">
+
                       <item.icon className="h-4 w-4 shrink-0" />
-                      {!collapsed && (
-                        <>
+                      {!collapsed &&
+                    <>
                           <span className="truncate">{item.title}</span>
                           {item.badge}
                         </>
-                      )}
+                    }
                     </NavLink>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
-              ))}
+              )}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
@@ -90,18 +90,18 @@ export function AppSidebar({ onOpenBackup, onOpenMarketConfig, onOpenReset, onOp
         <SidebarSeparator />
 
         {/* Marketplace selector */}
-        {!collapsed && (
-          <SidebarGroup>
+        {!collapsed &&
+        <SidebarGroup>
             <SidebarGroupLabel className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
               Mercado
             </SidebarGroupLabel>
-            <SidebarGroupContent className="px-2">
+            <SidebarGroupContent className="px-1">
               <div data-tour="marketplace">
                 <MarketplaceSelector value={selectedMarketplace} onChange={setSelectedMarketplace} />
               </div>
             </SidebarGroupContent>
           </SidebarGroup>
-        )}
+        }
       </SidebarContent>
 
       <SidebarFooter className="p-2">
@@ -155,6 +155,6 @@ export function AppSidebar({ onOpenBackup, onOpenMarketConfig, onOpenReset, onOp
           </TooltipProvider>
         </div>
       </SidebarFooter>
-    </Sidebar>
-  );
+    </Sidebar>);
+
 }
