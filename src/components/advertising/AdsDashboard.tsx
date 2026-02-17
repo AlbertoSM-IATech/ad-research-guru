@@ -171,7 +171,7 @@ export function AdsDashboard({
         <div className="">
           <h3 className="text- font-semibold py-0 mx-0 my-0">
         </h3>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-sm text-muted-foreground mx-[24px]">
             Resumen de métricas de Ads para {keywords.length} keywords
           </p>
         </div>
