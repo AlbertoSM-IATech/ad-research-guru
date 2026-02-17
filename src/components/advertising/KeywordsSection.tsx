@@ -185,7 +185,7 @@ export const KeywordsSection = ({
   // Functional view state (Editorial vs Ads) - use forcedView if provided
   const [functionalViewInternal, setFunctionalViewInternal] = useState<FunctionalView>(persistedState.functionalView || 'editorial');
   const functionalView = forcedViewProp || functionalViewInternal;
-  const setFunctionalView = forcedViewProp ? (() => {}) : setFunctionalViewInternal;
+  const setFunctionalView = forcedViewProp ? () => {} : setFunctionalViewInternal;
 
   // Column width management for resizable columns
   const {
@@ -838,23 +838,23 @@ export const KeywordsSection = ({
         <div className="items-start justify-between flex flex-col px-0 mx-0 my-0 py-0 gap-[13px]">
           
           {/* View Toggle: Editorial / Ads - only shown when no forcedView */}
-          {!forcedViewProp && (
-            <div className="p-1 bg-muted rounded-lg items-start justify-start flex flex-row px-[5px] my-0 py-0 gap-[4px]">
+          {!forcedViewProp &&
+        <div className="p-1 bg-muted rounded-lg items-start justify-start flex flex-row px-[5px] my-0 py-0 gap-[4px]">
               <Button data-tour="btn-estudio-kw" variant={functionalView === 'editorial' ? 'default' : 'ghost'} size="sm" onClick={() => {
-              setFunctionalView('editorial');
-              updateFunctionalView('editorial');
-            }} className={cn("gap-2 transition-all text-xs", functionalView === 'editorial' && "bg-primary text-primary-foreground")}>
+            setFunctionalView('editorial');
+            updateFunctionalView('editorial');
+          }} className={cn("gap-2 transition-all text-xs", functionalView === 'editorial' && "bg-primary text-primary-foreground")}>
                 <BookOpen className="w-4 h-4" />
                 Estudio de Keywords
               </Button>
               <Button data-tour="tab-ads" variant={functionalView === 'ads' ? 'default' : 'ghost'} size="sm" onClick={() => {
-              if (!hasAdsAccess) {
-                setShowPlanUpgradeModal(true);
-                return;
-              }
-              setFunctionalView('ads');
-              updateFunctionalView('ads');
-            }} className={cn("gap-2 transition-all text-xs", functionalView === 'ads' && "bg-primary text-primary-foreground")}>
+            if (!hasAdsAccess) {
+              setShowPlanUpgradeModal(true);
+              return;
+            }
+            setFunctionalView('ads');
+            updateFunctionalView('ads');
+          }} className={cn("gap-2 transition-all text-xs", functionalView === 'ads' && "bg-primary text-primary-foreground")}>
                 <Megaphone className="w-4 h-4" />
                 Gestión de Ads
                 <Badge variant="secondary" className="ml-1 bg-blue-500 text-white text-[10px] px-1.5 py-0 h-4">
@@ -862,12 +862,12 @@ export const KeywordsSection = ({
                 </Badge>
               </Button>
             </div>
-          )}
+        }
         </div>
         
         {/* ADS Dashboard - only in ads view, collapsible - full width */}
         {functionalView === 'ads' && hasAdsAccess && <details className="group w-full bg-secondary rounded-lg" open>
-            <summary className="gap-2 cursor-pointer select-none text-sm font-semibold transition-colors flex-row w-full border-primary text-[#f98334] flex items-start justify-center border-0 px-0 py-[7px]">
+            <summary className="gap-2 cursor-pointer select-none text-sm font-semibold transition-colors flex-row w-full border-primary text-[#f98334] flex items-start justify-center border-0 px-0 my-[2px] py-[12px]">
               <ChevronDown className="w-4 h-4 transition-transform group-open:rotate-0 -rotate-90" />
               Dashboard de rendimiento
             </summary>
@@ -933,10 +933,10 @@ export const KeywordsSection = ({
         </div>
 
         {/* 5. Contextual view badge */}
-        <div className={cn("flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs whitespace-nowrap", functionalView === 'editorial' ? "bg-blue-500/10 text-blue-600 dark:text-blue-400" : "bg-amber-500/10 text-amber-600 dark:text-amber-400")}>
-          <Info className="w-3 h-3 flex-shrink-0" />
-          {functionalView === 'editorial' ? "Vista editorial" : "Vista de inversión Ads"}
-        </div>
+        
+
+
+
 
         {/* 6. Needs Attention (ads only) */}
         {functionalView === 'ads' && (() => {
@@ -961,34 +961,34 @@ export const KeywordsSection = ({
         {/* 8. Transfer buttons */}
         {functionalView === 'editorial' ? <>
             <Button variant="outline" size="sm" className="gap-1.5 h-8 text-xs" disabled={selectedIds.size === 0} onClick={() => {
-        onUpdateBulk(Array.from(selectedIds), { purpose: 'both' });
-        onSelectedIdsChange(new Set());
-        toast({ title: `${selectedIds.size} keywords enviadas también a Ads`, description: 'Ahora aparecen en ambas vistas.' });
-      }}>
+          onUpdateBulk(Array.from(selectedIds), { purpose: 'both' });
+          onSelectedIdsChange(new Set());
+          toast({ title: `${selectedIds.size} keywords enviadas también a Ads`, description: 'Ahora aparecen en ambas vistas.' });
+        }}>
               <Megaphone className="w-3.5 h-3.5" />
               Enviar también a Ads
             </Button>
             <Button variant="ghost" size="sm" className="gap-1.5 h-8 text-xs text-muted-foreground" disabled={selectedIds.size === 0} onClick={() => {
-        onUpdateBulk(Array.from(selectedIds), { purpose: 'ads' });
-        onSelectedIdsChange(new Set());
-        toast({ title: `${selectedIds.size} keywords movidas a Ads`, description: 'Ya no aparecen en Estudio de KW.' });
-      }}>
+          onUpdateBulk(Array.from(selectedIds), { purpose: 'ads' });
+          onSelectedIdsChange(new Set());
+          toast({ title: `${selectedIds.size} keywords movidas a Ads`, description: 'Ya no aparecen en Estudio de KW.' });
+        }}>
               Mover a Ads
             </Button>
           </> : <>
             <Button variant="outline" size="sm" className="gap-1.5 h-8 text-xs" disabled={selectedIds.size === 0} onClick={() => {
-        onUpdateBulk(Array.from(selectedIds), { purpose: 'both' });
-        onSelectedIdsChange(new Set());
-        toast({ title: `${selectedIds.size} keywords enviadas también a Estudio`, description: 'Ahora aparecen en ambas vistas.' });
-      }}>
+          onUpdateBulk(Array.from(selectedIds), { purpose: 'both' });
+          onSelectedIdsChange(new Set());
+          toast({ title: `${selectedIds.size} keywords enviadas también a Estudio`, description: 'Ahora aparecen en ambas vistas.' });
+        }}>
               <BookOpen className="w-3.5 h-3.5" />
               Enviar también a Estudio
             </Button>
             <Button variant="ghost" size="sm" className="gap-1.5 h-8 text-xs text-muted-foreground" disabled={selectedIds.size === 0} onClick={() => {
-        onUpdateBulk(Array.from(selectedIds), { purpose: 'editorial' });
-        onSelectedIdsChange(new Set());
-        toast({ title: `${selectedIds.size} keywords movidas a Estudio`, description: 'Ya no aparecen en Gestión de Ads.' });
-      }}>
+          onUpdateBulk(Array.from(selectedIds), { purpose: 'editorial' });
+          onSelectedIdsChange(new Set());
+          toast({ title: `${selectedIds.size} keywords movidas a Estudio`, description: 'Ya no aparecen en Gestión de Ads.' });
+        }}>
               Mover a Estudio
             </Button>
           </>}
@@ -1000,9 +1000,9 @@ export const KeywordsSection = ({
         <Tooltip>
           <TooltipTrigger asChild>
             <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => {
-              resetColumnWidths();
-              resetColumnOrder();
-            }}>
+            resetColumnWidths();
+            resetColumnOrder();
+          }}>
               <RotateCcw className="w-3.5 h-3.5" />
             </Button>
           </TooltipTrigger>
