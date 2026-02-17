@@ -165,7 +165,7 @@ export const AdsManagementModule = () => {
 
         {/* Education */}
         <div className="mt-6">
-          <CollapsibleEducation sections={educationSections} />
+          
         </div>
       </div>
     </div>);
