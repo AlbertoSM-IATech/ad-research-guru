@@ -138,6 +138,7 @@ export function AdsDashboard({
     }
     const avgConversion = keywordsWithConversion > 0 ? conversionSum / keywordsWithConversion : 0;
     const acosTotal = totalVentas > 0 ? totalGasto / totalVentas * 100 : null;
+    const classifiedKeywords = belowPeKeywords + recoverableKeywords + abovePeKeywords;
     return {
       totalClicks,
       totalPedidos,
@@ -149,6 +150,7 @@ export function AdsDashboard({
       acosTotal,
       acosEquilibrio,
       keywordsWithAdsData,
+      classifiedKeywords,
       belowPeKeywords,
       recoverableKeywords,
       abovePeKeywords
@@ -196,11 +198,11 @@ export function AdsDashboard({
         
         <MetricCard title="Conversión Media" value={`${metrics.avgConversion.toFixed(1)}%`} subtitle={metrics.keywordsWithConversion > 0 ? `Basada en ${metrics.keywordsWithConversion} KW con conversión` : "Sin KW con conversión"} icon={<Percent className="w-5 h-5 text-muted-foreground" />} tooltip="Media de conversión calculada solo con keywords que tienen al menos 1 pedido. Las keywords sin conversión no se incluyen." />
         
-        <MetricCard title="KW Bajo PE" value={metrics.belowPeKeywords.toString()} subtitle={`${(metrics.belowPeKeywords / Math.max(metrics.keywordsWithAdsData, 1) * 100).toFixed(0)}% del total`} icon={<CheckCircle2 className="w-5 h-5 text-green-500" />} valueClassName="text-green-600 dark:text-green-400" tooltip="Keywords con ACOS actual por debajo del ACOS PE (punto de equilibrio)." />
+        <MetricCard title="KW Bajo PE" value={metrics.belowPeKeywords.toString()} subtitle={`${(metrics.belowPeKeywords / Math.max(metrics.classifiedKeywords, 1) * 100).toFixed(0)}% del total`} icon={<CheckCircle2 className="w-5 h-5 text-green-500" />} valueClassName="text-green-600 dark:text-green-400" tooltip="Keywords con ACOS actual por debajo del ACOS PE (punto de equilibrio)." />
         
-        <MetricCard title="KW Recuperables" value={metrics.recoverableKeywords.toString()} subtitle={`${(metrics.recoverableKeywords / Math.max(metrics.keywordsWithAdsData, 1) * 100).toFixed(0)}% del total`} icon={<AlertTriangle className="w-5 h-5 text-amber-500" />} valueClassName="text-amber-600 dark:text-amber-400" tooltip="Keywords con ACOS por encima del PE pero que con 1 sola venta adicional bajarían del PE. Son las más cercanas a ser rentables." />
+        <MetricCard title="KW Recuperables" value={metrics.recoverableKeywords.toString()} subtitle={`${(metrics.recoverableKeywords / Math.max(metrics.classifiedKeywords, 1) * 100).toFixed(0)}% del total`} icon={<AlertTriangle className="w-5 h-5 text-amber-500" />} valueClassName="text-amber-600 dark:text-amber-400" tooltip="Keywords con ACOS por encima del PE pero que con 1 sola venta adicional bajarían del PE. Son las más cercanas a ser rentables." />
 
-        <MetricCard title="KW Sobre PE" value={metrics.abovePeKeywords.toString()} subtitle={`${(metrics.abovePeKeywords / Math.max(metrics.keywordsWithAdsData, 1) * 100).toFixed(0)}% del total`} icon={<XCircle className="w-5 h-5 text-red-500" />} valueClassName="text-red-600 dark:text-red-400" tooltip="Keywords con ACOS actual por encima del ACOS PE y no recuperables con 1 venta." />
+        <MetricCard title="KW Sobre PE" value={metrics.abovePeKeywords.toString()} subtitle={`${(metrics.abovePeKeywords / Math.max(metrics.classifiedKeywords, 1) * 100).toFixed(0)}% del total`} icon={<XCircle className="w-5 h-5 text-red-500" />} valueClassName="text-red-600 dark:text-red-400" tooltip="Keywords con ACOS actual por encima del ACOS PE y no recuperables con 1 venta." />
       </div>
 
       {/* Rentability Distribution */}
@@ -233,9 +235,9 @@ export function AdsDashboard({
               </span>
             </div>
             <div className="flex h-4 rounded-full overflow-hidden w-full bg-muted">
-              <div className="bg-green-500 transition-all" style={{ width: `${metrics.belowPeKeywords / metrics.keywordsWithAdsData * 100}%` }} />
-              <div className="bg-amber-400 transition-all" style={{ width: `${metrics.recoverableKeywords / metrics.keywordsWithAdsData * 100}%` }} />
-              <div className="bg-red-500 transition-all" style={{ width: `${metrics.abovePeKeywords / metrics.keywordsWithAdsData * 100}%` }} />
+              <div className="bg-green-500 transition-all" style={{ width: `${metrics.belowPeKeywords / Math.max(metrics.classifiedKeywords, 1) * 100}%` }} />
+              <div className="bg-amber-400 transition-all" style={{ width: `${metrics.recoverableKeywords / Math.max(metrics.classifiedKeywords, 1) * 100}%` }} />
+              <div className="bg-red-500 transition-all" style={{ width: `${metrics.abovePeKeywords / Math.max(metrics.classifiedKeywords, 1) * 100}%` }} />
             </div>
           </CardContent>
         </Card>}
