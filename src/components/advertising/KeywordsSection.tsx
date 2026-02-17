@@ -867,7 +867,7 @@ export const KeywordsSection = ({
         
         {/* ADS Dashboard - only in ads view, collapsible - full width */}
         {functionalView === 'ads' && hasAdsAccess && <details className="group w-full bg-secondary rounded-lg" open>
-            <summary className="gap-2 cursor-pointer select-none text-sm font-semibold transition-colors flex-row w-full border-primary text-[#f98334] border-0 px-0 my-[2px] py-[12px] flex items-start justify-start">
+            <summary className="gap-2 cursor-pointer select-none text-sm font-semibold transition-colors flex-row w-full border-primary text-[#f98334] border-0 my-[2px] py-[12px] flex items-start justify-start px-[16px]">
               <ChevronDown className="w-4 h-4 transition-transform group-open:rotate-0 -rotate-90" />
               Dashboard de rendimiento
             </summary>
