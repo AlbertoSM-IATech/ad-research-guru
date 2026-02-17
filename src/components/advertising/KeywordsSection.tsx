@@ -895,7 +895,7 @@ export const KeywordsSection = ({
       {advancedFiltersExpanded && (functionalView === 'editorial' ? <AdvancedFiltersContent filters={filters} onFiltersChange={handleAdvancedFiltersChange} /> : <AdsFiltersContent filters={adsFilters} onFiltersChange={handleAdsFiltersChange} />)}
 
       {/* Unified toolbar - single row */}
-      <div className="flex items-center gap-2 flex-wrap">
+      <div className="flex items-center gap-2 flex-wrap text-white">
         {/* 1. Import */}
         {functionalView === 'editorial' && <Button data-tour="external-import" size="sm" onClick={() => setShowExternalImportModal(true)} className="gap-2 bg-primary hover:bg-primary/90">
             <Upload className="w-4 h-4" />
@@ -949,7 +949,7 @@ export const KeywordsSection = ({
           return acosActual !== null && acosActual > acosEquilibrioVal;
         }).length : 0;
         if (needsAttentionCount === 0) return null;
-        return <Button variant="outline" size="sm" onClick={() => setIsAlertsDialogOpen(true)} className={cn("gap-1.5 text-xs border-red-500/50 text-red-600 hover:bg-red-500/10 h-8")}>
+        return <Button variant="outline" size="sm" onClick={() => setIsAlertsDialogOpen(true)} className={cn("gap-1.5 text-xs border-red-500/50 h-8 text-primary-foreground bg-red-700 hover:bg-red-600")}>
               <AlertTriangle className="w-3.5 h-3.5" />
               Necesitan atención: {needsAttentionCount}
             </Button>;
@@ -984,7 +984,7 @@ export const KeywordsSection = ({
               <BookOpen className="w-3.5 h-3.5" />
               Enviar también a Estudio
             </Button>
-            <Button variant="ghost" size="sm" className="gap-1.5 h-8 text-xs text-muted-foreground" disabled={selectedIds.size === 0} onClick={() => {
+            <Button variant="ghost" size="sm" className="gap-1.5 h-8 text-xs border text-primary-foreground" disabled={selectedIds.size === 0} onClick={() => {
           onUpdateBulk(Array.from(selectedIds), { purpose: 'editorial' });
           onSelectedIdsChange(new Set());
           toast({ title: `${selectedIds.size} keywords movidas a Estudio`, description: 'Ya no aparecen en Gestión de Ads.' });
