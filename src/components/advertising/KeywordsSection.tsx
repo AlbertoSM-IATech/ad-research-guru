@@ -894,24 +894,31 @@ export const KeywordsSection = ({
       {/* Advanced Filters Content */}
       {advancedFiltersExpanded && (functionalView === 'editorial' ? <AdvancedFiltersContent filters={filters} onFiltersChange={handleAdvancedFiltersChange} /> : <AdsFiltersContent filters={adsFilters} onFiltersChange={handleAdsFiltersChange} />)}
 
-      {/* Quick Add + Search + Stats + Transfer - single row */}
+      {/* Unified toolbar - single row */}
       <div className="flex items-center gap-2 flex-wrap">
-        {/* Quick Add */}
-        <div className="flex gap-1.5 items-center">
-          <Input placeholder="Escribe una keyword..." value={quickAddKeyword} onChange={(e) => setQuickAddKeyword(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleQuickAdd()} className="w-48 h-9" />
-          <Button onClick={quickAddKeyword.trim() ? handleQuickAdd : handleOpenNewKeywordWizard} size="sm" className="gap-1 bg-primary hover:bg-primary/90 whitespace-nowrap h-9">
-            <Plus className="w-4 h-4" />
-            {quickAddKeyword.trim() ? 'Añadir' : 'Nueva'}
-          </Button>
-        </div>
+        {/* 1. Import */}
+        {functionalView === 'editorial' && <Button data-tour="external-import" size="sm" onClick={() => setShowExternalImportModal(true)} className="gap-2 bg-primary hover:bg-primary/90">
+            <Upload className="w-4 h-4" />
+            Importar datos
+          </Button>}
+        {functionalView === 'ads' && <Button data-tour="btn-import-ads" size="sm" onClick={() => setShowAmazonAdsImport(true)} className="gap-2 bg-primary hover:bg-primary/90">
+            <Upload className="w-4 h-4" />
+            Importar Amazon ADS
+          </Button>}
 
-        {/* Search */}
+        {/* 2. + Nueva (button only) */}
+        <Button onClick={handleOpenNewKeywordWizard} size="sm" variant="outline" className="gap-1 whitespace-nowrap h-8">
+          <Plus className="w-4 h-4" />
+          Nueva
+        </Button>
+
+        {/* 3. Search */}
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input placeholder="Buscar keywords..." value={searchTerm} onChange={(e) => {
           onSearchTermChange(e.target.value);
           setCurrentPage(1);
-        }} className="pl-10 pr-8 w-48 h-9" />
+        }} className="pl-10 pr-8 w-48 h-8" />
           {searchTerm && <button type="button" onClick={() => {
           onSearchTermChange('');
           setCurrentPage(1);
@@ -920,20 +927,18 @@ export const KeywordsSection = ({
             </button>}
         </div>
 
-        <div className="h-5 w-px bg-border hidden sm:block" />
-
-        {/* Results count */}
+        {/* 4. Counter */}
         <div className="text-sm text-muted-foreground whitespace-nowrap">
           {filteredKeywords.length} de {keywords.length} keywords
         </div>
-          
-        {/* Contextual view warning - inline */}
+
+        {/* 5. Contextual view badge */}
         <div className={cn("flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs whitespace-nowrap", functionalView === 'editorial' ? "bg-blue-500/10 text-blue-600 dark:text-blue-400" : "bg-amber-500/10 text-amber-600 dark:text-amber-400")}>
           <Info className="w-3 h-3 flex-shrink-0" />
           {functionalView === 'editorial' ? "Vista editorial" : "Vista de inversión Ads"}
         </div>
-          
-        {/* Needs Attention counter */}
+
+        {/* 6. Needs Attention (ads only) */}
         {functionalView === 'ads' && (() => {
         const acosEquilibrioVal = bookEconomy.precioLibro > 0 && bookEconomy.regaliasPorVenta > 0 ? bookEconomy.regaliasPorVenta / bookEconomy.precioLibro * 100 : null;
         const needsAttentionCount = acosEquilibrioVal !== null ? keywords.filter((k) => {
@@ -950,9 +955,10 @@ export const KeywordsSection = ({
             </Button>;
       })()}
 
+        {/* 7. Separator */}
         <div className="h-5 w-px bg-border hidden sm:block" />
 
-        {/* Transfer buttons */}
+        {/* 8. Transfer buttons */}
         {functionalView === 'editorial' ? <>
             <Button variant="outline" size="sm" className="gap-1.5 h-8 text-xs" disabled={selectedIds.size === 0} onClick={() => {
         onUpdateBulk(Array.from(selectedIds), { purpose: 'both' });
@@ -987,48 +993,44 @@ export const KeywordsSection = ({
             </Button>
           </>}
 
-        {/* Spacer */}
+        {/* 9. Spacer */}
         <div className="flex-1" />
 
-        {/* Right-side tools */}
-        <div className="flex items-center gap-2">
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => {
+        {/* 10. Reset columns */}
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => {
               resetColumnWidths();
               resetColumnOrder();
             }}>
-                <RotateCcw className="w-3.5 h-3.5" />
+              <RotateCcw className="w-3.5 h-3.5" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>Resetear columnas (ancho y orden)</TooltipContent>
+        </Tooltip>
+
+        {/* 11. Copy all */}
+        <BulkCopyTools keywords={filteredKeywords} selectedIds={selectedIds} />
+
+        {/* 12. Export CSV */}
+        <KeywordExportCSV keywords={filteredKeywords} bookEconomy={bookEconomy} selectedIds={selectedIds} />
+
+        {/* 13. Compare (if 2 selected) */}
+        {selectedIds.size === 2 && <Tooltip>
+            <TooltipTrigger asChild>
+              <Button variant="outline" size="sm" onClick={() => setIsComparisonOpen(true)} className="gap-2 border-primary/50 text-primary hover:bg-primary/10">
+                <GitCompare className="w-4 h-4" />
+                Comparar
               </Button>
             </TooltipTrigger>
-            <TooltipContent>Resetear columnas (ancho y orden)</TooltipContent>
-          </Tooltip>
-          
-          <BulkCopyTools keywords={filteredKeywords} selectedIds={selectedIds} />
-          <KeywordExportCSV keywords={filteredKeywords} bookEconomy={bookEconomy} selectedIds={selectedIds} />
-          
-          {functionalView === 'editorial' && <Button data-tour="external-import" size="sm" onClick={() => setShowExternalImportModal(true)} className="gap-2 bg-primary hover:bg-primary/90">
-              <Upload className="w-4 h-4" />
-              Importar datos
-            </Button>}
-          {functionalView === 'ads' && <Button data-tour="btn-import-ads" size="sm" onClick={() => setShowAmazonAdsImport(true)} className="gap-2 bg-primary hover:bg-primary/90">
-              <Upload className="w-4 h-4" />
-              Importar Amazon ADS
-            </Button>}
-          {selectedIds.size === 2 && <Tooltip>
-              <TooltipTrigger asChild>
-                <Button variant="outline" size="sm" onClick={() => setIsComparisonOpen(true)} className="gap-2 border-primary/50 text-primary hover:bg-primary/10">
-                  <GitCompare className="w-4 h-4" />
-                  Comparar
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>Comparar las 2 keywords seleccionadas lado a lado</TooltipContent>
-            </Tooltip>}
-          {selectedIds.size > 0 && <Button variant="destructive" size="sm" onClick={handleDeleteSelected} className="gap-2">
-              <Trash2 className="w-4 h-4" />
-              Eliminar ({selectedIds.size})
-            </Button>}
-        </div>
+            <TooltipContent>Comparar las 2 keywords seleccionadas lado a lado</TooltipContent>
+          </Tooltip>}
+
+        {/* 14. Delete (if selection) */}
+        {selectedIds.size > 0 && <Button variant="destructive" size="sm" onClick={handleDeleteSelected} className="gap-2">
+            <Trash2 className="w-4 h-4" />
+            Eliminar ({selectedIds.size})
+          </Button>}
       </div>
 
       {/* Bulk actions (Editorial) */}
