@@ -901,7 +901,7 @@ export const KeywordsSection = ({
             <Upload className="w-4 h-4" />
             Importar datos
           </Button>}
-        {functionalView === 'ads' && <Button data-tour="btn-import-ads" size="sm" onClick={() => setShowAmazonAdsImport(true)} className="gap-2 bg-primary hover:bg-primary/90 text-sm font-sans font-medium">
+        {functionalView === 'ads' && <Button data-tour="btn-import-ads" size="sm" onClick={() => setShowAmazonAdsImport(true)} className="gap-2 text-sm font-sans font-medium px-[27px] bg-accent">
             <Upload className="w-4 h-4" />
             Importar Amazon ADS
           </Button>}
