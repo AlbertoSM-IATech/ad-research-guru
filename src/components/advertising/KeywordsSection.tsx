@@ -866,12 +866,12 @@ export const KeywordsSection = ({
         </div>
         
         {/* ADS Dashboard - only in ads view, collapsible - full width */}
-        {functionalView === 'ads' && hasAdsAccess && <details className="group w-full" open>
-            <summary className="gap-2 cursor-pointer select-none text-sm font-semibold transition-colors flex-row rounded-lg w-full border-primary text-[#f98334] flex items-start justify-center bg-secondary border-0 px-0 py-[7px]">
+        {functionalView === 'ads' && hasAdsAccess && <details className="group w-full bg-secondary rounded-lg" open>
+            <summary className="gap-2 cursor-pointer select-none text-sm font-semibold transition-colors flex-row w-full border-primary text-[#f98334] flex items-start justify-center border-0 px-0 py-[7px]">
               <ChevronDown className="w-4 h-4 transition-transform group-open:rotate-0 -rotate-90" />
               Dashboard de rendimiento
             </summary>
-            <div className="mt-2">
+            <div className="px-4 pb-4">
               <AdsDashboard keywords={keywords} bookEconomy={bookEconomy} currencySymbol={currencySymbol} />
             </div>
           </details>}

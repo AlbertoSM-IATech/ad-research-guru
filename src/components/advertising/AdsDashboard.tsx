@@ -232,15 +232,10 @@ export function AdsDashboard({
                 {metrics.abovePeKeywords} sobre PE
               </span>
             </div>
-            <div className="flex gap-1 h-4 rounded-full overflow-hidden">
-              <div className="bg-green-500 transition-all" style={{ width: `${metrics.belowPeKeywords / metrics.keywordsWithAdsData * 100}%`
-            }} />
-              <div className="bg-amber-400 transition-all" style={{
-            width: `${metrics.recoverableKeywords / metrics.keywordsWithAdsData * 100}%`
-          }} />
-              <div className="bg-red-500 transition-all" style={{
-            width: `${metrics.abovePeKeywords / metrics.keywordsWithAdsData * 100}%`
-          }} />
+            <div className="flex h-4 rounded-full overflow-hidden w-full bg-muted">
+              <div className="bg-green-500 transition-all" style={{ width: `${metrics.belowPeKeywords / metrics.keywordsWithAdsData * 100}%` }} />
+              <div className="bg-amber-400 transition-all" style={{ width: `${metrics.recoverableKeywords / metrics.keywordsWithAdsData * 100}%` }} />
+              <div className="bg-red-500 transition-all" style={{ width: `${metrics.abovePeKeywords / metrics.keywordsWithAdsData * 100}%` }} />
             </div>
           </CardContent>
         </Card>}
