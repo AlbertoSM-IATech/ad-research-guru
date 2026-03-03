@@ -3,8 +3,6 @@ import { useLocation } from "react-router-dom";
 import { NavLink } from "@/components/NavLink";
 import { Badge } from "@/components/ui/badge";
 import { ThemeToggle } from "@/components/ThemeToggle";
-import { MarketplaceSelector } from "./MarketplaceSelector";
-import { useAdvertisingData } from "./AdvertisingDataProvider";
 import { getCurrentPlan } from "@/lib/plan-system";
 import {
   Sidebar,
@@ -33,7 +31,6 @@ export function AppSidebar({ onOpenBackup, onOpenMarketConfig, onOpenReset, onOp
   const { state } = useSidebar();
   const collapsed = state === "collapsed";
   const location = useLocation();
-  const { selectedMarketplace, setSelectedMarketplace } = useAdvertisingData();
   const userPlan = getCurrentPlan();
 
   const navItems = [
@@ -95,20 +92,6 @@ export function AppSidebar({ onOpenBackup, onOpenMarketConfig, onOpenReset, onOp
         </SidebarGroup>
 
         <SidebarSeparator />
-
-        {/* Marketplace selector */}
-        {!collapsed &&
-        <SidebarGroup>
-            <SidebarGroupLabel className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              Mercado
-            </SidebarGroupLabel>
-            <SidebarGroupContent className="px-1">
-              <div data-tour="marketplace">
-                <MarketplaceSelector value={selectedMarketplace} onChange={setSelectedMarketplace} />
-              </div>
-            </SidebarGroupContent>
-          </SidebarGroup>
-        }
       </SidebarContent>
 
       <SidebarFooter className="p-2">
