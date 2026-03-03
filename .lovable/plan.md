@@ -1,41 +1,42 @@
 
 
-# Unificar toolbar en 1 sola fila
+# Adaptar navegacion al estilo visual de referencia
 
-## Objetivo
-Mover todos los elementos de las 2 filas actuales de la toolbar a una unica fila, reorganizando el orden segun lo indicado:
+## Que cambia
 
-## Orden final (izquierda a derecha)
+La referencia muestra un patron de navegacion mas limpio: en lugar de botones pill para cambiar entre secciones (Datos/Visualizaciones), usa **tabs con borde inferior** (underline tabs). El sidebar actual ya funciona bien pero se puede mejorar con mejor jerarquia visual.
 
-1. **Importar** (boton primario - Importar datos / Importar Amazon ADS segun vista)
-2. **+ Nueva** (solo el boton, sin el input de texto "Escribe una keyword...")
-3. **Buscar keywords** (input de busqueda)
-4. **Contador** ("15 de 15 keywords")
-5. **Vista contextual** (badge "Vista editorial" / "Vista de inversion Ads")
-6. **Necesitan atencion** (solo en vista ads, si aplica)
-7. **Separador vertical**
-8. **Enviar tambien a...** / **Mover a...** (botones de transferencia)
-9. **Spacer** (flex-1)
-10. **Resetear columnas** (icono)
-11. **Copiar todas** (BulkCopyTools)
-12. **Exportar CSV**
-13. **Comparar** (si 2 seleccionadas)
-14. **Eliminar** (si hay seleccion)
+Los cambios son puramente cosmeticos - no se mueve BookInfo, no cambia el layout de columnas, solo se mejora la navegacion.
 
-## Cambios
+## Cambios concretos
 
-El input "Escribe una keyword..." se elimina de la fila. El boton "+ Nueva" abrira directamente el wizard sin necesidad del input de texto previo.
+### 1. Tabs underline en NicheStudyModule (`NicheStudyModule.tsx`)
+- Reemplazar los botones pill `bg-muted rounded-md` por tabs con estilo underline
+- Tab activo: texto con color primario + borde inferior de 2px
+- Tab inactivo: texto muted, sin borde
+- Mantener los mismos iconos (Search, TrendingUp)
+
+### 2. Sidebar con mejor jerarquia (`AppSidebar.tsx`)
+- Añadir un header con nombre de la app (ej: "KW Research") en la parte superior
+- Cambiar el estilo del item activo: en lugar de `bg-primary/10`, usar un indicador lateral izquierdo (borde de 2-3px en color primario) como en la referencia
+- Mayor padding vertical en los items para dar mas aire
+
+### 3. Header bar simplificada (`Index.tsx`)
+- Añadir breadcrumb contextual al lado del SidebarTrigger mostrando el nombre del modulo activo ("Estudio de KW" / "Gestion de ADS")
+- Eliminar los h1 redundantes de dentro de cada modulo (ya que el header los muestra)
 
 ## Seccion tecnica
 
-### Archivo modificado: `src/components/advertising/KeywordsSection.tsx`
+### `src/components/advertising/NicheStudyModule.tsx`
+- Lineas 100-112: Reemplazar el bloque de botones pill por un `div` con `border-b` y dos botones con clase condicional `border-b-2 border-primary` para el activo
 
-Lineas ~900-1032: Se reestructura el bloque del toolbar:
+### `src/components/advertising/AppSidebar.tsx`
+- Lineas 58-88: Añadir un header con el nombre de la app antes del primer SidebarGroup
+- Lineas 70-73: Cambiar `activeClassName` de `bg-primary/10` a un estilo con `border-l-2 border-primary bg-transparent`
 
-- Eliminar el input `quickAddKeyword` y su contenedor (lineas 901-906)
-- Mover los botones de Importar (lineas 1010-1017) al inicio de la fila
-- Colocar el boton "+ Nueva" (que llama a `handleOpenNewKeywordWizard`) justo despues
-- Mantener el resto de elementos en el orden descrito
-- Todo dentro del mismo `<div className="flex items-center gap-2 flex-wrap">`
-- Eliminar el div contenedor `<div className="flex items-center gap-2">` interno de "Right-side tools" (lineas 994, 1031) para aplanar todo en una sola fila
+### `src/pages/Index.tsx`
+- Lineas 53-55: Añadir al lado del SidebarTrigger un texto con el nombre del modulo activo basado en `location.pathname`
+
+### `src/components/advertising/AdsManagementModule.tsx`
+- Lineas 82-98: Eliminar el header `<h1>` ya que se mostrara en la barra superior
 
