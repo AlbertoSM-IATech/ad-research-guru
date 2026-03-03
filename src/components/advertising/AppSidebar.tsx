@@ -58,6 +58,13 @@ export function AppSidebar({ onOpenBackup, onOpenMarketConfig, onOpenReset, onOp
   return (
     <Sidebar collapsible="icon" className="border-r border-border/50">
       <SidebarContent>
+        {/* App header */}
+        {!collapsed && (
+          <div className="px-4 py-4 border-b border-border/50">
+            <span className="text-sm font-bold tracking-tight text-foreground">KW Research</span>
+          </div>
+        )}
+
         <SidebarGroup>
           <SidebarGroupLabel className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
             {!collapsed && "Módulos"}
@@ -69,8 +76,8 @@ export function AppSidebar({ onOpenBackup, onOpenMarketConfig, onOpenReset, onOp
                   <SidebarMenuButton asChild tooltip={item.title}>
                     <NavLink
                     to={item.url}
-                    className="flex items-center gap-2 px-2 py-1.5 rounded-md text-sm transition-colors hover:bg-muted/50"
-                    activeClassName="bg-primary/10 text-primary font-medium">
+                    className="flex items-center gap-2 px-3 py-2 rounded-none text-sm transition-colors hover:bg-muted/50 border-l-2 border-transparent"
+                    activeClassName="border-l-2 border-primary text-primary font-medium bg-primary/5">
 
                       <item.icon className="h-4 w-4 shrink-0" />
                       {!collapsed &&

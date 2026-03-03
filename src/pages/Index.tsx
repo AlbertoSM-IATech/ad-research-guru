@@ -50,8 +50,11 @@ function AppLayout() {
           onOpenTour={() => setShowTour(true)}
         />
         <main className="flex-1 overflow-auto">
-          <div className="flex items-center h-10 border-b border-border/50 px-2">
+          <div className="flex items-center h-10 border-b border-border/50 px-3 gap-3">
             <SidebarTrigger />
+            <span className="text-sm font-medium text-foreground">
+              {location.pathname === "/ads" ? "Gestión de ADS" : "Estudio de KW"}
+            </span>
           </div>
           <Routes>
             <Route path="/estudio" element={<NicheStudyModule />} />
