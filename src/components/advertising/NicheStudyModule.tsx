@@ -68,47 +68,30 @@ export const NicheStudyModule = () => {
       <KeyboardShortcutsManager onSave={handleSave} onSearch={handleFocusSearch} />
 
       <div className="w-full px-3 sm:px-4 lg:px-6 py-6">
-        <header className="mb-4">
-          <div className="flex items-center justify-between gap-2 flex-wrap">
-            <div className="flex items-center gap-2">
-              <h1 className="font-heading text-xl font-bold text-foreground">Estudio de KW</h1>
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <span className="text-muted-foreground cursor-help text-xs">ⓘ</span>
-                  </TooltipTrigger>
-                  <TooltipContent side="bottom" className="max-w-sm">
-                    <p className="text-xs">Investiga nichos, analiza keywords editoriales y visualiza oportunidades de mercado.</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            </div>
-          </div>
-        </header>
-
-        {/* Book Info */}
-        <section className="mb-4 space-y-2" data-tour="book-info">
-          <BookInfoPanelCompact
-            bookInfo={bookInfo} onChange={setBookInfo}
-            bookEconomy={bookEconomy} onBookEconomyChange={setBookEconomy}
-            keywords={currentKeywords} marketplaceId={selectedMarketplace}
-          />
-        </section>
-
         {/* Main View Toggle + Sync */}
         <section className="mb-4">
           <div className="flex items-center justify-between flex-wrap gap-2 mb-3">
-            <div className="flex items-center gap-1 p-0.5 bg-muted rounded-md w-fit">
-              <Button data-tour="tab-datos" variant={mainView === 'data' ? 'default' : 'ghost'} size="sm"
+            <div className="flex items-center gap-0 border-b border-border">
+              <button data-tour="tab-datos"
                 onClick={() => setMainView('data')}
-                className={cn("gap-1.5 h-7 text-xs px-3 transition-all", mainView === 'data' && "bg-primary text-primary-foreground")}>
+                className={cn(
+                  "inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px",
+                  mainView === 'data'
+                    ? "border-primary text-primary"
+                    : "border-transparent text-muted-foreground hover:text-foreground"
+                )}>
                 <Search className="w-3.5 h-3.5" />Datos
-              </Button>
-              <Button data-tour="tab-visualizaciones" variant={mainView === 'insights' ? 'default' : 'ghost'} size="sm"
+              </button>
+              <button data-tour="tab-visualizaciones"
                 onClick={() => setMainView('insights')}
-                className={cn("gap-1.5 h-7 text-xs px-3 transition-all", mainView === 'insights' && "bg-primary text-primary-foreground")}>
+                className={cn(
+                  "inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px",
+                  mainView === 'insights'
+                    ? "border-primary text-primary"
+                    : "border-transparent text-muted-foreground hover:text-foreground"
+                )}>
                 <TrendingUp className="w-3.5 h-3.5" />Visualizaciones
-              </Button>
+              </button>
             </div>
 
             {/* Sync status */}

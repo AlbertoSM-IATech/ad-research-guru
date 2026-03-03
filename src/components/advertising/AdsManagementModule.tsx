@@ -79,23 +79,7 @@ export const AdsManagementModule = () => {
       <KeyboardShortcutsManager onSave={handleSave} onSearch={handleFocusSearch} />
 
       <div className="w-full px-3 sm:px-4 lg:px-6 py-6">
-        <header className="mb-4">
-          <div className="flex items-center justify-between gap-2 flex-wrap">
-            <div className="flex items-center gap-2">
-              <h1 className="font-heading text-xl font-bold text-foreground">Gestión de ADS</h1>
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <span className="text-muted-foreground cursor-help text-xs">ⓘ</span>
-                  </TooltipTrigger>
-                  <TooltipContent side="bottom" className="max-w-sm">
-                    <p className="text-xs">Gestiona tus campañas de Amazon Ads, importa datos de rendimiento y monitoriza ACOS vs Punto de Equilibrio.</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            </div>
-          </div>
-        </header>
+        
 
         {/* Book Info */}
         <section className="mb-4 space-y-2" data-tour="book-info">
