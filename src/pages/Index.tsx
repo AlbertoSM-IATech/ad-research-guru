@@ -6,6 +6,7 @@ import { AppSidebar } from "@/components/advertising/AppSidebar";
 import { NicheStudyModule } from "@/components/advertising/NicheStudyModule";
 import { AdsManagementModule } from "@/components/advertising/AdsManagementModule";
 import { AdvertisingDataProvider, useAdvertisingData } from "@/components/advertising/AdvertisingDataProvider";
+import { MarketplaceSelector } from "@/components/advertising/MarketplaceSelector";
 import { BackupModal } from "@/components/advertising/BackupModal";
 import { MarketConfigModal } from "@/components/advertising/MarketConfigModal";
 import { NicheTour } from "@/components/advertising/NicheTour";
@@ -18,8 +19,8 @@ import {
   AlertDialogDescription,
   AlertDialogFooter,
   AlertDialogHeader,
-  AlertDialogTitle } from
-"@/components/ui/alert-dialog";
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 function AppLayout() {
   const location = useLocation();
@@ -30,7 +31,7 @@ function AppLayout() {
     showInsights, activeTab,
     handleResetData, handleRestoreBackup,
     configVersion, setConfigVersion,
-    bookId
+    bookId,
   } = ctx;
 
   const [showBackupModal, setShowBackupModal] = useState(false);
@@ -47,29 +48,34 @@ function AppLayout() {
           onOpenBackup={() => setShowBackupModal(true)}
           onOpenMarketConfig={() => setShowMarketConfigModal(true)}
           onOpenReset={() => setShowResetDialog(true)}
-          onOpenTour={() => setShowTour(true)} />
-        
+          onOpenTour={() => setShowTour(true)}
+        />
         <main className="flex-1 overflow-auto">
-          <div className="flex items-center h-10 border-b border-border/50 px-3 gap-3">
-            <SidebarTrigger className="py-[28px] pr-[37px] mx-0" />
-            <span className="text-sm font-medium text-foreground">
-              {location.pathname === "/ads" ? "Gestión de ADS" : "Estudio de KW"}
-            </span>
+          <div className="flex items-center justify-between h-10 border-b border-border/50 px-3">
+            <div className="flex items-center gap-3">
+              <SidebarTrigger />
+              <span className="text-sm font-medium text-foreground">
+                {location.pathname === "/ads" ? "Gestión de ADS" : "Estudio de KW"}
+              </span>
+            </div>
+            <div data-tour="marketplace">
+              <MarketplaceSelector value={ctx.selectedMarketplace} onChange={ctx.setSelectedMarketplace} />
+            </div>
           </div>
           <Routes>
             <Route path="/estudio" element={<NicheStudyModule />} />
             <Route path="/ads" element={<AdsManagementModule />} />
-            <Route path="*" element={<Navigate to="/estudio" replace />} className="px-[21px]" />
+            <Route path="*" element={<Navigate to="/estudio" replace />} />
           </Routes>
         </main>
       </div>
 
       {/* Tour - context-specific */}
-      {isAdsRoute ?
-      <AdsTour isOpen={showTour} onClose={() => setShowTour(false)} onComplete={() => setShowTour(false)} /> :
-
-      <NicheTour isOpen={showTour} onClose={() => setShowTour(false)} onComplete={() => setShowTour(false)} />
-      }
+      {isAdsRoute ? (
+        <AdsTour isOpen={showTour} onClose={() => setShowTour(false)} onComplete={() => setShowTour(false)} />
+      ) : (
+        <NicheTour isOpen={showTour} onClose={() => setShowTour(false)} onComplete={() => setShowTour(false)} />
+      )}
 
       {/* Modals */}
       <BackupModal
@@ -85,14 +91,14 @@ function AppLayout() {
         categoriesByMarket={categoriesByMarket}
         campaignPlansByMarket={campaignPlansByMarket}
         showInsights={showInsights}
-        onRestore={handleRestoreBackup} />
-      
+        onRestore={handleRestoreBackup}
+      />
       <MarketConfigModal
         isOpen={showMarketConfigModal}
         onClose={() => setShowMarketConfigModal(false)}
         currentMarketplace={selectedMarketplace}
-        onConfigChange={() => setConfigVersion((v: number) => v + 1)} />
-      
+        onConfigChange={() => setConfigVersion((v: number) => v + 1)}
+      />
       <AlertDialog open={showResetDialog} onOpenChange={setShowResetDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -104,24 +110,24 @@ function AppLayout() {
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
             <AlertDialogAction
-              onClick={() => {setShowResetDialog(false);handleResetData();}}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-              
+              onClick={() => { setShowResetDialog(false); handleResetData(); }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
               Restablecer
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </SidebarProvider>);
-
+    </SidebarProvider>
+  );
 }
 
 const Index = () => {
   return (
     <AdvertisingDataProvider>
       <AppLayout />
-    </AdvertisingDataProvider>);
-
+    </AdvertisingDataProvider>
+  );
 };
 
 export default Index;
