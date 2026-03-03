@@ -6,6 +6,7 @@ import { AppSidebar } from "@/components/advertising/AppSidebar";
 import { NicheStudyModule } from "@/components/advertising/NicheStudyModule";
 import { AdsManagementModule } from "@/components/advertising/AdsManagementModule";
 import { AdvertisingDataProvider, useAdvertisingData } from "@/components/advertising/AdvertisingDataProvider";
+import { MarketplaceSelector } from "@/components/advertising/MarketplaceSelector";
 import { BackupModal } from "@/components/advertising/BackupModal";
 import { MarketConfigModal } from "@/components/advertising/MarketConfigModal";
 import { NicheTour } from "@/components/advertising/NicheTour";
@@ -50,11 +51,16 @@ function AppLayout() {
           onOpenTour={() => setShowTour(true)}
         />
         <main className="flex-1 overflow-auto">
-          <div className="flex items-center h-10 border-b border-border/50 px-3 gap-3">
-            <SidebarTrigger />
-            <span className="text-sm font-medium text-foreground">
-              {location.pathname === "/ads" ? "Gestión de ADS" : "Estudio de KW"}
-            </span>
+          <div className="flex items-center justify-between h-10 border-b border-border/50 px-3">
+            <div className="flex items-center gap-3">
+              <SidebarTrigger />
+              <span className="text-sm font-medium text-foreground">
+                {location.pathname === "/ads" ? "Gestión de ADS" : "Estudio de KW"}
+              </span>
+            </div>
+            <div data-tour="marketplace">
+              <MarketplaceSelector value={ctx.selectedMarketplace} onChange={ctx.setSelectedMarketplace} />
+            </div>
           </div>
           <Routes>
             <Route path="/estudio" element={<NicheStudyModule />} />

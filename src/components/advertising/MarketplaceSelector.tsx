@@ -1,4 +1,3 @@
-import { Globe } from 'lucide-react';
 import {
   Select,
   SelectContent,
@@ -18,19 +17,14 @@ export const MarketplaceSelector = ({ value, onChange }: MarketplaceSelectorProp
   const selectedMarketplace = MARKETPLACES.find((m) => m.id === value);
 
   return (
-    <div className="flex items-center gap-2">
-      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-        <Globe className="w-4 h-4" />
-        <span className="hidden sm:inline">Mercado:</span>
-      </div>
-
+    <div className="flex items-center gap-1.5">
       <Select value={value} onValueChange={onChange}>
-        <SelectTrigger className="w-full h-9 bg-primary text-primary-foreground border-primary hover:bg-primary/90 transition-colors">
+        <SelectTrigger className="w-auto h-8 gap-1.5 bg-primary text-primary-foreground border-primary hover:bg-primary/90 transition-colors px-2.5 text-sm">
           <SelectValue>
             {selectedMarketplace && (
-              <span className="flex items-center gap-2">
-                <span className="text-lg">{selectedMarketplace.flag}</span>
-                <span className="font-medium text-sm truncate">{selectedMarketplace.name}</span>
+              <span className="flex items-center gap-1.5">
+                <span className="text-base leading-none">{selectedMarketplace.flag}</span>
+                <span className="font-medium text-xs">{selectedMarketplace.domain}</span>
               </span>
             )}
           </SelectValue>
@@ -39,9 +33,9 @@ export const MarketplaceSelector = ({ value, onChange }: MarketplaceSelectorProp
           {MARKETPLACES.map((marketplace) => (
             <SelectItem key={marketplace.id} value={marketplace.id} className="cursor-pointer">
               <span className="flex items-center gap-2">
-                <span className="text-lg">{marketplace.flag}</span>
-                <span>{marketplace.name}</span>
-                <span className="text-xs text-muted-foreground ml-1">({marketplace.domain})</span>
+                <span className="text-base">{marketplace.flag}</span>
+                <span className="text-sm">{marketplace.name}</span>
+                <span className="text-xs text-muted-foreground">({marketplace.domain})</span>
               </span>
             </SelectItem>
           ))}
